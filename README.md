@@ -1,5 +1,32 @@
 # chip-stroma-analysis
-Computational pipeline for automated segmentation and quantification of stromal remodeling in CHIP bone marrow biopsies using multiplex IHC staining
+
+Computational pipeline for automated quantification of stromal remodeling in CHIP bone marrow biopsies.
+
+## Overview
+Clonal Hematopoiesis of Indeterminate Potential (CHIP) is associated with fibroblast expansion and 
+increased extracellular matrix production in the bone marrow. This pipeline automates quantification 
+of αSMA+ fibroblast density from multiplex IHC staining (αSMA, Masson's Trichrome, Reticulin) to 
+characterize the tumour microenvironment in CHIP versus non-CHIP patients.
+
+## Pipeline
+1. **Vessel Segmentation** — U-Net trained on vessel annotations to remove vascular regions
+2. **Fibroblast Quantification** — Stain deconvolution and intensity thresholding on vessel-excluded regions
+3. **Density Scoring** — αSMA+ region area per patient
+4. **Statistical Validation** — t-test replication of CHIP vs non-CHIP fibroblast density difference
+5. **Pathologist Validation** — export segmentation masks as visual overlays for pathologist review
+
+## Data
+N=30 bone marrow biopsies (15 CHIP, 15 non-CHIP) with αSMA, Masson's Trichrome, and Reticulin staining.
+
+## Requirements
+See `requirements.txt`.
+
+## Usage
+```bash
+pip install -e .
+python scripts/preprocess.py
+python scripts/evaluate.py
+```
 
 
 ```

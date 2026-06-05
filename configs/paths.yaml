@@ -8,8 +8,16 @@
 
 # Normalized and name-sanitized patches and masks
 processed_data:
+  processed_dir: data
   patch_dir: data/patches
   mask_dir: data/masks
+
+# Intermediate paths for preprocessing workflow
+intermediate_data:
+  sanitized_dir: data/intermediate/sanitized
+  tissue_dir: data/intermediate/tissue_filtered
+  artifact_dir: data/intermediate/artifact_filtered
+  normalized_dir: data/intermediate/normalized
 
 metadata:
   name_mapping: data/metadata/name_mapping.csv

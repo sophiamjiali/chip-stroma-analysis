@@ -6,6 +6,7 @@
 # Date:             06/04/2026
 # ==============================================================================
 
+import shutil
 import logging
 
 import pandas as pd
@@ -14,6 +15,7 @@ import numpy as np
 from PIL import Image
 from pathlib import Path
 from tqdm import tqdm
+from torchvision.transforms.functional import to_tensor
 
 from skimage.color import rgb2lab
 from skimage.filters import threshold_otsu, gaussian
@@ -161,7 +163,67 @@ def apply_artifact_filter(src_dir: Path,
     return manifest
 
 
-def normalize_patches():
+def normalize_patches(included_patches: pd.DataFrame,
+                      normalizer,
+                      src_patch_dir: Path,
+                      src_mask_dir: Path,
+                      dst_patch_dir: Path,
+                      dst_mask_dir: Path,
+                      name_mapping: dict) -> None:
+    """
+    Orchestration wrapper for stain normalization.
+
+    Iterates over included patches, normalizes each, and saves to disk.
+    Copies corresponding masks in lockstep with normalized patches.
+    Operates only on patches where include=True — filtering is assumed
+    to be complete before this function is called.
+
+    Parameters
+    ----------
+    included_patches : pd.DataFrame
+        Subset of manifest where include=True, containing at minimum
+        'sample_id', 'original_name', and 'patch' columns.
+    normalizer : fitted torchstain normalizer
+        Pre-fitted normalizer instance. Must be fitted before calling.
+    src_patch_dir : Path
+        Root directory of raw patches: src_patch_dir/{original_name}/{patch}.
+    src_mask_dir : Path
+        Root directory of raw masks: src_mask_dir/{original_name}/{mask}.
+    dst_patch_dir : Path
+        Root directory for normalized patches: dst_patch_dir/{sample_id}/{patch}.
+    dst_mask_dir : Path
+        Root directory for copied masks: dst_mask_dir/{sample_id}/{mask}.
+    name_mapping : dict
+        Original → sanitized name mapping. Used to construct dst paths
+        using sanitized sample_id.
+    """
+
+    # Normalize and save each patch under its sanitized sample ID and name
+    for _, row in tqdm(included_patches.iterrows(), 
+                       total = len(included_patches),
+                       desc = "Patch Normalization:"):
+        
+        # Build the source and destination paths based on sanitized names
+        src_patch_path = src_patch_dir / row['original_id'] / row['patch']
+        dst_patch_path = dst_patch_dir / row['sample_id'] / row['patch']
+        dst_patch_path.parent.mkdir(parents = True, exist_ok = True)
+
+        patch = np.array(Image.open(src_patch_path).convert("RGB"))
+        normalized = normalize_patch(patch, normalizer)
+        Image.fromarray(normalized).save(dst_patch_path)
+
+        # Copy the mask in lockstep
+        mask_name = row['patch'].replace("_raw.png", "_mask.png")
+        src_mask_path = src_mask_dir / row['original_id'] / mask_name
+        dst_mask_path = dst_mask_dir / row['sample_id'] / mask_name
+        dst_mask_path.parent.mkdir(parents = True, exist_ok = True)
+
+        if src_mask_path.exists(): shutil.copy(src_mask_path, dst_mask_dir)
+        else: print(f"Warning: missing mask for {row['patch']}")
+
+    n = len(included_patches)
+    logger.info(f"Normalization complete: {n} patches saved → {dst_patch_dir}")
+    
     return
 
 
@@ -351,5 +413,29 @@ def detect_artifacts(patch: np.ndarray,
     if pen_ratio > pen_pixel_ratio: return False
 
     return True
+
+
+def normalize_patch(patch: np.ndarray, normalizer) -> np.ndarray:
+    """
+    Normalize a single RGB patch using a pre-fitted stain normalizer.
+
+    Parameters
+    ----------
+    patch : np.ndarray
+        RGB patch of shape (H, W, 3), dtype uint8.
+    normalizer : fitted torchstain normalizer
+        Pre-fitted normalizer instance (e.g. VahadaneNormalizer).
+        Must be fitted on a reference patch before being passed in.
+
+    Returns
+    -------
+    np.ndarray
+        Normalized RGB patch of shape (H, W, 3), dtype uint8.
+    """
+
+    patch_tensor = to_tensor(patch)
+    normalized = normalizer.normalize(patch_tensor)
+    return (normalized.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
+
     
 # [END]

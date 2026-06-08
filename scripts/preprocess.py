@@ -79,11 +79,12 @@ def main():
 
     normalize_patches(
         included_patches = included,
-        normalizer = normalizer,
-        src_patch_dir = config.paths.raw_data.patch_dir,
-        src_mask_dir = config.paths.raw_Data.mask_dir,
-        dst_patch_dir = config.paths.processed_data.patch_dir,
-        dst_mask_dir = config.paths.processed_data.mask_dir
+        normalizer       = normalizer,
+        src_patch_dir    = config.paths.raw_data.patch_dir,
+        src_mask_dir     = config.paths.raw_Data.mask_dir,
+        dst_patch_dir    = config.paths.processed_data.patch_dir,
+        dst_mask_dir     = config.paths.processed_data.mask_dir,
+        name_mapping     = name_mapping
     )
 
 

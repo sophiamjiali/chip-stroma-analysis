@@ -14,17 +14,15 @@ from pathlib import Path
 
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.io import (
-    run_step, 
-    mark_complete,
-    step_complete,
     sanitize_names, 
     save_name_mapping,
-    move_directory_contents
+    build_patch_manifest,
+    save_patch_manifest
 )
 from chip_stroma.data.preprocessing import (
-    detect_tissue,
-    detect_artifacts,
-    normalize_patch
+    apply_tissue_filter,
+    apply_artifact_filter,
+    normalize_patches
 )
 
 logger = logging.getLogger(__name__)
@@ -42,46 +40,50 @@ def main():
 
     # 1. Sanitize sample folder names
     name_mapping = sanitize_names(
-        src_dir = config.paths.raw_data.raw_dir,
-        out_dir = config.paths.intermediate_data.sanitized_dir
+        src_dir = config.paths.raw_data.raw_dir
     )
-    save_name_mapping(name_mapping, path = config.paths.metadata.name_mapping)
-    mark_complete(config.paths.intermediate_data.sanitized_dir)
 
-
+    # Initialize a patch manifest to log filtering and mapping
+    manifest = build_patch_manifest(
+        src_dir      = config.paths.raw_data.patch_dir,
+        name_mapping = name_mapping
+    )
+    
     # 2. Detect tissue and remove background
-    run_step(
-        src_dir = config.paths.intermediate_data.sanitized_dir,
-        dst_dir = config.paths.intermediate_data.tissue_dir,
-        process_fn = detect_tissue,
-        cleanup_src = True,
+    manifest = apply_tissue_filter(
+        src_dir = config.paths.raw_data.patch_dir,
+        manifest = manifest,
+        tissue_threshold = config.preprocess.tissue_detection.tissue_threshold,
+        gaussian_sigma = config.preprocess.tissue_detection.gaussian_sigma,
+        min_region_size = config.preprocess.tissue_detection.min_region_size,
+        morph_disk_radius = config.preprocess.tissue_detection.morph_disk_radius
+    )
+    
+    # 3. Detect artifacts and discard corrupted patches
+    patch_manifest = apply_artifact_filter(
+        src_dir = config.paths.raw_data.patch_dir,
+        manifest = manifest,
         ...
     )
 
-    # 3. Detect artifacts and discard corrupted patches
-    run_step(
-        src_dir = config.paths.intermediate_data.tissue_dir,
-        dst_dir = config.paths.intermediate_data.artifact_dir,
-        process_fn = detect_artifacts,
-        cleanup_src = True,
-        ...
-    )
+    # Save metadata generated during preprocessing before normalization
+    save_name_mapping( name_mapping, path = config.paths.metadata.name_mapping)
+    save_patch_manifest(manifest, path = config.paths.metadata.patch_manifest)
 
     # 4. Perform stain normalization
-    run_step(
-        src_dir = config.paths.intermediate_data.artifact_dir,
-        dst_dir = config.paths.intermediate_data.normalized_dir,
-        process_fn = normalize_patch,
-        cleanup_src = True,
-        ...
+    included = manifest[manifest['include'] == True][['sample_id', 'patch']]
+    normalizer = fit_normalizer(
+        reference_path = config.preprocess.normalization.reference_patch,
+        method = config.preprocess.normalization.method
     )
 
-    assert step_complete(config.paths.intermediate_data.normalized_dir), "Normalization was not completed successfully -- aborting cleanup"
-
-    # Move all processed data into the processed directories
-    move_directory_contents(
-        src_dir = config.paths.intermediate_data.normalized_dir,
-        dst_dir = config.paths.processed_data.processed_dir
+    normalize_patches(
+        included_patches = included,
+        normalizer = normalizer,
+        src_patch_dir = config.paths.raw_data.patch_dir,
+        src_mask_dir = config.paths.raw_Data.mask_dir,
+        dst_patch_dir = config.paths.processed_data.patch_dir,
+        dst_mask_dir = config.paths.processed_data.mask_dir
     )
 
 

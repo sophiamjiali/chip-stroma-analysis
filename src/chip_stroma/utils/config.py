@@ -8,20 +8,32 @@
 
 import os
 import yaml
+import logging
 
 from pathlib import Path
 from box import Box
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 # =====| Main API |=============================================================
 
 def load_configs(pipeline: Path, paths: Path) -> Box:
     "Loads all configurations nested by their file name."
 
+    logger.info("=" * 50)
+    logger.info("Step 01: Configurations")
+    logger.info(f"- Pipeline: {pipeline}")
+    logger.info(f"- Paths: {paths}")
+    logger.info("-" * 50)
+
     config = {
         pipeline.stem: load_config(pipeline),
         "paths": load_paths_config(paths)
     }
+
+    logger.info("Successfully loaded and merged both configuration files")
+    logger.info("=" * 50)
 
     return Box(config, frozen_box = True)
     

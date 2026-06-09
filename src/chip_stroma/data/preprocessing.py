@@ -65,6 +65,14 @@ def apply_tissue_filter(src_dir: Path,
         Manifest updated with 'passes_tissue' and 'include' columns.
     """
 
+    logger.info("=" * 50)
+    logger.info("Step 04: Tissue Detection")
+    logger.info(f"- Tissue Threshold: {tissue_threshold}")
+    logger.info(f"- Gaussian Sigma: {gaussian_sigma}")
+    logger.info(f"- Minimum Region Size: {min_region_size}")
+    logger.info(f"- Morphological Disk Radius: {morph_disk_radius}")
+    logger.info("-" * 50)
+
     manifest = manifest.copy()
     passes_filter = []
 
@@ -91,8 +99,11 @@ def apply_tissue_filter(src_dir: Path,
     manifest['include'] = manifest['passes_tissue']
 
     n_passed, n_total = sum(passes_filter), len(passes_filter)
-    logger.info(f"Tissue detection: {n_passed}/{n_total} patches passed "
+
+    logger.info(f"Evaluated {n_total} total patches: {n_passed} patches "
+                f"passed the tissue detection filter "
                 f"({100 * n_passed / n_total:.1f}%)")
+    logger.info("=" * 50)
     
     return manifest
 
@@ -131,6 +142,14 @@ def apply_artifact_filter(src_dir: Path,
         Manifest updated with 'passes_artifact' and 'include' columns.
     """
 
+    logger.info("=" * 50)
+    logger.info("Step 05: Artifact Detection")
+    logger.info(f"- Blur Threshold: {blur_threshold}")
+    logger.info(f"- Dark Pixel Threshold: {dark_pixel_threshold}")
+    logger.info(f"- Dark Pixel Ratio: {dark_pixel_ratio}")
+    logger.info(f"- Pen Pixel Ratio: {pen_pixel_ratio}")
+    logger.info("-" * 50)
+
     manifest = manifest.copy()
     passes_filter = []
 
@@ -158,8 +177,11 @@ def apply_artifact_filter(src_dir: Path,
     manifest.loc[mask, 'included'] = False
 
     n_passed, n_total = sum(passes_filter), len(passes_filter)
-    logger.info(f"Artifact detection: {n_passed}/{n_total} patches passed "
+
+    logger.info(f"Evaluated {n_total} total patches: {n_passed} patches "
+                f"passed the artifact detection filter "
                 f"({100 * n_passed / n_total:.1f}%)")
+    logger.info("=" * 50)
     
     return manifest
 
@@ -169,8 +191,7 @@ def normalize_patches(included_patches: pd.DataFrame,
                       src_patch_dir: Path,
                       src_mask_dir: Path,
                       dst_patch_dir: Path,
-                      dst_mask_dir: Path,
-                      name_mapping: dict) -> None:
+                      dst_mask_dir: Path) -> None:
     """
     Orchestration wrapper for stain normalization.
 
@@ -194,10 +215,15 @@ def normalize_patches(included_patches: pd.DataFrame,
         Root directory for normalized patches: dst_patch_dir/{sample_id}/{patch}.
     dst_mask_dir : Path
         Root directory for copied masks: dst_mask_dir/{sample_id}/{mask}.
-    name_mapping : dict
-        Original → sanitized name mapping. Used to construct dst paths
-        using sanitized sample_id.
     """
+
+    logger.info("=" * 50)
+    logger.info("Step 07: Normalization")
+    logger.info(f"- Source Patch Directory: {src_patch_dir}")
+    logger.info(f"- Source Mask Directory: {src_mask_dir}")
+    logger.info(f"- Destination Patch Directory: {dst_patch_dir}")
+    logger.info(f"- Destination Mask Directory: {dst_mask_dir}")
+    logger.info("-" * 50)
 
     # Normalize and save each patch under its sanitized sample ID and name
     for _, row in tqdm(included_patches.iterrows(), 
@@ -222,8 +248,9 @@ def normalize_patches(included_patches: pd.DataFrame,
         if src_mask_path.exists(): shutil.copy(src_mask_path, dst_mask_dir)
         else: print(f"Warning: missing mask for {row['patch']}")
 
-    n = len(included_patches)
-    logger.info(f"Normalization complete: {n} patches saved → {dst_patch_dir}")
+    logger.info(f"Normalized {len(included_patches)} patches")
+    logger.info("All masks moved to the corresponding destination directory")
+    logger.info("=" * 50)
     
     return
 
@@ -457,6 +484,12 @@ def fit_normalizer(reference_path: Path, method: str = "vahadane"):
     Fitted torchstain normalizer instance.
     """
 
+    logger.info("=" * 50)
+    logger.info("Step 06: Fit Normalizer")
+    logger.info(f"- Reference Path: {reference_path}")
+    logger.info(f"- Method: {method}")
+    logger.info("-" * 50)
+
     normalizers = {
         "vahadane": tiatoolbox.tools.stainnorm.VahadaneNormalizer,
         "macenko":  torchstain.normalizers.MacenkoNormalizer,
@@ -470,6 +503,9 @@ def fit_normalizer(reference_path: Path, method: str = "vahadane"):
     reference = to_tensor(np.array(Image.open(reference_path).convert("RGB")))
     normalizer = normalizers[method]()
     normalizer.fit(reference)
+
+    logger.info("Successfully fit the normalizer to the reference patch")
+    logger.info("=" * 50)
 
     return normalizer
 

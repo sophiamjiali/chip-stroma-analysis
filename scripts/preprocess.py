@@ -11,6 +11,7 @@ import logging
 import argparse as ap
 
 from pathlib import Path
+from datetime import datetime
 
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.io import (
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     args = parse_args()
+    log_header(config_path = Path(args.config_dir) / "preprocess.yaml")
 
     config = load_configs(
         pipeline = Path(args.config_dir) / "preprocess.yaml",
@@ -87,9 +89,12 @@ def main():
         src_patch_dir    = config.paths.raw_data.patch_dir,
         src_mask_dir     = config.paths.raw_Data.mask_dir,
         dst_patch_dir    = config.paths.processed_data.patch_dir,
-        dst_mask_dir     = config.paths.processed_data.mask_dir,
-        name_mapping     = name_mapping
+        dst_mask_dir     = config.paths.processed_data.mask_dir
     )
+
+    log_footer()
+
+    return
 
 
 # =====| Helpers |==============================================================
@@ -99,6 +104,26 @@ def parse_args():
     parser.add_argument("--config_dir", type = str, default = "configs/")
     
     return parser.parse_args()
+
+
+def log_header(config_path):
+    logger.info("=" * 60)
+    logger.info("Starting Pipeline Execution")
+    logger.info("- Pipeline Stage: Preprocessing")
+    logger.info(f"- Configurations: {config_path}")
+    logger.info(f"- Working Directory: {Path.cwd()}")
+    logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    logger.info("=" * 60)
+
+def log_footer(cfg):
+    logger.info("=" * 60)
+    logger.info("Successfully Completed Pipeline Execution")
+    logger.info(f"- Patch Directory: {cfg.processed_data.patch_dir}")
+    logger.info(f"- Mask Directory: {cfg.processed_data.mask_dir}")
+    logger.info(f"- Name Mapping: {cfg.metadata.name_mapping}")
+    logger.info(f"- Patch Manifest: {cfg.metadata.patch_manifeset}")
+    logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    logger.info("=" * 60)
 
 if __name__ == "__main__":
     main()

@@ -92,7 +92,7 @@ def main():
         dst_mask_dir     = config.paths.processed_data.mask_dir
     )
 
-    log_footer()
+    log_footer(cfg = config.paths)
 
     return
 

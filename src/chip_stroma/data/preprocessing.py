@@ -8,6 +8,8 @@
 
 import shutil
 import logging
+import torchstain
+import tiatoolbox
 
 import pandas as pd
 import numpy as np
@@ -16,7 +18,6 @@ from PIL import Image
 from pathlib import Path
 from tqdm import tqdm
 from torchvision.transforms.functional import to_tensor
-
 from skimage.color import rgb2lab
 from skimage.filters import threshold_otsu, gaussian
 from skimage.morphology.binary import binary_closing, binary_opening
@@ -437,5 +438,39 @@ def normalize_patch(patch: np.ndarray, normalizer) -> np.ndarray:
     normalized = normalizer.normalize(patch_tensor)
     return (normalized.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
 
+
+def fit_normalizer(reference_path: Path, method: str = "vahadane"):
+    """
+    Fit a stain normalizer on a reference patch.
+
+    Parameters
+    ----------
+    reference_path : Path
+        Path to a representative reference patch — ideally selected
+        and reviewed by a pathologist.
+    method : str
+        Normalization method. One of: "vahadane" (default), "macenko", "reinhard".
+        Vahadane is preferred for IHC (Vahadane et al., 2016).
+
+    Returns
+    -------
+    Fitted torchstain normalizer instance.
+    """
+
+    normalizers = {
+        "vahadane": tiatoolbox.tools.stainnorm.VahadaneNormalizer,
+        "macenko":  torchstain.normalizers.MacenkoNormalizer,
+        "reinhard": torchstain.normalizers.ReinhardNormalizer
+    }
+
+    if method not in normalizers: 
+        raise ValueError(f"Unknown normalization method: {method}. Choose from "
+                         f"{list(normalizers.keys())}.")
     
+    reference = to_tensor(np.array(Image.open(reference_path).convert("RGB")))
+    normalizer = normalizers[method]()
+    normalizer.fit(reference)
+
+    return normalizer
+
 # [END]

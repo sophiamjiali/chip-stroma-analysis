@@ -22,6 +22,7 @@ from chip_stroma.utils.io import (
 from chip_stroma.data.preprocessing import (
     apply_tissue_filter,
     apply_artifact_filter,
+    fit_normalizer,
     normalize_patches
 )
 
@@ -39,9 +40,7 @@ def main():
     )
 
     # 1. Sanitize sample folder names
-    name_mapping = sanitize_names(
-        src_dir = config.paths.raw_data.raw_dir
-    )
+    name_mapping = sanitize_names(src_dir = config.paths.raw_data.raw_dir)
 
     # Initialize a patch manifest to log filtering and mapping
     manifest = build_patch_manifest(
@@ -50,20 +49,25 @@ def main():
     )
     
     # 2. Detect tissue and remove background
+    tissue_detection_cfg = config.preprocess.tissue_detection
     manifest = apply_tissue_filter(
-        src_dir = config.paths.raw_data.patch_dir,
-        manifest = manifest,
-        tissue_threshold = config.preprocess.tissue_detection.tissue_threshold,
-        gaussian_sigma = config.preprocess.tissue_detection.gaussian_sigma,
-        min_region_size = config.preprocess.tissue_detection.min_region_size,
-        morph_disk_radius = config.preprocess.tissue_detection.morph_disk_radius
+        src_dir           = config.paths.raw_data.patch_dir,
+        manifest          = manifest,
+        tissue_threshold  = tissue_detection_cfg.tissue_threshold,
+        gaussian_sigma    = tissue_detection_cfg.gaussian_sigma,
+        min_region_size   = tissue_detection_cfg.min_region_size,
+        morph_disk_radius = tissue_detection_cfg.morph_disk_radius
     )
     
     # 3. Detect artifacts and discard corrupted patches
-    patch_manifest = apply_artifact_filter(
-        src_dir = config.paths.raw_data.patch_dir,
+    artifact_detection_cfg = config.preprocess.artifact_detection
+    manifest = apply_artifact_filter(
+        src_dir  = config.paths.raw_data.patch_dir,
         manifest = manifest,
-        ...
+        blur_threshold = artifact_detection_cfg.blur_threshold,
+        dark_pixel_threshold = artifact_detection_cfg.dark_pixel_threhsold,
+        dark_pixel_ratio = artifact_detection_cfg.dark_pixel_ratio,
+        pen_pixel_ratio = artifact_detection_cfg.pen_pixel_ratio
     )
 
     # Save metadata generated during preprocessing before normalization

@@ -10,24 +10,29 @@ import shutil
 import logging
 import torchstain
 import tiatoolbox
+import cv2
 
 import pandas as pd
 import numpy as np
 
-from PIL import Image
+from PIL import Image, PngImagePlugin
 from pathlib import Path
 from tqdm import tqdm
 from torchvision.transforms.functional import to_tensor
-from skimage.color import rgb2lab
 from skimage.filters import threshold_otsu, gaussian
-from skimage.morphology.binary import binary_closing, binary_opening
+from skimage.color import separate_stains, hdx_from_rgb
 from skimage.morphology import (
     remove_small_objects, 
     remove_small_holes, 
+    dilation,
+    closing,
+    opening,
     disk
 )
 
 logger = logging.getLogger(__name__)
+
+PngImagePlugin.MAX_TEXT_CHUNK = 100 * (1024 ** 2)  # 100MB
 
 # =====| Orchestrational Wrappers |=============================================
 
@@ -36,7 +41,9 @@ def apply_tissue_filter(src_dir: Path,
                         tissue_threshold: float = 0.5,
                         gaussian_sigma: float = 1.0,
                         min_region_size: int = 500,
-                        morph_disk_radius: int = 3) -> pd.DataFrame:
+                        morph_disk_radius: int = 3,
+                        haem_min_signal: float = 0.13,
+                        dab_min_signal: float = 0.05) -> pd.DataFrame:
     """
     Orchestration wrapper for tissue detection.
 
@@ -58,6 +65,8 @@ def apply_tissue_filter(src_dir: Path,
         Passed to detect_tissue.
     morph_disk_radius : int
         Passed to detect_tissue.
+    haem_min_signal : float
+        Passed to detect_tissue.
 
     Returns
     -------
@@ -71,10 +80,13 @@ def apply_tissue_filter(src_dir: Path,
     logger.info(f"- Gaussian Sigma: {gaussian_sigma}")
     logger.info(f"- Minimum Region Size: {min_region_size}")
     logger.info(f"- Morphological Disk Radius: {morph_disk_radius}")
+    logger.info(f"- Haematoxylin Minimum Signal: {haem_min_signal}")
+    logger.info(f"- DAB Minimum Signal: {dab_min_signal}")
     logger.info("-" * 50)
 
     manifest = manifest.copy()
-    passes_filter = []
+    passes_filter, tissue_ratios = [], []
+    fails_haem, fails_threshold = 0, 0
 
     # Evaluate the tissue filter upon each patch available
     for _, row in tqdm(manifest.iterrows(), total = len(manifest), 
@@ -85,24 +97,35 @@ def apply_tissue_filter(src_dir: Path,
         patch = np.array(Image.open(patch_path).convert("RGB"))
 
         # Evaluate if the patch contains sufficient tissue content
-        passed = detect_tissue(
+        passed, tissue_ratio = detect_tissue(
             patch             = patch,
             tissue_threshold  = tissue_threshold,
             gaussian_sigma    = gaussian_sigma,
             min_region_size   = min_region_size,
-            morph_disk_radius = morph_disk_radius
+            morph_disk_radius = morph_disk_radius,
+            haem_min_signal   = haem_min_signal,
+            dab_min_signal    = dab_min_signal
         )
         passes_filter.append(passed)
+        tissue_ratios.append(tissue_ratio)
+
+        if tissue_ratio == -1: fails_haem += 1
+        elif not passed: fails_threshold += 1
 
     # Update the patch manifest with the boolean flag
     manifest['passes_tissue'] = passes_filter
     manifest['include'] = manifest['passes_tissue']
+    manifest['tissue_ratio'] = tissue_ratios
 
     n_passed, n_total = sum(passes_filter), len(passes_filter)
 
-    logger.info(f"Evaluated {n_total} total patches: {n_passed} patches "
-                f"passed the tissue detection filter "
+    logger.info(f"Evaluated {n_total} total patches: ")
+    logger.info(f"- Passed Tissue Filter: {n_passed} patches "
                 f"({100 * n_passed / n_total:.1f}%)")
+    logger.info(f"- Failed Haematoxylin Minimum: {fails_haem} patches "
+                f"({100 * fails_haem / n_total:.1f}%)")
+    logger.info(f"- Failed Threshold: {fails_threshold} patches "
+                f"({100 * fails_threshold / n_total:.1f}%)")
     logger.info("=" * 50)
     
     return manifest
@@ -139,7 +162,7 @@ def apply_artifact_filter(src_dir: Path,
     Returns
     -------
     pd.DataFrame
-        Manifest updated with 'passes_artifact' and 'include' columns.
+        Manifest updated with 'passes_artifacts' and 'include' columns.
     """
 
     logger.info("=" * 50)
@@ -152,6 +175,7 @@ def apply_artifact_filter(src_dir: Path,
 
     manifest = manifest.copy()
     passes_filter = []
+    lap_variances, dark_ratios, pen_ratios = [], [], []
 
     # Evaluate the tissue filter upon each patch available
     for _, row in tqdm(manifest.iterrows(), total = len(manifest), 
@@ -162,7 +186,7 @@ def apply_artifact_filter(src_dir: Path,
         patch = np.array(Image.open(patch_path).convert("RGB"))
 
         # Evaluate if the patch contains sufficient tissue content
-        passed = detect_artifacts(
+        passed, lap_variance, dark_ratio, pen_ratio = detect_artifacts(
             patch                = patch,
             blur_threshold       = blur_threshold,
             dark_pixel_threshold = dark_pixel_threshold,
@@ -170,11 +194,18 @@ def apply_artifact_filter(src_dir: Path,
             pen_pixel_ratio      = pen_pixel_ratio
         )
         passes_filter.append(passed)
+        lap_variances.append(lap_variance)
+        dark_ratios.append(dark_ratio)
+        pen_ratios.append(pen_ratio)
 
     # Update the patch manifest with the boolean flag
-    manifest['passes_artifact'] = passes_filter
-    mask = (manifest['included'] == True) & (manifest['passes_artifact']==False)
-    manifest.loc[mask, 'included'] = False
+    manifest['passes_artifacts'] = passes_filter
+    mask = (manifest['include'] == True) & (manifest['passes_artifacts']==False)
+    manifest.loc[mask, 'include'] = False
+
+    manifest['lap_variance'] = lap_variances
+    manifest['dark_ratio'] = dark_ratios
+    manifest['pen_ratio'] = pen_ratios
 
     n_passed, n_total = sum(passes_filter), len(passes_filter)
 
@@ -261,24 +292,30 @@ def detect_tissue(patch: np.ndarray,
                   tissue_threshold: float = 0.5,
                   gaussian_sigma: float = 1.0,
                   min_region_size: int = 500,
-                  morph_disk_radius: int = 3) -> bool:
+                  morph_disk_radius: int = 3,
+                  haem_min_signal: float = 0.13,
+                  dab_min_signal: float = 0.05) -> tuple[bool, float]:
     """
-        Detect tissue regions in an IHC patch.
- 
-    Follows the standard computational pathology approach used in HistomicsTK
-    and adopted in IHC studies (Nguyen et al.):
-      1. Convert to LAB colour space
-      2. Apply Gaussian smoothing to the B channel (blue-yellow axis)
-      3. Otsu threshold to separate tissue from background
-      4. Morphological cleanup — remove small objects and fill small holes
-      5. Reject patch if tissue ratio is below threshold
- 
-    For IHC, the LAB B channel is preferred over HSV saturation:
-    - HSV saturation is well-suited to H&E (strong hue contrast)
-    - LAB B channel is more robust for IHC where background may retain
-      residual chromogen colour, causing HSV saturation to misclassify
-      background as tissue (Nguyen et al.; HistomicsTK)
- 
+    Detect tissue regions in an H-DAB IHC patch.
+
+    Uses stain deconvolution (Ruifrok & Johnston, 2001) to separate
+    haematoxylin and DAB channels, uses only haematoxylin for a tissue mask:
+      1. Stain deconvolution via skimage hdx_from_rgb (H-DAB matrix)
+      2. Gaussian smoothing on each channel
+      3. Otsu thresholding on each channel independently
+      4. Union mask: tissue present if haematoxylin OR DAB signal detected
+      5. Morphological cleanup — remove small objects and fill small holes
+      6. Reject patch if tissue ratio is below threshold
+
+    Rationale for using both channels:
+    - Haematoxylin (blue): marks all nucleated cells as a stain-agnostic tissue 
+                           indicator
+    - DAB (brown): marks αSMA+ cells — vessel/fibroblast signal
+    - DAB-only detection would bias against patches with low αSMA expression,
+      confounding CHIP vs non-CHIP comparison
+    - Union mask ensures tissue-containing patches with low marker expression
+      are retained
+
     Parameters
     ----------
     patch : np.ndarray
@@ -286,27 +323,29 @@ def detect_tissue(patch: np.ndarray,
     tissue_threshold : float
         Minimum fraction of pixels classified as tissue for the patch to pass.
         Default 0.5, consistent with CLAM (Lu et al., 2021).
-        Increase to 0.7-0.8 if many background-dominant patches are observed.
     gaussian_sigma : float
         Sigma for Gaussian smoothing applied before Otsu thresholding.
-        Reduces sensitivity to noise. Default 1.0, consistent with HistomicsTK.
+        Default 1.0, consistent with HistomicsTK.
     min_region_size : int
-        Minimum connected component size in pixels to retain after thresholding.
-        Removes spurious small tissue detections. Default 500.
+        Minimum connected component size in pixels to retain.
+        Default 500.
     morph_disk_radius : int
         Radius of the morphological structuring element for opening and closing.
-        Default 3, consistent with standard pathology preprocessing.
- 
+        Default 3.
+    haem_min_signal : float
+        Minimum signal for haematoxylin channel to register as tissue.
+
     Returns
     -------
-    bool
-        True if the patch passes the tissue filter, false if it fails.
- 
+    tuple[bool, float]
+        (passed, tissue_ratio). tissue_ratio is -1.0 if patch fails early.
+
     References
     ----------
+    - Ruifrok & Johnston (2001). Quantification of histochemical staining
+      by color deconvolution. Anal Quant Cytol Histol.
     - Lu et al. (2021). Data-efficient and weakly supervised computational
       pathology on whole-slide images. Nature Biomedical Engineering. (CLAM)
-    - Nguyen et al. LAB B-channel Otsu for IHC tissue detection.
     - HistomicsTK: Gaussian smoothing + Otsu thresholding for tissue detection.
     """
 
@@ -315,41 +354,64 @@ def detect_tissue(patch: np.ndarray,
         raise ValueError(f"Expected RGB patch of shape (H, W, 3), "
                          f"got {patch.shape}")
     
-    # Convert to LAB; B channel (blue-yellow) more robust for IHC
-    lab = rgb2lab(patch)
-    channel = lab[:, :, 2]
+    # Stain deconvolution: separate blue from brown
+    stains = separate_stains(patch / 255.0, hdx_from_rgb)
+    haem_raw = np.clip(stains[:, :, 0], 0, None).astype(np.float32)
+    dab_raw  = np.clip(stains[:, :, 1], 0, None).astype(np.float32)
 
+    # Enforce a minimum signal to detect background patches
+    if haem_raw.max() <= haem_min_signal: return (False, -1.0)
+
+    haem_mask = np.zeros(haem_raw.shape, dtype = bool)
+    dab_mask  = np.zeros(dab_raw.shape, dtype = bool)
+
+    # Scale the haematoxylin channel to [0-1]
+    haem = ((haem_raw - haem_raw.min()) 
+            / (haem_raw.max() - haem_raw.min() + 1e-8))
+    dab  = ((dab_raw - dab_raw.min()) 
+            / (dab_raw.max() - dab_raw.min() + 1e-8))
+    
     # Gaussian smoothing before thresholding
-    smoothed = gaussian(channel, sigma = gaussian_sigma)
+    haem_smoothed = gaussian(haem, sigma = gaussian_sigma)
+    dab_smoothed  = gaussian(dab, sigma = gaussian_sigma)
 
-    # Compute Otsu threshold to segment for tissue
-    try: threshold = threshold_otsu(smoothed)
-    except ValueError: return False
+    # Compute Otsu threshold per channel to segment for tissue
+    haem_mask = haem_smoothed > threshold_otsu(haem_smoothed)
 
-    tissue_mask = smoothed > threshold
+    # Only use DAB if it passes the threshold
+    if dab_raw.max() > dab_min_signal:
+        dab_mask = dab_smoothed > threshold_otsu(dab_smoothed)
+
+    tissue_mask = haem_mask | dab_mask
 
     # Perform morphological cleanup upon the tissue mask
-    selem = disk(morph_disk_radius)
-    tissue_mask = binary_opening(tissue_mask, selem)
-    tissue_mask = binary_closing(tissue_mask, selem)
+    tissue_mask = dilation(tissue_mask, disk(morph_disk_radius * 1.25))
+    selem       = disk(morph_disk_radius)
+    tissue_mask = opening(tissue_mask, selem)
+    tissue_mask = closing(tissue_mask, selem)
 
     # Remove small connected components for area filtering
-    tissue_mask = remove_small_objects(tissue_mask, min_size = min_region_size)
-    tissue_mask = remove_small_holes(tissue_mask, 
-                                     area_threshold = min_region_size)
+    tissue_mask = remove_small_objects(
+        tissue_mask, 
+        max_size = min_region_size - 1
+    )
+    tissue_mask = remove_small_holes(
+        tissue_mask, 
+        max_size = min_region_size - 1
+    )
     
     # Apply a minimum tissue percentage to keep patches
     tissue_ratio = tissue_mask.mean()
-    if tissue_ratio < tissue_threshold: return False
+    if tissue_ratio < tissue_threshold: return (False, tissue_ratio)
 
-    return True
+    return (True, tissue_ratio)
 
 
 def detect_artifacts(patch: np.ndarray,
                      blur_threshold: float = 100.0,
                      dark_pixel_threshold: int = 50,
                      dark_pixel_ratio: float = 0.1,
-                     pen_pixel_ratio: float = 0.05) -> bool:
+                     pen_pixel_ratio: float = 0.05) -> tuple[bool, float, float, float]:
     """
     Detect and reject patches containing common histopathology artifacts.
 
@@ -393,8 +455,8 @@ def detect_artifacts(patch: np.ndarray,
 
     Returns
     -------
-    bool
-        True if the patch passes the tissue filter, false if it fails.
+    tuple[bool, int]
+        The artifact coverage if the patch passes the tissue filter, -1.0 if it fails.
 
     References
     ----------
@@ -416,13 +478,8 @@ def detect_artifacts(patch: np.ndarray,
     B = patch[:, :, 2].astype(np.float32)
 
     # Apply blurring via variance of Laplacian on grayscale
-    gray = np.mean(patch, axis = 2).astype(np.uint8)
-    laplacian = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype = np.float32)
-    lap_response = np.abs((np.convolve(gray.rave(), laplacian.ravel(), 
-                                       mode = "same").reshape(gray.shape)))
-    laplacian_var = lap_response.var()
-
-    if laplacian_var < blur_threshold: return False
+    gray = cv2.cvtColor(patch, cv2.COLOR_RGB2GRAY)
+    lap_variance = cv2.Laplacian(gray, cv2.CV_64F).var()
 
     # Detect tissue folds via dark pixels below the threshold
     dark_mask = (R < dark_pixel_threshold) & \
@@ -430,17 +487,18 @@ def detect_artifacts(patch: np.ndarray,
                 (G < dark_pixel_threshold)
     dark_ratio = dark_mask.mean()
 
-    if dark_ratio > dark_pixel_ratio: return False
-
     # Compute an extreme channel dominance heuristic to detect pens/markers
-    blue_pen_mask = B > (R + G)
-    green_pen_mask = G > (R + B)
+    blue_pen_mask = (B > R * 1.5) & (B > G * 1.5)
+    green_pen_mask = (G > R * 1.5) & (G > B * 1.5)
     pen_mask = blue_pen_mask | green_pen_mask
     pen_ratio = pen_mask.mean()
 
-    if pen_ratio > pen_pixel_ratio: return False
+    if ((lap_variance < blur_threshold) or 
+        (dark_ratio > dark_pixel_ratio) or
+        (pen_ratio > pen_pixel_ratio)):
+        return (False, lap_variance, dark_ratio, pen_ratio)
 
-    return True
+    return (True, lap_variance, dark_ratio, pen_ratio)
 
 
 def normalize_patch(patch: np.ndarray, normalizer) -> np.ndarray:

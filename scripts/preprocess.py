@@ -36,21 +36,22 @@ def main():
     args = parse_args()
     log_header(config_path = Path(args.config_dir) / "preprocess.yaml")
 
+    # 1. Load workflow and path configurations
     config = load_configs(
         pipeline = Path(args.config_dir) / "preprocess.yaml",
         paths    = Path(args.config_dir) / "paths.yaml"
     )
 
-    # 1. Sanitize sample folder names
-    name_mapping = sanitize_names(src_dir = config.paths.raw_data.raw_dir)
+    # 2. Sanitize sample folder names
+    name_mapping = sanitize_names(src_dir = config.paths.raw_data.patch_dir)
 
-    # Initialize a patch manifest to log filtering and mapping
+    # 3. Initialize a patch manifest to log filtering and mapping
     manifest = build_patch_manifest(
         src_dir      = config.paths.raw_data.patch_dir,
         name_mapping = name_mapping
     )
     
-    # 2. Detect tissue and remove background
+    # 4. Detect tissue and remove background
     tissue_detection_cfg = config.preprocess.tissue_detection
     manifest = apply_tissue_filter(
         src_dir           = config.paths.raw_data.patch_dir,
@@ -58,18 +59,20 @@ def main():
         tissue_threshold  = tissue_detection_cfg.tissue_threshold,
         gaussian_sigma    = tissue_detection_cfg.gaussian_sigma,
         min_region_size   = tissue_detection_cfg.min_region_size,
-        morph_disk_radius = tissue_detection_cfg.morph_disk_radius
+        morph_disk_radius = tissue_detection_cfg.morph_disk_radius,
+        haem_min_signal   = tissue_detection_cfg.haem_min_signal,
+        dab_min_signal    = tissue_detection_cfg.dab_min_signal
     )
     
     # 3. Detect artifacts and discard corrupted patches
     artifact_detection_cfg = config.preprocess.artifact_detection
     manifest = apply_artifact_filter(
-        src_dir  = config.paths.raw_data.patch_dir,
-        manifest = manifest,
-        blur_threshold = artifact_detection_cfg.blur_threshold,
+        src_dir              = config.paths.raw_data.patch_dir,
+        manifest             = manifest,
+        blur_threshold       = artifact_detection_cfg.blur_threshold,
         dark_pixel_threshold = artifact_detection_cfg.dark_pixel_threhsold,
-        dark_pixel_ratio = artifact_detection_cfg.dark_pixel_ratio,
-        pen_pixel_ratio = artifact_detection_cfg.pen_pixel_ratio
+        dark_pixel_ratio     = artifact_detection_cfg.dark_pixel_ratio,
+        pen_pixel_ratio      = artifact_detection_cfg.pen_pixel_ratio
     )
 
     # Save metadata generated during preprocessing before normalization
@@ -80,7 +83,7 @@ def main():
     included = manifest[manifest['include'] == True][['sample_id', 'patch']]
     normalizer = fit_normalizer(
         reference_path = config.preprocess.normalization.reference_patch,
-        method = config.preprocess.normalization.method
+        method         = config.preprocess.normalization.method
     )
 
     normalize_patches(

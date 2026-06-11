@@ -1,0 +1,26 @@
+# ==============================================================================
+# Script:           paths.yaml
+# Purpose:          Input and output paths for the full pipeline
+# Author:           Sophia Mengjia Li
+# Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
+# Date:             06/04/2026
+# ==============================================================================
+
+# Normalized and name-sanitized patches and masks
+processed_data:
+  processed_dir: data
+  patch_dir: data/patches
+  mask_dir: data/masks
+
+metadata:
+  name_mapping: data/metadata/name_mapping.json
+  patch_manifest: data/metadata/patch_manifest.csv
+
+# Key outputs from the full pipeline
+outputs:
+  masks:
+    fibroblasts_dir: outputs/masks/fibroblasts
+    vessels_dir: outputs/masks/vessels
+  overlays:
+    fibroblasts_dir: outputs/overlays/fibroblasts
+    vessels_dir: outputs/overlays/vessels

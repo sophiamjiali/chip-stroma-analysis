@@ -75,7 +75,11 @@ def build_patch_manifest(src_dir: Path,
                 'patch': patch_path.name,
                 'passes_tissue': None,
                 'passes_artifacts': None,
-                'include': None
+                'include': None,
+                'tissue_ratio': None,
+                'lap_variance': None,
+                'dark_ratio': None,
+                'pen_ratio': None
             })
 
     logger.info(f"Initialized manifest for {len(name_mapping)} samples")

@@ -14,6 +14,7 @@ from pathlib import Path
 from box import Box
 from dotenv import load_dotenv
 
+ROOT = Path(__file__).resolve().parents[3]
 logger = logging.getLogger(__name__)
 
 # =====| Main API |=============================================================
@@ -63,17 +64,14 @@ def load_paths_config(paths: Path) -> dict:
 def extract_env() -> tuple[Path, Path, Path, Path]:
     "Safe loading for .env constants."
 
-    load_dotenv()
-    PROJECT_ROOT = os.getenv("PROJECT_ROOT", ".")
-    RAW_DIR = os.getenv("RAW_DIR", ".")
+    load_dotenv(ROOT / ".env")
+    PROJECT_ROOT  = os.getenv("PROJECT_ROOT", ".")
+    RAW_DIR       = os.getenv("RAW_DIR", ".")
     RAW_PATCH_DIR = os.getenv("RAW_PATCH_DIR", ".")
-    RAW_MASK_DIR = os.getenv("RAW_MASK_DIR", ".")
-
-    if PROJECT_ROOT or RAW_PATCH_DIR or RAW_MASK_DIR == ".":
-        raise ValueError("Environment variables are configured incorrectly.") 
+    RAW_MASK_DIR  = os.getenv("RAW_MASK_DIR", ".")
     
     return (Path(PROJECT_ROOT), Path(RAW_DIR), 
-            Path(RAW_MASK_DIR), Path(RAW_MASK_DIR))
+            Path(RAW_PATCH_DIR), Path(RAW_MASK_DIR))
 
 
 def resolve_paths(data, root) -> dict:

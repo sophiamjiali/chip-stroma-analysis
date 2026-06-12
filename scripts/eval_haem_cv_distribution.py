@@ -26,11 +26,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
-from PIL     import Image
+from PIL     import Image, PngImagePlugin
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from skimage.color      import separate_stains, hdx_from_rgb
 from tqdm               import tqdm
 
+PngImagePlugin.MAX_TEXT_CHUNK = 100 * (1024 ** 2)  # 100MB
 
 # ---------------------------------------------------------------------------
 # Per-patch worker (module-level for multiprocessing pickling)

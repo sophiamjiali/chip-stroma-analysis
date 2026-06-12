@@ -9,13 +9,14 @@
 import shutil
 import logging
 import torchstain
-import tiatoolbox
 import cv2
 
 import pandas as pd
 import numpy as np
 
 from PIL import Image, PngImagePlugin
+from torchvision import transforms
+from tiatoolbox.tools.stainnorm import VahadaneNormalizer
 from pathlib import Path
 from tqdm import tqdm
 from torchvision.transforms.functional import to_tensor
@@ -31,8 +32,12 @@ from skimage.morphology import (
 )
 
 logger = logging.getLogger(__name__)
-
 PngImagePlugin.MAX_TEXT_CHUNK = 100 * (1024 ** 2)  # 100MB
+
+T = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Lambda(lambda x: x * 255)
+])
 
 # =====| Orchestrational Wrappers |=============================================
 
@@ -41,9 +46,7 @@ def apply_tissue_filter(src_dir: Path,
                         tissue_threshold: float = 0.5,
                         gaussian_sigma: float = 1.0,
                         min_region_size: int = 500,
-                        morph_disk_radius: int = 3,
-                        haem_min_signal: float = 0.13,
-                        dab_min_signal: float = 0.05) -> pd.DataFrame:
+                        morph_disk_radius: int = 3) -> pd.DataFrame:
     """
     Orchestration wrapper for tissue detection.
 
@@ -65,8 +68,6 @@ def apply_tissue_filter(src_dir: Path,
         Passed to detect_tissue.
     morph_disk_radius : int
         Passed to detect_tissue.
-    haem_min_signal : float
-        Passed to detect_tissue.
 
     Returns
     -------
@@ -80,13 +81,11 @@ def apply_tissue_filter(src_dir: Path,
     logger.info(f"- Gaussian Sigma: {gaussian_sigma}")
     logger.info(f"- Minimum Region Size: {min_region_size}")
     logger.info(f"- Morphological Disk Radius: {morph_disk_radius}")
-    logger.info(f"- Haematoxylin Minimum Signal: {haem_min_signal}")
-    logger.info(f"- DAB Minimum Signal: {dab_min_signal}")
     logger.info("-" * 50)
 
     manifest = manifest.copy()
     passes_filter, tissue_ratios = [], []
-    fails_haem, fails_threshold = 0, 0
+    fails_gray, fails_threshold = 0, 0
 
     # Evaluate the tissue filter upon each patch available
     for _, row in tqdm(manifest.iterrows(), total = len(manifest), 
@@ -102,14 +101,12 @@ def apply_tissue_filter(src_dir: Path,
             tissue_threshold  = tissue_threshold,
             gaussian_sigma    = gaussian_sigma,
             min_region_size   = min_region_size,
-            morph_disk_radius = morph_disk_radius,
-            haem_min_signal   = haem_min_signal,
-            dab_min_signal    = dab_min_signal
+            morph_disk_radius = morph_disk_radius
         )
         passes_filter.append(passed)
         tissue_ratios.append(tissue_ratio)
 
-        if tissue_ratio == -1: fails_haem += 1
+        if tissue_ratio == -1.0: fails_gray += 1
         elif not passed: fails_threshold += 1
 
     # Update the patch manifest with the boolean flag
@@ -122,8 +119,8 @@ def apply_tissue_filter(src_dir: Path,
     logger.info(f"Evaluated {n_total} total patches: ")
     logger.info(f"- Passed Tissue Filter: {n_passed} patches "
                 f"({100 * n_passed / n_total:.1f}%)")
-    logger.info(f"- Failed Haematoxylin Minimum: {fails_haem} patches "
-                f"({100 * fails_haem / n_total:.1f}%)")
+    logger.info(f"- Failed Gray Check: {fails_gray} patches "
+                f"({100 * fails_gray / n_total:.1f}%)")
     logger.info(f"- Failed Threshold: {fails_threshold} patches "
                 f"({100 * fails_threshold / n_total:.1f}%)")
     logger.info("=" * 50)
@@ -268,15 +265,15 @@ def normalize_patches(included_patches: pd.DataFrame,
 
         patch = np.array(Image.open(src_patch_path).convert("RGB"))
         normalized = normalize_patch(patch, normalizer)
-        Image.fromarray(normalized).save(dst_patch_path)
+        Image.fromarray(normalized, mode = 'RGB').save(dst_patch_path)
 
         # Copy the mask in lockstep
         mask_name = row['patch'].replace("_raw.png", "_mask.png")
         src_mask_path = src_mask_dir / row['original_id'] / mask_name
-        dst_mask_path = dst_mask_dir / row['sample_id'] / mask_name
-        dst_mask_path.parent.mkdir(parents = True, exist_ok = True)
+        dst_dir = dst_mask_dir / row['sample_id']
+        dst_dir.mkdir(parents = True, exist_ok = True)
 
-        if src_mask_path.exists(): shutil.copy(src_mask_path, dst_mask_dir)
+        if src_mask_path.exists(): shutil.copy(src_mask_path, dst_dir)
         else: print(f"Warning: missing mask for {row['patch']}")
 
     logger.info(f"Normalized {len(included_patches)} patches")
@@ -292,9 +289,7 @@ def detect_tissue(patch: np.ndarray,
                   tissue_threshold: float = 0.5,
                   gaussian_sigma: float = 1.0,
                   min_region_size: int = 500,
-                  morph_disk_radius: int = 3,
-                  haem_min_signal: float = 0.13,
-                  dab_min_signal: float = 0.05) -> tuple[bool, float]:
+                  morph_disk_radius: int = 3) -> tuple[bool, float]:
     """
     Detect tissue regions in an H-DAB IHC patch.
 
@@ -332,8 +327,6 @@ def detect_tissue(patch: np.ndarray,
     morph_disk_radius : int
         Radius of the morphological structuring element for opening and closing.
         Default 3.
-    haem_min_signal : float
-        Minimum signal for haematoxylin channel to register as tissue.
 
     Returns
     -------
@@ -354,13 +347,18 @@ def detect_tissue(patch: np.ndarray,
         raise ValueError(f"Expected RGB patch of shape (H, W, 3), "
                          f"got {patch.shape}")
     
+    # Gray pre-rejection for mainly background patches
+    R = patch[:, :, 0].astype(float)
+    G = patch[:, :, 1].astype(float)
+    B = patch[:, :, 2].astype(float)
+    gray_mask = ((np.abs(R - G) < 10) & (np.abs(G - B) < 10) 
+                 & (np.abs(R - B) < 10))
+    if gray_mask.mean() > 0.9: return (False, -1.0)
+    
     # Stain deconvolution: separate blue from brown
     stains = separate_stains(patch / 255.0, hdx_from_rgb)
     haem_raw = np.clip(stains[:, :, 0], 0, None).astype(np.float32)
     dab_raw  = np.clip(stains[:, :, 1], 0, None).astype(np.float32)
-
-    # Enforce a minimum signal to detect background patches
-    if haem_raw.max() <= haem_min_signal: return (False, -1.0)
 
     haem_mask = np.zeros(haem_raw.shape, dtype = bool)
     dab_mask  = np.zeros(dab_raw.shape, dtype = bool)
@@ -377,10 +375,7 @@ def detect_tissue(patch: np.ndarray,
 
     # Compute Otsu threshold per channel to segment for tissue
     haem_mask = haem_smoothed > threshold_otsu(haem_smoothed)
-
-    # Only use DAB if it passes the threshold
-    if dab_raw.max() > dab_min_signal:
-        dab_mask = dab_smoothed > threshold_otsu(dab_smoothed)
+    dab_mask = dab_smoothed > threshold_otsu(dab_smoothed)
 
     tissue_mask = haem_mask | dab_mask
 
@@ -519,9 +514,15 @@ def normalize_patch(patch: np.ndarray, normalizer) -> np.ndarray:
         Normalized RGB patch of shape (H, W, 3), dtype uint8.
     """
 
-    patch_tensor = to_tensor(patch)
-    normalized = normalizer.normalize(patch_tensor)
-    return (normalized.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
+    patch_tensor = T(patch)
+    result = normalizer.normalize(patch_tensor)
+    if isinstance(result, tuple): result = result[0]
+
+    normalized = result.cpu().numpy().astype(np.uint8)
+    print(f"result min: {result.min()}, max: {result.max()}")
+    print(f"normalized unique values sample: {np.unique(normalized[:,:,0])[:10]}")
+
+    return normalized
 
 
 def fit_normalizer(reference_path: Path, method: str = "vahadane"):
@@ -549,7 +550,7 @@ def fit_normalizer(reference_path: Path, method: str = "vahadane"):
     logger.info("-" * 50)
 
     normalizers = {
-        "vahadane": tiatoolbox.tools.stainnorm.VahadaneNormalizer,
+        "vahadane": VahadaneNormalizer,
         "macenko":  torchstain.normalizers.MacenkoNormalizer,
         "reinhard": torchstain.normalizers.ReinhardNormalizer
     }
@@ -558,7 +559,10 @@ def fit_normalizer(reference_path: Path, method: str = "vahadane"):
         raise ValueError(f"Unknown normalization method: {method}. Choose from "
                          f"{list(normalizers.keys())}.")
     
-    reference = to_tensor(np.array(Image.open(reference_path).convert("RGB")))
+    # Only Vahadane method does not need the array converted to Tensor
+    reference = np.array(Image.open(reference_path).convert("RGB"))
+    if method != "vahadane": reference = to_tensor(reference)
+
     normalizer = normalizers[method]()
     normalizer.fit(reference)
 

@@ -59,9 +59,7 @@ def main():
         tissue_threshold  = tissue_detection_cfg.tissue_threshold,
         gaussian_sigma    = tissue_detection_cfg.gaussian_sigma,
         min_region_size   = tissue_detection_cfg.min_region_size,
-        morph_disk_radius = tissue_detection_cfg.morph_disk_radius,
-        haem_min_signal   = tissue_detection_cfg.haem_min_signal,
-        dab_min_signal    = tissue_detection_cfg.dab_min_signal
+        morph_disk_radius = tissue_detection_cfg.morph_disk_radius
     )
     
     # 3. Detect artifacts and discard corrupted patches
@@ -80,7 +78,9 @@ def main():
     save_patch_manifest(manifest, path = config.paths.metadata.patch_manifest)
 
     # 4. Perform stain normalization
-    included = manifest[manifest['include'] == True][['sample_id', 'patch']]
+    included = manifest[manifest['include'] == True]
+    included = included[['sample_id', 'patch', 'original_id']]
+    
     normalizer = fit_normalizer(
         reference_path = config.preprocess.normalization.reference_patch,
         method         = config.preprocess.normalization.method
@@ -90,7 +90,7 @@ def main():
         included_patches = included,
         normalizer       = normalizer,
         src_patch_dir    = config.paths.raw_data.patch_dir,
-        src_mask_dir     = config.paths.raw_Data.mask_dir,
+        src_mask_dir     = config.paths.raw_data.mask_dir,
         dst_patch_dir    = config.paths.processed_data.patch_dir,
         dst_mask_dir     = config.paths.processed_data.mask_dir
     )

@@ -6,7 +6,6 @@
 # Date:             06/04/2026
 # ==============================================================================
 
-import os
 import logging
 import torchstain
 import cv2
@@ -18,7 +17,6 @@ from PIL import Image, PngImagePlugin
 from torchvision import transforms
 from tiatoolbox.tools.stainnorm import VahadaneNormalizer, ReinhardNormalizer
 from pathlib import Path
-from tqdm import tqdm
 from torchvision.transforms.functional import to_tensor
 from skimage.filters import threshold_otsu, gaussian
 from skimage.color import separate_stains, hdx_from_rgb
@@ -91,8 +89,7 @@ def apply_tissue_filter(src_patch_dir: Path,
     fails_gray, fails_threshold = 0, 0
 
     # Evaluate the tissue filter upon each patch available
-    for _, row in tqdm(manifest.iterrows(), total = len(manifest), 
-                       desc = "Tissue Detection"):
+    for _, row in manifest.iterrows():
         
         # Build the raw path from the manifest using the original sample ID
         patch_path = src_patch_dir / row['original_id'] / row['patch']
@@ -187,8 +184,7 @@ def apply_artifact_filter(src_dir: Path,
     lap_variances, dark_ratios, pen_ratios = [], [], []
 
     # Evaluate the tissue filter upon each patch available
-    for _, row in tqdm(manifest.iterrows(), total = len(manifest), 
-                       desc = "Artifact Detection"):
+    for _, row in manifest.iterrows():
         
         # Build the raw path from the manifest using the original sample ID
         patch_path = src_dir / row['original_id'] / row['patch']
@@ -267,9 +263,7 @@ def normalize_patches(included_patches: pd.DataFrame,
     logger.info("-" * 50)
 
     # Normalize and save each patch under its sanitized sample ID and name
-    for _, row in tqdm(included_patches.iterrows(), 
-                       total = len(included_patches),
-                       desc = "Patch Normalization:"):
+    for _, row in included_patches.iterrows():
         
         # Build the source and destination paths based on sanitized names
         src_patch_path = src_patch_dir / row['original_id'] / row['patch']

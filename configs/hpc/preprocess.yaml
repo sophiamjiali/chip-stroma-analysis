@@ -7,7 +7,7 @@
 # ==============================================================================
 
 tissue_detection:
-  tissue_threshold: 0.5
+  tissue_threshold: 0.25
   gaussian_sigma: 1.0
   min_region_size: 500
   morph_disk_radius: 3
@@ -19,5 +19,5 @@ artifact_detection:
   pen_pixel_ratio: 0.05
 
 normalization:
-  reference_patch: ...
+  reference_patch: /cluster/projects/kumargroup/ch_fibrosis_analysis/trident/patches/T25-415 A6-2 H-BMO-73 SMA/tile_12044_raw.png
   method: vahadane

@@ -10,7 +10,8 @@
 processed_data:
   processed_dir: data
   patch_dir: data/patches
-  mask_dir: data/masks
+  vessel_mask_dir: data/vessel_masks
+  tissue_mask_dir: data/tissue_masks
 
 metadata:
   name_mapping: data/metadata/name_mapping.json

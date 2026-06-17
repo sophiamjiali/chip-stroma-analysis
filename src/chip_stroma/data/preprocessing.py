@@ -6,7 +6,7 @@
 # Date:             06/04/2026
 # ==============================================================================
 
-import shutil
+import os
 import logging
 import torchstain
 import cv2
@@ -16,7 +16,7 @@ import numpy as np
 
 from PIL import Image, PngImagePlugin
 from torchvision import transforms
-from tiatoolbox.tools.stainnorm import VahadaneNormalizer
+from tiatoolbox.tools.stainnorm import VahadaneNormalizer, ReinhardNormalizer
 from pathlib import Path
 from tqdm import tqdm
 from torchvision.transforms.functional import to_tensor
@@ -41,7 +41,8 @@ T = transforms.Compose([
 
 # =====| Orchestrational Wrappers |=============================================
 
-def apply_tissue_filter(src_dir: Path,
+def apply_tissue_filter(src_patch_dir: Path,
+                        dst_mask_dir: Path,
                         manifest: pd.DataFrame,
                         tissue_threshold: float = 0.5,
                         gaussian_sigma: float = 1.0,
@@ -56,7 +57,7 @@ def apply_tissue_filter(src_dir: Path,
 
     Parameters
     ----------
-    src_dir : Path
+    src_patch_dir : Path
         Root directory containing raw patches, structured as src_dir/{original_name}/*.png
     manifest : pd.DataFrame
         Patch manifest produced by build_patch_manifest.
@@ -77,6 +78,8 @@ def apply_tissue_filter(src_dir: Path,
 
     logger.info("=" * 50)
     logger.info("Step 04: Tissue Detection")
+    logger.info(f"- Source Patch Directory: {src_patch_dir}")
+    logger.info(f"- Destination Tissue Mask Directory: {dst_mask_dir}")
     logger.info(f"- Tissue Threshold: {tissue_threshold}")
     logger.info(f"- Gaussian Sigma: {gaussian_sigma}")
     logger.info(f"- Minimum Region Size: {min_region_size}")
@@ -92,17 +95,26 @@ def apply_tissue_filter(src_dir: Path,
                        desc = "Tissue Detection"):
         
         # Build the raw path from the manifest using the original sample ID
-        patch_path = src_dir / row['original_id'] / row['patch']
+        patch_path = src_patch_dir / row['original_id'] / row['patch']
         patch = np.array(Image.open(patch_path).convert("RGB"))
 
         # Evaluate if the patch contains sufficient tissue content
-        passed, tissue_ratio = detect_tissue(
+        mask, passed, tissue_ratio = detect_tissue(
             patch             = patch,
             tissue_threshold  = tissue_threshold,
             gaussian_sigma    = gaussian_sigma,
             min_region_size   = min_region_size,
             morph_disk_radius = morph_disk_radius
         )
+
+        # If the patch passes, save its corresponding tissue mask
+        if mask is not None:
+            mask_name = row['patch'].replace('_raw.png', '_tissue_mask.png')
+            dst_path = dst_mask_dir / row['sample_id'] / mask_name
+            dst_path.parent.mkdir(parents = True, exist_ok = True)
+            Image.fromarray((mask * 255).astype(np.uint8), 
+                            mode = 'L').save(dst_path)
+
         passes_filter.append(passed)
         tissue_ratios.append(tissue_ratio)
 
@@ -216,6 +228,7 @@ def apply_artifact_filter(src_dir: Path,
 
 def normalize_patches(included_patches: pd.DataFrame,
                       normalizer,
+                      method: str,
                       src_patch_dir: Path,
                       src_mask_dir: Path,
                       dst_patch_dir: Path,
@@ -264,16 +277,25 @@ def normalize_patches(included_patches: pd.DataFrame,
         dst_patch_path.parent.mkdir(parents = True, exist_ok = True)
 
         patch = np.array(Image.open(src_patch_path).convert("RGB"))
-        normalized = normalize_patch(patch, normalizer)
+        normalized = normalize_patch(patch, normalizer, method)
         Image.fromarray(normalized, mode = 'RGB').save(dst_patch_path)
 
         # Copy the mask in lockstep
-        mask_name = row['patch'].replace("_raw.png", "_mask.png")
-        src_mask_path = src_mask_dir / row['original_id'] / mask_name
+        src_mask_name = row['patch'].replace("_raw.png", "_mask.png")
+        dst_mask_name = row['patch'].replace("_raw.png", "_vessel_mask.png")
+
+        src_mask_path = src_mask_dir / row['original_id'] / src_mask_name
         dst_dir = dst_mask_dir / row['sample_id']
         dst_dir.mkdir(parents = True, exist_ok = True)
+        dst_mask_path = dst_dir / dst_mask_name
 
-        if src_mask_path.exists(): shutil.copy(src_mask_path, dst_dir)
+        if src_mask_path.exists():
+
+            # Scale the binary mask to 255 for quick view
+            mask = np.array(Image.open(src_mask_path))
+            mask = (mask > 0).astype(np.uint8) * 255
+            Image.fromarray(mask, mode = 'L').save(dst_mask_path)
+
         else: print(f"Warning: missing mask for {row['patch']}")
 
     logger.info(f"Normalized {len(included_patches)} patches")
@@ -289,7 +311,8 @@ def detect_tissue(patch: np.ndarray,
                   tissue_threshold: float = 0.5,
                   gaussian_sigma: float = 1.0,
                   min_region_size: int = 500,
-                  morph_disk_radius: int = 3) -> tuple[bool, float]:
+                  morph_disk_radius: int = 3
+                  ) -> tuple[np.ndarray | None, bool, float]:
     """
     Detect tissue regions in an H-DAB IHC patch.
 
@@ -353,7 +376,7 @@ def detect_tissue(patch: np.ndarray,
     B = patch[:, :, 2].astype(float)
     gray_mask = ((np.abs(R - G) < 10) & (np.abs(G - B) < 10) 
                  & (np.abs(R - B) < 10))
-    if gray_mask.mean() > 0.9: return (False, -1.0)
+    if gray_mask.mean() > 0.9: return (None, False, -1.0)
     
     # Stain deconvolution: separate blue from brown
     stains = separate_stains(patch / 255.0, hdx_from_rgb)
@@ -397,9 +420,10 @@ def detect_tissue(patch: np.ndarray,
     
     # Apply a minimum tissue percentage to keep patches
     tissue_ratio = tissue_mask.mean()
-    if tissue_ratio < tissue_threshold: return (False, tissue_ratio)
+    if tissue_ratio < tissue_threshold: 
+        return (tissue_mask, False, tissue_ratio)
 
-    return (True, tissue_ratio)
+    return (tissue_mask, True, tissue_ratio)
 
 
 def detect_artifacts(patch: np.ndarray,
@@ -496,7 +520,7 @@ def detect_artifacts(patch: np.ndarray,
     return (True, lap_variance, dark_ratio, pen_ratio)
 
 
-def normalize_patch(patch: np.ndarray, normalizer) -> np.ndarray:
+def normalize_patch(patch: np.ndarray, normalizer, method: str) -> np.ndarray:
     """
     Normalize a single RGB patch using a pre-fitted stain normalizer.
 
@@ -514,13 +538,16 @@ def normalize_patch(patch: np.ndarray, normalizer) -> np.ndarray:
         Normalized RGB patch of shape (H, W, 3), dtype uint8.
     """
 
+    if method in {"vahadane"}: return normalizer.transform(patch)
+    if method in {"reinhard"}: return normalizer.normalize(patch)
+
     patch_tensor = T(patch)
     result = normalizer.normalize(patch_tensor)
-    if isinstance(result, tuple): result = result[0]
 
-    normalized = result.cpu().numpy().astype(np.uint8)
-    print(f"result min: {result.min()}, max: {result.max()}")
-    print(f"normalized unique values sample: {np.unique(normalized[:,:,0])[:10]}")
+    if isinstance(result, tuple): result = result[0]
+    if result.ndim == 4: result = result.squeeze(0)
+
+    normalized = result.cpu().numpy().clip(0, 255).astype(np.uint8)
 
     return normalized
 
@@ -551,6 +578,7 @@ def fit_normalizer(reference_path: Path, method: str = "vahadane"):
 
     normalizers = {
         "vahadane": VahadaneNormalizer,
+        "reinhard" : ReinhardNormalizer,
         "macenko":  torchstain.normalizers.MacenkoNormalizer,
         "reinhard": torchstain.normalizers.ReinhardNormalizer
     }
@@ -561,7 +589,7 @@ def fit_normalizer(reference_path: Path, method: str = "vahadane"):
     
     # Only Vahadane method does not need the array converted to Tensor
     reference = np.array(Image.open(reference_path).convert("RGB"))
-    if method != "vahadane": reference = to_tensor(reference)
+    if method not in {"vahadane", "reinhard"}: reference = to_tensor(reference)
 
     normalizer = normalizers[method]()
     normalizer.fit(reference)

@@ -96,4 +96,15 @@ def save_patch_manifest(manifest: pd.DataFrame, path: Path) -> None:
     manifest.to_csv(path, index = False)
     return None
 
+# =====| Directory Cleanup |====================================================
+
+def prune_tissue_masks(manifest: pd.DataFrame, src_mask_dir: Path) -> None:
+    """Delete tissue masks for excluded patches."""
+
+    excluded = manifest[~manifest['include']]
+    for _, row in excluded.iterrows():
+        mask_path = src_mask_dir / row['sample_id'] / row['patch'].replace('_raw.png', '_tissue_mask.png')
+        if mask_path.exists():
+            mask_path.unlink()
+
 # [END]

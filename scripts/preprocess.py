@@ -16,6 +16,7 @@ from datetime import datetime
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.io import (
     sanitize_names, 
+    prune_tissue_masks,
     save_name_mapping,
     build_patch_manifest,
     save_patch_manifest
@@ -54,7 +55,8 @@ def main():
     # 4. Detect tissue and remove background
     tissue_detection_cfg = config.preprocess.tissue_detection
     manifest = apply_tissue_filter(
-        src_dir           = config.paths.raw_data.patch_dir,
+        src_patch_dir     = config.paths.raw_data.patch_dir,
+        dst_mask_dir      = config.paths.processed_data.tissue_mask_dir,
         manifest          = manifest,
         tissue_threshold  = tissue_detection_cfg.tissue_threshold,
         gaussian_sigma    = tissue_detection_cfg.gaussian_sigma,
@@ -65,12 +67,12 @@ def main():
     # 3. Detect artifacts and discard corrupted patches
     artifact_detection_cfg = config.preprocess.artifact_detection
     manifest = apply_artifact_filter(
-        src_dir              = config.paths.raw_data.patch_dir,
-        manifest             = manifest,
-        blur_threshold       = artifact_detection_cfg.blur_threshold,
-        dark_pixel_threshold = artifact_detection_cfg.dark_pixel_threhsold,
-        dark_pixel_ratio     = artifact_detection_cfg.dark_pixel_ratio,
-        pen_pixel_ratio      = artifact_detection_cfg.pen_pixel_ratio
+        src_dir  = config.paths.raw_data.patch_dir,
+        manifest = manifest,
+        blur_threshold = artifact_detection_cfg.blur_threshold,
+        dark_pixel_threshold = artifact_detection_cfg.dark_pixel_threshold,
+        dark_pixel_ratio = artifact_detection_cfg.dark_pixel_ratio,
+        pen_pixel_ratio = artifact_detection_cfg.pen_pixel_ratio
     )
 
     # Save metadata generated during preprocessing before normalization
@@ -80,7 +82,6 @@ def main():
     # 4. Perform stain normalization
     included = manifest[manifest['include'] == True]
     included = included[['sample_id', 'patch', 'original_id']]
-    
     normalizer = fit_normalizer(
         reference_path = config.preprocess.normalization.reference_patch,
         method         = config.preprocess.normalization.method
@@ -89,10 +90,17 @@ def main():
     normalize_patches(
         included_patches = included,
         normalizer       = normalizer,
+        method           = config.preprocess.normalization.method,
         src_patch_dir    = config.paths.raw_data.patch_dir,
-        src_mask_dir     = config.paths.raw_data.mask_dir,
+        src_mask_dir     = config.paths.raw_data.vessel_mask_dir,
         dst_patch_dir    = config.paths.processed_data.patch_dir,
-        dst_mask_dir     = config.paths.processed_data.mask_dir
+        dst_mask_dir     = config.paths.processed_data.vessel_mask_dir
+    )
+
+    # Clean tissue masks of patches that didn't pass downstream filtering
+    prune_tissue_masks(
+        manifest     = manifest,
+        src_mask_dir = config.paths.processed_data.tissue_mask_dir
     )
 
     log_footer(cfg = config.paths)
@@ -124,7 +132,7 @@ def log_footer(cfg):
     logger.info(f"- Patch Directory: {cfg.processed_data.patch_dir}")
     logger.info(f"- Mask Directory: {cfg.processed_data.mask_dir}")
     logger.info(f"- Name Mapping: {cfg.metadata.name_mapping}")
-    logger.info(f"- Patch Manifest: {cfg.metadata.patch_manifeset}")
+    logger.info(f"- Patch Manifest: {cfg.metadata.patch_manifest}")
     logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
     logger.info("=" * 60)
 

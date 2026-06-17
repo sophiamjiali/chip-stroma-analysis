@@ -20,4 +20,4 @@ artifact_detection:
 
 normalization:
   reference_patch: /Users/sophiali/Desktop/chip-stroma-analysis/data/raw/patches/T25-415 A6-2 H-BMO-73 SMA/tile_12044_raw.png
-  method: macenko
+  method: vahadane

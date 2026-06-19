@@ -61,18 +61,20 @@ def main():
         tissue_threshold  = tissue_detection_cfg.tissue_threshold,
         gaussian_sigma    = tissue_detection_cfg.gaussian_sigma,
         min_region_size   = tissue_detection_cfg.min_region_size,
-        morph_disk_radius = tissue_detection_cfg.morph_disk_radius
+        morph_disk_radius = tissue_detection_cfg.morph_disk_radius,
+        n_workers         = config.preprocess.n_workers
     )
     
     # 3. Detect artifacts and discard corrupted patches
     artifact_detection_cfg = config.preprocess.artifact_detection
     manifest = apply_artifact_filter(
-        src_dir  = config.paths.raw_data.patch_dir,
-        manifest = manifest,
-        blur_threshold = artifact_detection_cfg.blur_threshold,
+        src_dir              = config.paths.raw_data.patch_dir,
+        manifest             = manifest,
+        blur_threshold       = artifact_detection_cfg.blur_threshold,
         dark_pixel_threshold = artifact_detection_cfg.dark_pixel_threshold,
-        dark_pixel_ratio = artifact_detection_cfg.dark_pixel_ratio,
-        pen_pixel_ratio = artifact_detection_cfg.pen_pixel_ratio
+        dark_pixel_ratio     = artifact_detection_cfg.dark_pixel_ratio,
+        pen_pixel_ratio      = artifact_detection_cfg.pen_pixel_ratio,
+        n_workers            = config.preprocess.n_workers
     )
 
     # Save metadata generated during preprocessing before normalization
@@ -94,13 +96,15 @@ def main():
         src_patch_dir    = config.paths.raw_data.patch_dir,
         src_mask_dir     = config.paths.raw_data.vessel_mask_dir,
         dst_patch_dir    = config.paths.processed_data.patch_dir,
-        dst_mask_dir     = config.paths.processed_data.vessel_mask_dir
+        dst_mask_dir     = config.paths.processed_data.vessel_mask_dir,
+        n_workers        = config.preprocess.n_workers
     )
 
     # Clean tissue masks of patches that didn't pass downstream filtering
     prune_tissue_masks(
         manifest     = manifest,
-        src_mask_dir = config.paths.processed_data.tissue_mask_dir
+        src_mask_dir = config.paths.processed_data.tissue_mask_dir,
+        n_workers    = config.preprocess.n_workers
     )
 
     log_footer(cfg = config.paths)

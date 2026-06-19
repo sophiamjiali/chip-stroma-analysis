@@ -15,6 +15,9 @@ import numpy as np
 
 from PIL import Image, PngImagePlugin
 from torchvision import transforms
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
+from tqdm import tqdm
 from tiatoolbox.tools.stainnorm import VahadaneNormalizer, ReinhardNormalizer
 from pathlib import Path
 from torchvision.transforms.functional import to_tensor
@@ -45,7 +48,8 @@ def apply_tissue_filter(src_patch_dir: Path,
                         tissue_threshold: float = 0.5,
                         gaussian_sigma: float = 1.0,
                         min_region_size: int = 500,
-                        morph_disk_radius: int = 3) -> pd.DataFrame:
+                        morph_disk_radius: int = 3,
+                        n_workers: int | None = None) -> pd.DataFrame:
     """
     Orchestration wrapper for tissue detection.
 
@@ -84,46 +88,37 @@ def apply_tissue_filter(src_patch_dir: Path,
     logger.info(f"- Morphological Disk Radius: {morph_disk_radius}")
     logger.info("-" * 50)
 
-    manifest = manifest.copy()
-    passes_filter, tissue_ratios = [], []
-    fails_gray, fails_threshold = 0, 0
+    # Convert the manifest to lightweight row objects for parallelization
+    rows = list(manifest.itertuples(index = False))
 
-    # Evaluate the tissue filter upon each patch available
-    for _, row in manifest.iterrows():
-        
-        # Build the raw path from the manifest using the original sample ID
-        patch_path = src_patch_dir / row['original_id'] / row['patch']
-        patch = np.array(Image.open(patch_path).convert("RGB"))
+    # Define workers for parallelization
+    worker_fn = partial(
+        tissue_worker,
+        src_patch_dir = src_patch_dir,
+        dst_mask_dir = dst_mask_dir,
+        tissue_threshold  = tissue_threshold,
+        gaussian_sigma    = gaussian_sigma,
+        min_region_size   = min_region_size,
+        morph_disk_radius = morph_disk_radius
+    )
 
-        # Evaluate if the patch contains sufficient tissue content
-        mask, passed, tissue_ratio = detect_tissue(
-            patch             = patch,
-            tissue_threshold  = tissue_threshold,
-            gaussian_sigma    = gaussian_sigma,
-            min_region_size   = min_region_size,
-            morph_disk_radius = morph_disk_radius
-        )
+    # Detect tissue content in all patches
+    results = []
+    with ProcessPoolExecutor(max_workers = n_workers) as pool:
+        for r in tqdm(pool.map(worker_fn, rows, chunksize = 20),
+                      total = len(rows)):
+            results.append(r)
+    results = pd.DataFrame.from_records(results)
 
-        # If the patch passes, save its corresponding tissue mask
-        if mask is not None:
-            mask_name = row['patch'].replace('_raw.png', '_tissue_mask.png')
-            dst_path = dst_mask_dir / row['sample_id'] / mask_name
-            dst_path.parent.mkdir(parents = True, exist_ok = True)
-            Image.fromarray((mask * 255).astype(np.uint8), 
-                            mode = 'L').save(dst_path)
+    # Extract all results and initialize into the manifest for return
+    manifest['passes_tissue'] = results['passes_tissue'].to_numpy()
+    manifest['include']       = manifest['passes_tissue']
+    manifest['tissue_ratio']  = results["tissue_ratio"].to_numpy()
 
-        passes_filter.append(passed)
-        tissue_ratios.append(tissue_ratio)
-
-        if tissue_ratio == -1.0: fails_gray += 1
-        elif not passed: fails_threshold += 1
-
-    # Update the patch manifest with the boolean flag
-    manifest['passes_tissue'] = passes_filter
-    manifest['include'] = manifest['passes_tissue']
-    manifest['tissue_ratio'] = tissue_ratios
-
-    n_passed, n_total = sum(passes_filter), len(passes_filter)
+    n_passed        = int(results["passes_tissue"].sum())
+    n_total         = len(results)
+    fails_gray      = int(results["gray_fail"].sum())
+    fails_threshold = int(results["threshold_fail"].sum())
 
     logger.info(f"Evaluated {n_total} total patches: ")
     logger.info(f"- Passed Tissue Filter: {n_passed} patches "
@@ -142,7 +137,8 @@ def apply_artifact_filter(src_dir: Path,
                           blur_threshold: float = 100.0,
                           dark_pixel_threshold: int = 50,
                           dark_pixel_ratio: float = 0.1,
-                          pen_pixel_ratio: float = 0.05) -> pd.DataFrame:
+                          pen_pixel_ratio: float = 0.05,
+                          n_workers: int | None = None) -> pd.DataFrame:
     """
     Orchestration wrapper for tissue detection.
 
@@ -179,40 +175,38 @@ def apply_artifact_filter(src_dir: Path,
     logger.info(f"- Pen Pixel Ratio: {pen_pixel_ratio}")
     logger.info("-" * 50)
 
-    manifest = manifest.copy()
-    passes_filter = []
-    lap_variances, dark_ratios, pen_ratios = [], [], []
+    # Convert the manifest to lightweight row objects for parallelization
+    rows = list(manifest.itertuples(index = False))
 
-    # Evaluate the tissue filter upon each patch available
-    for _, row in manifest.iterrows():
-        
-        # Build the raw path from the manifest using the original sample ID
-        patch_path = src_dir / row['original_id'] / row['patch']
-        patch = np.array(Image.open(patch_path).convert("RGB"))
+    # Define workers for parallelization
+    worker_fn = partial(
+        artifact_worker,
+        src_dir              = src_dir,
+        blur_threshold       = blur_threshold,
+        dark_pixel_threshold = dark_pixel_threshold,
+        dark_pixel_ratio     = dark_pixel_ratio,
+        pen_pixel_ratio      = pen_pixel_ratio
+    )
 
-        # Evaluate if the patch contains sufficient tissue content
-        passed, lap_variance, dark_ratio, pen_ratio = detect_artifacts(
-            patch                = patch,
-            blur_threshold       = blur_threshold,
-            dark_pixel_threshold = dark_pixel_threshold,
-            dark_pixel_ratio     = dark_pixel_ratio,
-            pen_pixel_ratio      = pen_pixel_ratio
-        )
-        passes_filter.append(passed)
-        lap_variances.append(lap_variance)
-        dark_ratios.append(dark_ratio)
-        pen_ratios.append(pen_ratio)
+    # Detect artifacts in all patches
+    results = []
+    with ProcessPoolExecutor(max_workers = n_workers) as pool:
+        for r in tqdm(pool.map(worker_fn, rows, chunksize = 20),
+                      total = len(rows)):
+            results.append(r)
+    results = pd.DataFrame.from_records(results)
 
-    # Update the patch manifest with the boolean flag
-    manifest['passes_artifacts'] = passes_filter
+    # Extract all results and initialize into the manifest for return
+    manifest['passes_artifacts'] = results['passes_artifacts'].to_numpy()
     mask = (manifest['include'] == True) & (manifest['passes_artifacts']==False)
     manifest.loc[mask, 'include'] = False
 
-    manifest['lap_variance'] = lap_variances
-    manifest['dark_ratio'] = dark_ratios
-    manifest['pen_ratio'] = pen_ratios
+    manifest['lap_variance'] = results['lap_variance'].to_numpy()
+    manifest['dark_ratio']   = results['dark_ratio'].to_numpy()
+    manifest['pen_ratio']    = results['pen_ratio'].to_numpy()
 
-    n_passed, n_total = sum(passes_filter), len(passes_filter)
+    n_passed = int(results['passes_artifacts'].sum())
+    n_total = len(results)
 
     logger.info(f"Evaluated {n_total} total patches: {n_passed} patches "
                 f"passed the artifact detection filter "
@@ -228,7 +222,8 @@ def normalize_patches(included_patches: pd.DataFrame,
                       src_patch_dir: Path,
                       src_mask_dir: Path,
                       dst_patch_dir: Path,
-                      dst_mask_dir: Path) -> None:
+                      dst_mask_dir: Path,
+                      n_workers: int | None = None) -> None:
     """
     Orchestration wrapper for stain normalization.
 
@@ -262,42 +257,155 @@ def normalize_patches(included_patches: pd.DataFrame,
     logger.info(f"- Destination Mask Directory: {dst_mask_dir}")
     logger.info("-" * 50)
 
-    # Normalize and save each patch under its sanitized sample ID and name
-    for _, row in included_patches.iterrows():
-        
-        # Build the source and destination paths based on sanitized names
-        src_patch_path = src_patch_dir / row['original_id'] / row['patch']
-        dst_patch_path = dst_patch_dir / row['sample_id'] / row['patch']
-        dst_patch_path.parent.mkdir(parents = True, exist_ok = True)
+    # Convert the manifest to lightweight row objects for parallelization
+    rows = list(included_patches.itertuples(index = False))
 
-        patch = np.array(Image.open(src_patch_path).convert("RGB"))
-        normalized = normalize_patch(patch, normalizer, method)
-        Image.fromarray(normalized, mode = 'RGB').save(dst_patch_path)
+    # Define workers for parallelization
+    worker_fn = partial(
+        normalize_worker,
+        normalizer    = normalizer,
+        method        = method,
+        src_patch_dir = src_patch_dir,
+        src_mask_dir  = src_mask_dir,
+        dst_patch_dir = dst_patch_dir,
+        dst_mask_dir  = dst_mask_dir
+    )
 
-        # Copy the mask in lockstep
-        src_mask_name = row['patch'].replace("_raw.png", "_mask.png")
-        dst_mask_name = row['patch'].replace("_raw.png", "_vessel_mask.png")
-
-        src_mask_path = src_mask_dir / row['original_id'] / src_mask_name
-        dst_dir = dst_mask_dir / row['sample_id']
-        dst_dir.mkdir(parents = True, exist_ok = True)
-        dst_mask_path = dst_dir / dst_mask_name
-
-        if src_mask_path.exists():
-
-            # Scale the binary mask to 255 for quick view
-            mask = np.array(Image.open(src_mask_path))
-            mask = (mask > 0).astype(np.uint8) * 255
-            Image.fromarray(mask, mode = 'L').save(dst_mask_path)
-
-        else: print(f"Warning: missing mask for {row['patch']}")
+    # Normalize all patches
+    n_passed = 0
+    with ProcessPoolExecutor(max_workers = n_workers) as pool:
+        for r in tqdm(pool.map(worker_fn, rows, chunksize = 20),
+                      total = len(rows)):
+            n_passed += r
 
     logger.info(f"Normalized {len(included_patches)} patches")
+    logger.info(f"Evaluated {len(included_patches)} total patches: "
+                f"{n_passed} patches had corresponding masks")
     logger.info("All masks moved to the corresponding destination directory")
     logger.info("=" * 50)
     
     return
 
+# =====| Multi-Threading Helpers |==============================================
+
+def tissue_worker(row,
+                  src_patch_dir: Path,
+                  dst_mask_dir: Path,
+                  tissue_threshold: float = 0.5,
+                  gaussian_sigma: float = 1.0,
+                  min_region_size: int = 500,
+                  morph_disk_radius: int = 3) -> dict:
+    """Processes a single patch for tissue detection."""
+
+    # Build the raw path from the manifest using the original sample ID
+    patch_path = src_patch_dir / row['original_id'] / row['patch']
+    with Image.open(patch_path) as img: patch = np.array(img.convert("RGB"))
+
+    # Evaluate if the patch contains sufficient tissue content
+    mask, passed, tissue_ratio = detect_tissue(
+        patch             = patch,
+        tissue_threshold  = tissue_threshold,
+        gaussian_sigma    = gaussian_sigma,
+        min_region_size   = min_region_size,
+        morph_disk_radius = morph_disk_radius
+    )
+
+    # If the patch passes, save its corresponding tissue mask
+    if mask is not None:
+        mask_name = row['patch'].replace('_raw.png', '_tissue_mask.png')
+        dst_path = dst_mask_dir / row['sample_id'] / mask_name
+        dst_path.parent.mkdir(parents = True, exist_ok = True)
+        Image.fromarray((mask * 255).astype(np.uint8), 
+                        mode = 'L').save(dst_path)
+        
+    # Clean up intermediates to avoid memory overhead
+    del patch
+    del mask
+        
+    return {
+        "passes_tissue":  passed,
+        "tissue_ratio":   tissue_ratio,
+        "gray_fail":      tissue_ratio == -1.0,
+        "threshold_fail": (tissue_ratio != -1.0) and (not passed)
+    }
+
+
+def artifact_worker(row,
+                    src_dir: Path,
+                    blur_threshold: float = 100.0,
+                    dark_pixel_threshold: int = 50,
+                    dark_pixel_ratio: float = 0.1,
+                    pen_pixel_ratio: float = 0.05) -> dict:
+    """Processes a single patch for artifact detection."""
+
+    # Build the raw path from the manifest using the original sample ID
+    patch_path = src_dir / row['original_id'] / row['patch']
+    with Image.open(patch_path) as img: patch = np.array(img.convert("RGB"))
+
+    # Evaluate if the patch contains sufficient tissue content
+    passed, lap_variance, dark_ratio, pen_ratio = detect_artifacts(
+        patch                = patch,
+        blur_threshold       = blur_threshold,
+        dark_pixel_threshold = dark_pixel_threshold,
+        dark_pixel_ratio     = dark_pixel_ratio,
+        pen_pixel_ratio      = pen_pixel_ratio
+    )
+
+    del patch
+
+    return {
+        "passes_artifacts": passed,
+        "lap_variance":   lap_variance,
+        "dark_ratio":     dark_ratio,
+        "pen_ratio":     pen_ratio
+    }
+
+
+def normalize_worker(row,
+                     normalizer,
+                     method: str,
+                     src_patch_dir: Path,
+                     src_mask_dir: Path,
+                     dst_patch_dir: Path,
+                     dst_mask_dir: Path) -> int:
+    """Processes a single patch for normalization."""
+
+    # Build the source and destination paths based on sanitized names
+    src_patch_path = src_patch_dir / row['original_id'] / row['patch']
+    dst_patch_path = dst_patch_dir / row['sample_id'] / row['patch']
+    dst_patch_path.parent.mkdir(parents = True, exist_ok = True)
+
+    with Image.open(src_patch_path) as img: patch = np.array(img.convert('RGB'))
+    normalized = normalize_patch(patch, normalizer, method)
+    Image.fromarray(normalized, mode = 'RGB').save(dst_patch_path)
+
+    del patch
+    del normalized
+
+    # Copy the mask in lockstep
+    src_mask_name = row['patch'].replace("_raw.png", "_mask.png")
+    dst_mask_name = row['patch'].replace("_raw.png", "_vessel_mask.png")
+
+    src_mask_path = src_mask_dir / row['original_id'] / src_mask_name
+    dst_dir = dst_mask_dir / row['sample_id']
+    dst_dir.mkdir(parents = True, exist_ok = True)
+    dst_mask_path = dst_dir / dst_mask_name
+
+    if src_mask_path.exists():
+
+        # Scale the binary mask to 255 for quick view
+        mask = np.array(Image.open(src_mask_path))
+        mask = (mask > 0).astype(np.uint8) * 255
+        Image.fromarray(mask, mode = 'L').save(dst_mask_path)
+
+        del mask
+
+    else: 
+        print(f"Warning: missing mask for {row['patch']}")
+        return 0
+
+    return 1
+    
 
 # =====| Preprocessing Helpers |================================================
 

@@ -12,6 +12,8 @@ import json
 import pandas as pd
 
 from pathlib import Path
+from concurrent.futures import ProcessPoolExecutor
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -98,13 +100,25 @@ def save_patch_manifest(manifest: pd.DataFrame, path: Path) -> None:
 
 # =====| Directory Cleanup |====================================================
 
-def prune_tissue_masks(manifest: pd.DataFrame, src_mask_dir: Path) -> None:
+def prune_tissue_masks(manifest: pd.DataFrame, 
+                       src_mask_dir: Path,
+                       n_workers: int | None = None) -> None:
     """Delete tissue masks for excluded patches."""
 
-    excluded = manifest[~manifest['include']]
-    for _, row in excluded.iterrows():
-        mask_path = src_mask_dir / row['sample_id'] / row['patch'].replace('_raw.png', '_tissue_mask.png')
-        if mask_path.exists():
-            mask_path.unlink()
+    excluded = manifest.loc[~manifest["include"], ["sample_id", "patch"]]
+
+    mask_paths = [
+        src_mask_dir / str(row.sample_id) / 
+        str(row.patch).replace("_raw.png", "_tissue_mask.png") 
+        for row in excluded.itertuples(index = False)
+    ]
+
+    with ProcessPoolExecutor(max_workers = n_workers) as pool:
+        list(tqdm(pool.map(delete_mask, mask_paths, chunksize = 100), 
+                  total = len(mask_paths)))
+
+
+def delete_mask(mask_path: Path) -> None:
+    if mask_path.exists(): mask_path.unlink()
 
 # [END]

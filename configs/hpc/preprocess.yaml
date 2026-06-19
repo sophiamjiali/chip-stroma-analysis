@@ -6,6 +6,8 @@
 # Date:             06/04/2026
 # ==============================================================================
 
+n_workers: 8
+
 tissue_detection:
   tissue_threshold: 0.25
   gaussian_sigma: 1.0

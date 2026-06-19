@@ -89,7 +89,9 @@ def apply_tissue_filter(src_patch_dir: Path,
     logger.info("-" * 50)
 
     # Convert the manifest to lightweight row objects for parallelization
-    rows = list(manifest.itertuples(index = False))
+    rows = [(str(row[0]), str(row[1]), str(row[2])) for row in 
+            (manifest[['original_id', 'sample_id', 'patch']]
+             .itertuples(index = False, name = None))]
 
     # Define workers for parallelization
     worker_fn = partial(
@@ -176,7 +178,9 @@ def apply_artifact_filter(src_dir: Path,
     logger.info("-" * 50)
 
     # Convert the manifest to lightweight row objects for parallelization
-    rows = list(manifest.itertuples(index = False))
+    rows = [(str(row[0]), str(row[1])) for row in 
+            (manifest[['original_id', 'patch']]
+             .itertuples(index = False, name = None))]
 
     # Define workers for parallelization
     worker_fn = partial(
@@ -236,7 +240,7 @@ def normalize_patches(included_patches: pd.DataFrame,
     ----------
     included_patches : pd.DataFrame
         Subset of manifest where include=True, containing at minimum
-        'sample_id', 'original_name', and 'patch' columns.
+        'sample_id', 'original_id', and 'patch' columns.
     normalizer : fitted torchstain normalizer
         Pre-fitted normalizer instance. Must be fitted before calling.
     src_patch_dir : Path
@@ -258,7 +262,9 @@ def normalize_patches(included_patches: pd.DataFrame,
     logger.info("-" * 50)
 
     # Convert the manifest to lightweight row objects for parallelization
-    rows = list(included_patches.itertuples(index = False))
+    rows = [(str(row[0]), str(row[1]), str(row[2])) for row in 
+            (included_patches[['original_id', 'sample_id', 'patch']]
+             .itertuples(index = False, name = None))]
 
     # Define workers for parallelization
     worker_fn = partial(
@@ -288,7 +294,7 @@ def normalize_patches(included_patches: pd.DataFrame,
 
 # =====| Multi-Threading Helpers |==============================================
 
-def tissue_worker(row,
+def tissue_worker(row: tuple[str, str, str],
                   src_patch_dir: Path,
                   dst_mask_dir: Path,
                   tissue_threshold: float = 0.5,
@@ -297,8 +303,10 @@ def tissue_worker(row,
                   morph_disk_radius: int = 3) -> dict:
     """Processes a single patch for tissue detection."""
 
+    original_id, sample_id, patch_id = row
+
     # Build the raw path from the manifest using the original sample ID
-    patch_path = src_patch_dir / row['original_id'] / row['patch']
+    patch_path = src_patch_dir / original_id / patch_id
     with Image.open(patch_path) as img: patch = np.array(img.convert("RGB"))
 
     # Evaluate if the patch contains sufficient tissue content
@@ -312,8 +320,8 @@ def tissue_worker(row,
 
     # If the patch passes, save its corresponding tissue mask
     if mask is not None:
-        mask_name = row['patch'].replace('_raw.png', '_tissue_mask.png')
-        dst_path = dst_mask_dir / row['sample_id'] / mask_name
+        mask_name = patch_id.replace('_raw.png', '_tissue_mask.png')
+        dst_path = dst_mask_dir / sample_id / mask_name
         dst_path.parent.mkdir(parents = True, exist_ok = True)
         Image.fromarray((mask * 255).astype(np.uint8), 
                         mode = 'L').save(dst_path)
@@ -330,7 +338,7 @@ def tissue_worker(row,
     }
 
 
-def artifact_worker(row,
+def artifact_worker(row: tuple[str, str],
                     src_dir: Path,
                     blur_threshold: float = 100.0,
                     dark_pixel_threshold: int = 50,
@@ -338,8 +346,10 @@ def artifact_worker(row,
                     pen_pixel_ratio: float = 0.05) -> dict:
     """Processes a single patch for artifact detection."""
 
+    original_id, patch_id = row
+
     # Build the raw path from the manifest using the original sample ID
-    patch_path = src_dir / row['original_id'] / row['patch']
+    patch_path = src_dir / original_id / patch_id
     with Image.open(patch_path) as img: patch = np.array(img.convert("RGB"))
 
     # Evaluate if the patch contains sufficient tissue content
@@ -361,7 +371,7 @@ def artifact_worker(row,
     }
 
 
-def normalize_worker(row,
+def normalize_worker(row: tuple[str, str, str],
                      normalizer,
                      method: str,
                      src_patch_dir: Path,
@@ -370,9 +380,11 @@ def normalize_worker(row,
                      dst_mask_dir: Path) -> int:
     """Processes a single patch for normalization."""
 
+    original_id, sample_id, patch_id = row
+
     # Build the source and destination paths based on sanitized names
-    src_patch_path = src_patch_dir / row['original_id'] / row['patch']
-    dst_patch_path = dst_patch_dir / row['sample_id'] / row['patch']
+    src_patch_path = src_patch_dir / original_id / patch_id
+    dst_patch_path = dst_patch_dir / sample_id / patch_id
     dst_patch_path.parent.mkdir(parents = True, exist_ok = True)
 
     with Image.open(src_patch_path) as img: patch = np.array(img.convert('RGB'))
@@ -383,11 +395,11 @@ def normalize_worker(row,
     del normalized
 
     # Copy the mask in lockstep
-    src_mask_name = row['patch'].replace("_raw.png", "_mask.png")
-    dst_mask_name = row['patch'].replace("_raw.png", "_vessel_mask.png")
+    src_mask_name = patch_id.replace("_raw.png", "_mask.png")
+    dst_mask_name = patch_id.replace("_raw.png", "_vessel_mask.png")
 
-    src_mask_path = src_mask_dir / row['original_id'] / src_mask_name
-    dst_dir = dst_mask_dir / row['sample_id']
+    src_mask_path = src_mask_dir / original_id / src_mask_name
+    dst_dir = dst_mask_dir / sample_id
     dst_dir.mkdir(parents = True, exist_ok = True)
     dst_mask_path = dst_dir / dst_mask_name
 
@@ -401,7 +413,7 @@ def normalize_worker(row,
         del mask
 
     else: 
-        print(f"Warning: missing mask for {row['patch']}")
+        print(f"Warning: missing mask for {patch_id}")
         return 0
 
     return 1

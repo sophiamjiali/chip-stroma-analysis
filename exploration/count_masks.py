@@ -5,45 +5,41 @@ import argparse
 import numpy as np
 import pandas as pd
 from PIL import Image
-from concurrent.futures import ProcessPoolExecutor
-from tqdm import tqdm
 
 
-def has_positive_pixel(png_path: Path) -> tuple[str, bool]:
-    mask = np.array(Image.open(png_path))
-    return png_path.parts[-2], bool(np.any(mask > 0))
+def count_positive_masks(root_dir: Path) -> pd.DataFrame:
+    rows = []
+
+    root_dir = Path(root_dir)
+
+    for sample_dir in root_dir.iterdir():
+        if not sample_dir.is_dir():
+            continue
+
+        positive_count = 0
+
+        for png_path in sample_dir.rglob("*.png"):
+            mask = np.array(Image.open(png_path))
+
+            if np.any(mask > 0):
+                positive_count += 1
+
+        rows.append({
+            "sample_id": sample_dir.name,
+            "positive_png_count": positive_count
+        })
+
+    return pd.DataFrame(rows)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("root_dir", type=str)
+    parser.add_argument("root_dir", type=str, help="Path to root directory containing mask folders")
     parser.add_argument("--out_csv", type=str, default="positive_mask_counts.csv")
-    parser.add_argument("--workers", type=int, default=8)
 
     args = parser.parse_args()
 
-    root_dir = Path(args.root_dir)
-
-    # collect all png paths (single lightweight pass)
-    png_paths = list(root_dir.rglob("*.png"))
-
-    counts = {}
-
-    with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        for sample_id, has_pos in tqdm(
-            pool.map(has_positive_pixel, png_paths, chunksize=500),
-            total=len(png_paths)
-        ):
-            if sample_id not in counts:
-                counts[sample_id] = 0
-            if has_pos:
-                counts[sample_id] += 1
-
-    df = pd.DataFrame(
-        [(k, v) for k, v in counts.items()],
-        columns=["sample_id", "positive_png_count"]
-    )
-
+    df = count_positive_masks(Path(args.root_dir))
     df.to_csv(args.out_csv, index=False)
 
 

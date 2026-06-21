@@ -1,0 +1,16 @@
+General Notes
+
+Statistics on All Patches:
+    Total Samples: 24
+    Total Patches: 943180
+    Total w/Vessels: 1960 (2.07%)
+
+Tissue Detection (from all patches):
+    Passed Filter: 42647 (4.5%)
+    Failed Gray: 888171 (94.2%)
+    Failed Threshold: 12362 (1.3%)
+
+Artifact Detection (from all patches):
+    Passed Filter: 123630 (13.1%)
+
+Passed Filters: 39441 (4.18%)

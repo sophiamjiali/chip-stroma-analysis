@@ -1,9 +1,15 @@
 General Notes
 
+Patch Dimensions: 256 x 256 pixels
+
 Statistics on All Patches:
     Total Samples: 24
     Total Patches: 943180
     Total w/Vessels: 1960 (2.07%)
+
+Statistics on Filtered Patches:
+    Total Patches: 39441 (4.18%)
+    Total w/Vessels: 315 (0.033% / 0.798%)
 
 Tissue Detection (from all patches):
     Passed Filter: 42647 (4.5%)
@@ -13,4 +19,20 @@ Tissue Detection (from all patches):
 Artifact Detection (from all patches):
     Passed Filter: 123630 (13.1%)
 
-Passed Filters: 39441 (4.18%)
+--------------------------------------
+- sample 'h-BMO-18' is severe outlier
+    - has 57.1% positive patch retention versus 17.2% mean across Samples
+    - contributes 21.6% of all filtered positives
+--------------------------------------
+
+--------------------------------------
+- severe class imbalance (~125:1 background-to-vessel ratio)
+- implemented positive patch oversampling with a fixed probability
+- use combined Dice + BCE/Focal loss to address class balance
+    - use Focal over BCE if oversampling alone is insufficient
+- apply binary tissue masks as loss mask for training
+    - remove Vahadane background tint artifact from gradient signal
+- apply strong augmentation (rotations, flipping) on positive patches only
+- patient-level stratification to prevent data leakage
+- split 16-4-4 stratified by CHIP status
+--------------------------------------

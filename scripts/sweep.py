@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script:           run_sweep.yaml
+# Script:           sweep.yaml
 # Purpose:          WandB sweep agent entrypoint
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT

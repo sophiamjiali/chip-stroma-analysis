@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script:           train.py
+# Script:           lit_module.py
 # Purpose:          Trainer entrypoint
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT

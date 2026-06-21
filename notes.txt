@@ -23,16 +23,21 @@ Artifact Detection (from all patches):
 - sample 'h-BMO-18' is severe outlier
     - has 57.1% positive patch retention versus 17.2% mean across Samples
     - contributes 21.6% of all filtered positives
+- CHIP status isn't a part of the actual modelling task
+    - must be stratified for because of confounding; must balance
 --------------------------------------
 
 --------------------------------------
 - severe class imbalance (~125:1 background-to-vessel ratio)
 - implemented positive patch oversampling with a fixed probability
-- use combined Dice + BCE/Focal loss to address class balance
+- use combined Dice + Focal loss to address class balance
     - use Focal over BCE if oversampling alone is insufficient
 - apply binary tissue masks as loss mask for training
     - remove Vahadane background tint artifact from gradient signal
 - apply strong augmentation (rotations, flipping) on positive patches only
-- patient-level stratification to prevent data leakage
+- patient-level K-fold (k = 6) CV. stratified by CHIP status and patient
+    - avoid h-BMO-18 doesn't dominate training signal
+- per-patient positive weighting in the sampler
+    - weight each patient's patches equally vs. each patch equally
 - split 16-4-4 stratified by CHIP status
 --------------------------------------

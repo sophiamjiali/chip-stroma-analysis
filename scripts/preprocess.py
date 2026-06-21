@@ -24,8 +24,7 @@ from chip_stroma.utils.io import (
     save_patch_stats,
     update_vessel_report,
     update_tissue_report,
-    update_artifact_report,
-    update_normalize_report
+    update_artifact_report
 )
 from chip_stroma.data.preprocessing import (
     apply_tissue_filter,

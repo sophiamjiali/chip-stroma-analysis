@@ -72,16 +72,19 @@ def build_patch_manifest(src_dir: Path,
 
         for patch_path in patch_paths:
             records.append({
-                'sample_id': sanitized_id,
-                'original_id': original_id,
-                'patch': patch_path.name,
-                'passes_tissue': None,
-                'passes_artifacts': None,
-                'include': None,
-                'tissue_ratio': None,
-                'lap_variance': None,
-                'dark_ratio': None,
-                'pen_ratio': None
+                'sample_id':          sanitized_id,
+                'original_id':        original_id,
+                'patch_name':         patch_path.name,
+                'vessel_mask':        None,
+                'tissue_mask':        None,
+                'has_vessel':         None,
+                'vessel_pixel_count': None,
+                'passes_tissue':      None,
+                'passes_artifact':    None,
+                'include':            None,
+                'norm_status':        None,
+                'patient_pos_count':  None,
+                'fold':               None,
             })
 
     logger.info(f"Initialized manifest for {len(name_mapping)} samples")
@@ -97,6 +100,168 @@ def save_patch_manifest(manifest: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents = True, exist_ok = True)
     manifest.to_csv(path, index = False)
     return None
+
+# =====| Patch Statistics |=====================================================
+
+def build_patch_stats(src_dir: Path,
+                      name_mapping: dict) -> pd.DataFrame:
+    """
+    Initialize a patch statistics manifest with one row per patch.
+    All filter columns default to None — populated by downstream filter functions.
+    """
+
+    logger.info("=" * 50)
+    logger.info("Step 04: Patch Statistics")
+    logger.info(f"- Source Directory: {src_dir}")
+    logger.info("-" * 50)
+
+    total_patches = 0
+    records = []
+    for original_id, sanitized_id in name_mapping.items():
+
+        # Extract the raw paths to all patches associated with the sample
+        patch_paths = sorted((src_dir / original_id).glob("*_raw.png"))
+        total_patches += len(patch_paths)
+
+        for patch_path in patch_paths:
+            records.append({
+                'sample_id':          sanitized_id,
+                'patch_name':         patch_path.name,
+                'tissue_ratio':       None,
+                'lap_variance':       None,
+                'dark_ratio':         None,
+                'pen_ratio':          None
+            })
+
+    logger.info(f"Initialized statistics for {len(name_mapping)} samples")
+    logger.info(f"Populated statistics with {total_patches} total patches")
+    logger.info("=" * 50)
+
+    return pd.DataFrame(records)
+
+
+def save_patch_stats(stats: pd.DataFrame, path: Path) -> None:
+    """Persist patch manifest to CSV."""
+
+    path.parent.mkdir(parents = True, exist_ok = True)
+    stats.to_csv(path, index = False)
+    return None
+
+# =====| Report Updates |=======================================================
+
+def update_vessel_report(manifest: pd.DataFrame, 
+                         vessel_report: pd.DataFrame) -> pd.DataFrame:
+    """Updates the manifest with the vessel report."""
+
+    manifest = manifest.merge(
+        vessel_report[[
+            'sample_id',
+            'patch_name',
+            'vessel_mask',
+            'has_vessel',
+            'vessel_pixel_count'
+        ]],
+        on = ['sample_id', 'patch_name'],
+        how = 'left',
+        validate = 'one_to_one'
+    )
+
+    return manifest
+
+
+def update_tissue_report(manifest: pd.DataFrame,
+                         statistics: pd.DataFrame, 
+                         tissue_report: pd.DataFrame
+                         ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Updates the manifest and statistics with the tissue report."""
+
+    manifest = manifest.merge(
+        tissue_report[[
+            'sample_id',
+            'patch_name',
+            'passes_tissue',
+            'tissue_mask'
+        ]],
+        on = ['sample_id', 'patch_name'],
+        how = 'left',
+        validate = 'one_to_one'
+    )
+    manifest['include'] = manifest['passes_tissue']
+
+    statistics = statistics.merge(
+        tissue_report[[
+            'sample_id',
+            'patch_name',
+            'tissue_ratio'
+        ]],
+        on = ['sample_id', 'patch_name'],
+        how = 'left',
+        validate = 'one_to_one'
+    )
+
+    return manifest, statistics
+
+def update_artifact_report(manifest: pd.DataFrame,
+                           statistics: pd.DataFrame, 
+                           artifact_report: pd.DataFrame
+                           ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Updates the manifest statistics with the artifact report."""
+
+    manifest = manifest.merge(
+        artifact_report[[
+            'sample_id',
+            'patch_name',
+            'passes_artifact'
+        ]],
+        on = ['sample_id', 'patch_name'],
+        how = 'left',
+        validate = 'one_to_one'
+    )
+
+    mask = (
+        (manifest['include']) &
+        (~manifest['passes_artifact'])
+    )
+    manifest.loc[mask, 'include'] = False
+
+    statistics = statistics.merge(
+        artifact_report[[
+            'sample_id',
+            'patch_name',
+            'lap_variance',
+            'dark_ratio',
+            'pen_ratio'
+        ]],
+        on = ['sample_id', 'patch_name'],
+        how = 'left',
+        validate = 'one_to_one'
+    )
+
+    return manifest, statistics
+
+
+def update_normalize_report(manifest: pd.DataFrame,
+                            normalize_report: pd.DataFrame) -> pd.DataFrame:
+    """Updates the manifest statistics with the artifact report."""
+
+    manifest = manifest.merge(
+        normalize_report[[
+            'sample_id',
+            'patch_name',
+            'norm_status'
+        ]],
+        on = ['sample_id', 'patch_name'],
+        how = 'left',
+        validate = 'one_to_one'
+    )
+
+    mask = (
+        (manifest['include']) &
+        (~manifest['norm_status'])
+    )
+    manifest.loc[mask, 'include'] = False
+
+    return manifest
 
 # =====| Directory Cleanup |====================================================
 

@@ -16,6 +16,7 @@ processed_data:
 metadata:
   name_mapping: data/metadata/name_mapping.json
   patch_manifest: data/metadata/patch_manifest.csv
+  patch_statistics: data/metadata/patch_statistics.csv
 
 # Key outputs from the full pipeline
 outputs:

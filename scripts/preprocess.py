@@ -19,13 +19,20 @@ from chip_stroma.utils.io import (
     prune_tissue_masks,
     save_name_mapping,
     build_patch_manifest,
-    save_patch_manifest
+    save_patch_manifest,
+    build_patch_stats,
+    save_patch_stats,
+    update_vessel_report,
+    update_tissue_report,
+    update_artifact_report,
+    update_normalize_report
 )
 from chip_stroma.data.preprocessing import (
     apply_tissue_filter,
     apply_artifact_filter,
     fit_normalizer,
-    normalize_patches
+    normalize_patches,
+    record_vessel_content
 )
 
 logger = logging.getLogger(__name__)
@@ -46,15 +53,29 @@ def main():
     # 2. Sanitize sample folder names
     name_mapping = sanitize_names(src_dir = config.paths.raw_data.patch_dir)
 
-    # 3. Initialize a patch manifest to log filtering and mapping
+    # 3. Initialize a patch manifest to map training information
     manifest = build_patch_manifest(
         src_dir      = config.paths.raw_data.patch_dir,
         name_mapping = name_mapping
     )
-    
-    # 4. Detect tissue and remove background
+
+    # 4. Initialize patch statistics for QC and audit logging
+    statistics = build_patch_stats(
+        src_dir      = config.paths.raw_data.patch_dir,
+        name_mapping = name_mapping
+    )
+
+    # 5. Record which patches include vessel annotation content
+    vessel_report = record_vessel_content(
+        src_mask_dir  = config.paths.raw_data.vessel_mask_dir,
+        manifest      = manifest,
+        n_workers     = config.preprocess.n_workers
+    )
+    manifest = update_vessel_report(manifest, vessel_report)
+
+    # 6. Detect tissue and remove background
     tissue_detection_cfg = config.preprocess.tissue_detection
-    manifest = apply_tissue_filter(
+    tissue_report = apply_tissue_filter(
         src_patch_dir     = config.paths.raw_data.patch_dir,
         dst_mask_dir      = config.paths.processed_data.tissue_mask_dir,
         manifest          = manifest,
@@ -64,10 +85,12 @@ def main():
         morph_disk_radius = tissue_detection_cfg.morph_disk_radius,
         n_workers         = config.preprocess.n_workers
     )
+    manifest, statistics = update_tissue_report(manifest, statistics, 
+                                                tissue_report)
     
-    # 3. Detect artifacts and discard corrupted patches
+    # 7. Detect artifacts and discard corrupted patches
     artifact_detection_cfg = config.preprocess.artifact_detection
-    manifest = apply_artifact_filter(
+    artifact_report = apply_artifact_filter(
         src_dir              = config.paths.raw_data.patch_dir,
         manifest             = manifest,
         blur_threshold       = artifact_detection_cfg.blur_threshold,
@@ -76,20 +99,19 @@ def main():
         pen_pixel_ratio      = artifact_detection_cfg.pen_pixel_ratio,
         n_workers            = config.preprocess.n_workers
     )
-
-    # Save metadata generated during preprocessing before normalization
-    save_name_mapping( name_mapping, path = config.paths.metadata.name_mapping)
-    save_patch_manifest(manifest, path = config.paths.metadata.patch_manifest)
-
-    # 4. Perform stain normalization
+    manifest, statistics = update_artifact_report(manifest, statistics, 
+                                                  artifact_report)
+    
+    # 8. Fit the normalizer on the reference patch
     included = manifest[manifest['include'] == True]
-    included = included[['sample_id', 'patch', 'original_id']]
+    included = included[['sample_id', 'patch_name', 'original_id']]
     normalizer = fit_normalizer(
         reference_path = config.preprocess.normalization.reference_patch,
         method         = config.preprocess.normalization.method
     )
 
-    normalize_patches(
+    # 9. Perform stain normalization
+    normalize_report = normalize_patches(
         included_patches = included,
         normalizer       = normalizer,
         method           = config.preprocess.normalization.method,
@@ -99,6 +121,7 @@ def main():
         dst_mask_dir     = config.paths.processed_data.vessel_mask_dir,
         n_workers        = config.preprocess.n_workers
     )
+    manifest = update_normalize_report(manifest, normalize_report)
 
     # Clean tissue masks of patches that didn't pass downstream filtering
     prune_tissue_masks(
@@ -106,6 +129,11 @@ def main():
         src_mask_dir = config.paths.processed_data.tissue_mask_dir,
         n_workers    = config.preprocess.n_workers
     )
+
+    # Save metadata generated during preprocessing before normalization
+    save_name_mapping( name_mapping, path = config.paths.metadata.name_mapping)
+    save_patch_manifest(manifest, path = config.paths.metadata.patch_manifest)
+    save_patch_stats(statistics, path = config.paths.metadata.patch_statistics)
 
     log_footer(cfg = config.paths)
 

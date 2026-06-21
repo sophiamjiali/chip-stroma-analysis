@@ -85,8 +85,17 @@ def record_vessel_content(src_mask_dir: Path,
         for r in tqdm(pool.map(worker_fn, rows, chunksize = 20),
                       total = len(rows)):
             report.append(r)
+    report = pd.DataFrame.from_records(report)
 
-    return pd.DataFrame.from_records(report)
+    n_total  = len(report)
+    n_passed = int(report["has_vessel"].sum())
+
+    logger.info(f"Evaluated {n_total} total patches: {n_passed} patches "
+                f"have vessel annotation content "
+                f"({100 * n_passed / n_total:.1f}%)")
+    logger.info("=" * 50)
+
+    return report
 
     
 def apply_tissue_filter(src_patch_dir: Path,

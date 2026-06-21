@@ -239,30 +239,6 @@ def update_artifact_report(manifest: pd.DataFrame,
 
     return manifest, statistics
 
-
-def update_normalize_report(manifest: pd.DataFrame,
-                            normalize_report: pd.DataFrame) -> pd.DataFrame:
-    """Updates the manifest statistics with the artifact report."""
-
-    manifest = manifest.merge(
-        normalize_report[[
-            'sample_id',
-            'patch_name',
-            'norm_status'
-        ]],
-        on = ['sample_id', 'patch_name'],
-        how = 'left',
-        validate = 'one_to_one'
-    )
-
-    mask = (
-        (manifest['include']) &
-        (~manifest['norm_status'])
-    )
-    manifest.loc[mask, 'include'] = False
-
-    return manifest
-
 # =====| Directory Cleanup |====================================================
 
 def prune_tissue_masks(manifest: pd.DataFrame, 

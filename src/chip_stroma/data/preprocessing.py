@@ -42,11 +42,14 @@ T = transforms.Compose([
 
 # =====| Orchestrational Wrappers |=============================================
 
-def record_vessel_content(src_mask_dir: Path, 
-                          manifest: pd.DataFrame,
-                          n_workers: int | None = None) -> pd.DataFrame:
+def convert_vessel_masks(manifest: pd.DataFrame,
+                         src_mask_dir: Path, 
+                         dst_mask_dir: Path,
+                         n_workers: int | None = None) -> pd.DataFrame:
     """
     Populate 'vessel_mask' and 'has_vessel' fields in the patch manifest.
+    Copies vessel annotation mask patches to the destination directory, 
+    converting its name from '_mask.png' to '_vessel_mask.png'.
 
     For each patch, resolves the corresponding vessel annotation mask at:
         src_mask_dir / original_id / patch_name.replace('_patch.png', '_mask.
@@ -67,8 +70,9 @@ def record_vessel_content(src_mask_dir: Path,
     """
 
     logger.info("=" * 50)
-    logger.info("Step 05: Tissue Detection")
+    logger.info("Step 09: Vessel Mask Conversion")
     logger.info(f"- Source Vessel Mask Directory: {src_mask_dir}")
+    logger.info(f"- Destination Vessel Mask Directory: {dst_mask_dir}")
     logger.info("-" * 50)
 
     # Convert the manifest to lightweight row objects for parallelization
@@ -77,7 +81,11 @@ def record_vessel_content(src_mask_dir: Path,
              .itertuples(index = False, name = None))]
     
     # Define workers for parallelization
-    worker_fn = partial(vessel_worker, src_mask_dir = src_mask_dir)
+    worker_fn = partial(
+        vessel_worker, 
+        src_mask_dir = src_mask_dir, 
+        dst_mask_dir = dst_mask_dir
+    )
 
     # Detect vessel annotation content in all patches
     report = []
@@ -135,7 +143,7 @@ def apply_tissue_filter(src_patch_dir: Path,
     """
 
     logger.info("=" * 50)
-    logger.info("Step 06: Tissue Detection")
+    logger.info("Step 05: Tissue Detection")
     logger.info(f"- Source Patch Directory: {src_patch_dir}")
     logger.info(f"- Destination Tissue Mask Directory: {dst_mask_dir}")
     logger.info(f"- Tissue Threshold: {tissue_threshold}")
@@ -221,7 +229,7 @@ def apply_artifact_filter(src_dir: Path,
     """
 
     logger.info("=" * 50)
-    logger.info("Step 07: Artifact Detection")
+    logger.info("Step 06: Artifact Detection")
     logger.info(f"- Blur Threshold: {blur_threshold}")
     logger.info(f"- Dark Pixel Threshold: {dark_pixel_threshold}")
     logger.info(f"- Dark Pixel Ratio: {dark_pixel_ratio}")
@@ -270,10 +278,8 @@ def normalize_patches(included_patches: pd.DataFrame,
                       normalizer,
                       method: str,
                       src_patch_dir: Path,
-                      src_mask_dir: Path,
                       dst_patch_dir: Path,
-                      dst_mask_dir: Path,
-                      n_workers: int | None = None) -> pd.DataFrame:
+                      n_workers: int | None = None) -> None:
     """
     Orchestration wrapper for stain normalization.
 
@@ -300,11 +306,10 @@ def normalize_patches(included_patches: pd.DataFrame,
     """
 
     logger.info("=" * 50)
-    logger.info("Step 09: Normalization")
+    logger.info("Step 08: Normalization")
     logger.info(f"- Source Patch Directory: {src_patch_dir}")
-    logger.info(f"- Source Mask Directory: {src_mask_dir}")
     logger.info(f"- Destination Patch Directory: {dst_patch_dir}")
-    logger.info(f"- Destination Mask Directory: {dst_mask_dir}")
+    logger.info(f"- Method: {method}")
     logger.info("-" * 50)
 
     # Convert the manifest to lightweight row objects for parallelization
@@ -318,46 +323,50 @@ def normalize_patches(included_patches: pd.DataFrame,
         normalizer    = normalizer,
         method        = method,
         src_patch_dir = src_patch_dir,
-        src_mask_dir  = src_mask_dir,
-        dst_patch_dir = dst_patch_dir,
-        dst_mask_dir  = dst_mask_dir
+        dst_patch_dir = dst_patch_dir
     )
 
     # Normalize all patches
-    report = []
-    with ProcessPoolExecutor(max_workers = n_workers) as pool:
-        for r in tqdm(pool.map(worker_fn, rows, chunksize = 20),
-                      total = len(rows)):
-            report.append(r)
 
-    report = pd.DataFrame.from_records(report)
-    n_passed = report['norm_status'].sum()
+    with ProcessPoolExecutor(max_workers = n_workers) as pool:
+        for _ in tqdm(pool.map(worker_fn, rows, chunksize = 20),
+                      total = len(rows)):
+            pass
 
     logger.info(f"Normalized {len(included_patches)} patches")
-    logger.info(f"Evaluated {len(included_patches)} total patches: "
-                f"{n_passed} patches had corresponding masks")
     logger.info("All masks moved to the corresponding destination directory")
     logger.info("=" * 50)
     
-    return report
+    return None
 
 
 # =====| Multi-Threading Helpers |==============================================
 
-def vessel_worker(row: tuple[str, str, str], src_mask_dir: Path) -> dict:
+def vessel_worker(row: tuple[str, str, str], 
+                  src_mask_dir: Path,
+                  dst_mask_dir: Path) -> dict:
     """Processes a single patch for vessel annotation content."""
 
     original_id, sample_id, patch_name = row
-    mask_name = patch_name.replace("_patch.png", "_mask.png")
-    mask_path = src_mask_dir / original_id / mask_name
+    src_mask_name = patch_name.replace("_raw.png", "_mask.png")
+    dst_mask_name = patch_name.replace("_raw.png", "_vessel_mask.png")
+
+    src_mask_path = src_mask_dir / original_id / src_mask_name
+    dst_mask_path = dst_mask_dir / sample_id / dst_mask_name
+    dst_mask_path.parent.mkdir(parents = True, exist_ok = True)
     
-    if mask_path.exists():
-        with Image.open(mask_path) as img: mask = np.array(img)
+    if src_mask_path.exists():
+
+        # Scale the binary mask to 255 (grayscale) to match tissue mask
+        with Image.open(src_mask_path) as mask: mask = np.array(mask)
+        mask = (mask > 0).astype(np.uint8) * 255
+        Image.fromarray(mask, mode = 'L').save(dst_mask_path)
+
         vessel_pixel_count = int(np.count_nonzero(mask))
         return {
             'sample_id':          sample_id,   # Join Key
             'patch_name':         patch_name,  # Join Key
-            'vessel_mask':        mask_name,
+            'vessel_mask':        dst_mask_name,
             'has_vessel':         vessel_pixel_count > 0,
             'vessel_pixel_count': vessel_pixel_count
         }
@@ -458,9 +467,7 @@ def normalize_worker(row: tuple[str, str, str],
                      normalizer,
                      method: str,
                      src_patch_dir: Path,
-                     src_mask_dir: Path,
-                     dst_patch_dir: Path,
-                     dst_mask_dir: Path) -> dict:
+                     dst_patch_dir: Path) -> None:
     """Processes a single patch for normalization."""
 
     original_id, sample_id, patch_name = row
@@ -477,37 +484,7 @@ def normalize_worker(row: tuple[str, str, str],
     del patch
     del normalized
 
-    # Copy the mask in lockstep
-    src_mask_name = patch_name.replace("_raw.png", "_mask.png")
-    dst_mask_name = patch_name.replace("_raw.png", "_vessel_mask.png")
-
-    src_mask_path = src_mask_dir / original_id / src_mask_name
-    dst_dir = dst_mask_dir / sample_id
-    dst_dir.mkdir(parents = True, exist_ok = True)
-    dst_mask_path = dst_dir / dst_mask_name
-
-    if src_mask_path.exists():
-
-        # Scale the binary mask to 255 for quick view
-        mask = np.array(Image.open(src_mask_path))
-        mask = (mask > 0).astype(np.uint8) * 255
-        Image.fromarray(mask, mode = 'L').save(dst_mask_path)
-
-        del mask
-
-        return {
-            'sample_id':   sample_id,
-            'patch_name':  patch_name,
-            'norm_status': 1
-        }
-
-    else: 
-        print(f"Warning: missing mask for {patch_name}")
-        return {
-            'sample_id':   sample_id,
-            'patch_name':  patch_name,
-            'norm_status': 0
-        }
+    return 
 
 # =====| Preprocessing Helpers |================================================
 
@@ -775,7 +752,7 @@ def fit_normalizer(reference_path: Path, method: str = "vahadane"):
     """
 
     logger.info("=" * 50)
-    logger.info("Step 08: Fit Normalizer")
+    logger.info("Step 07: Fit Normalizer")
     logger.info(f"- Reference Path: {reference_path}")
     logger.info(f"- Method: {method}")
     logger.info("-" * 50)

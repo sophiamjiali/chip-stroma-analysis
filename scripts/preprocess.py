@@ -32,7 +32,7 @@ from chip_stroma.data.preprocessing import (
     apply_artifact_filter,
     fit_normalizer,
     normalize_patches,
-    record_vessel_content
+    convert_vessel_masks
 )
 
 logger = logging.getLogger(__name__)
@@ -65,15 +65,7 @@ def main():
         name_mapping = name_mapping
     )
 
-    # 5. Record which patches include vessel annotation content
-    vessel_report = record_vessel_content(
-        src_mask_dir  = config.paths.raw_data.vessel_mask_dir,
-        manifest      = manifest,
-        n_workers     = config.preprocess.n_workers
-    )
-    manifest = update_vessel_report(manifest, vessel_report)
-
-    # 6. Detect tissue and remove background
+    # 5. Detect tissue and remove background
     tissue_detection_cfg = config.preprocess.tissue_detection
     tissue_report = apply_tissue_filter(
         src_patch_dir     = config.paths.raw_data.patch_dir,
@@ -88,7 +80,7 @@ def main():
     manifest, statistics = update_tissue_report(manifest, statistics, 
                                                 tissue_report)
     
-    # 7. Detect artifacts and discard corrupted patches
+    # 6. Detect artifacts and discard corrupted patches
     artifact_detection_cfg = config.preprocess.artifact_detection
     artifact_report = apply_artifact_filter(
         src_dir              = config.paths.raw_data.patch_dir,
@@ -102,7 +94,7 @@ def main():
     manifest, statistics = update_artifact_report(manifest, statistics, 
                                                   artifact_report)
     
-    # 8. Fit the normalizer on the reference patch
+    # 7. Fit the normalizer on the reference patch
     included = manifest[manifest['include'] == True]
     included = included[['sample_id', 'patch_name', 'original_id']]
     normalizer = fit_normalizer(
@@ -110,18 +102,24 @@ def main():
         method         = config.preprocess.normalization.method
     )
 
-    # 9. Perform stain normalization
-    normalize_report = normalize_patches(
+    # 8. Perform stain normalization
+    normalize_patches(
         included_patches = included,
         normalizer       = normalizer,
         method           = config.preprocess.normalization.method,
         src_patch_dir    = config.paths.raw_data.patch_dir,
-        src_mask_dir     = config.paths.raw_data.vessel_mask_dir,
         dst_patch_dir    = config.paths.processed_data.patch_dir,
-        dst_mask_dir     = config.paths.processed_data.vessel_mask_dir,
         n_workers        = config.preprocess.n_workers
     )
-    manifest = update_normalize_report(manifest, normalize_report)
+
+    # 9. Convert vessel annotation masks to binary scaled to grayscale
+    vessel_report = convert_vessel_masks(
+        manifest      = manifest,
+        src_mask_dir  = config.paths.raw_data.vessel_mask_dir,
+        dst_mask_dir  = config.paths.processed_data.vessel_mask_dir,
+        n_workers     = config.preprocess.n_workers
+    )
+    manifest = update_vessel_report(manifest, vessel_report)
 
     # Clean tissue masks of patches that didn't pass downstream filtering
     prune_tissue_masks(

@@ -91,7 +91,7 @@ def assign_chip_labels(manifest: pd.DataFrame,
                        negative_label: str) -> pd.DataFrame:
     """
     Merge CHIP status into patch manifest via substring matching. Maps
-    positive and negative (CH/NC) to binary labels.
+    positive and negative (CH/NC) to boolean labels.
 
     SampleID in chip_labels is a consistent substring of sample_id
     in manifest. Raises on any unmatched sample_id.
@@ -131,8 +131,8 @@ def assign_chip_labels(manifest: pd.DataFrame,
         
         # Convert the labels to binary
         chip_label = matches.iloc[0]['CHIP']
-        if chip_label == positive_label: chip_map[sample_id] = 1
-        elif chip_label == negative_label: chip_map[sample_id] = 0
+        if chip_label == positive_label: chip_map[sample_id] = True
+        elif chip_label == negative_label: chip_map[sample_id] = False
         else: raise ValueError(f"Unexpected CHIP value '{chip_label}' "
                                f"for sample ID: {sample_id}")
 
@@ -140,10 +140,12 @@ def assign_chip_labels(manifest: pd.DataFrame,
 
     logger.info("Successfully mapped all samples to CHIP status")
 
-    counts = Counter(chip_map.values())
-    n_chip   = counts.get(0, 0)
-    n_nochip = counts.get(1, 0)
-    
+    bool_values = [bool(v) for v in chip_map.values()]
+    counts = Counter(bool_values)
+
+    n_chip = counts.get(True, 0)
+    n_nochip = counts.get(False, 0)
+        
     logger.info(f"Mapped {n_chip} patients to CHIP status")
     logger.info(f"Mapped {n_nochip} patients to Non-CHIP status")
 

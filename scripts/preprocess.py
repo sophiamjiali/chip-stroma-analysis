@@ -155,6 +155,7 @@ def log_header(config_path):
     logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
     logger.info("=" * 60)
 
+
 def log_footer(cfg):
     logger.info("=" * 60)
     logger.info("Successfully Completed Pipeline Execution")

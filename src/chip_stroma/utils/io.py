@@ -50,6 +50,12 @@ def save_name_mapping(name_mapping: dict, path: Path) -> None:
     return None
 
 
+# =====| CHIP Labels |==========================================================
+
+def load_chip_labels(path: Path) -> pd.DataFrame:
+    """Loads the patch manifest from the path."""
+    return pd.read_csv(path)
+
 # =====| Patch Manifest |=======================================================
 
 def build_patch_manifest(src_dir: Path, 
@@ -79,6 +85,7 @@ def build_patch_manifest(src_dir: Path,
                 'patch_name':         patch_path.name,
                 'vessel_mask':        None,
                 'tissue_mask':        None,
+                'chip_status':        None,
                 'has_vessel':         None,
                 'vessel_pixel_count': None,
                 'passes_tissue':      None,
@@ -102,6 +109,11 @@ def save_patch_manifest(manifest: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents = True, exist_ok = True)
     manifest.to_csv(path, index = False)
     return None
+
+
+def load_patch_manifest(path: Path) -> pd.DataFrame:
+    """Loads the patch manifest from the path."""
+    return pd.read_csv(path)
 
 # =====| Patch Statistics |=====================================================
 

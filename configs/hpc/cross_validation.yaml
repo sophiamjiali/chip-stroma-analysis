@@ -1,9 +1,12 @@
 # ==============================================================================
-# Script:           segmentation.yaml
-# Purpose:          U-Net hyperparameters, augmentation, and training
+# Script:           cross_validation.yaml
+# Purpose:          Patient-stratified K-Fold CV Parameters
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
-# Date:             06/03/2026
+# Date:             06/22/2026
 # ==============================================================================
 
 seed: 42
+positive_label: CH
+negative_label: NC
+k: 6

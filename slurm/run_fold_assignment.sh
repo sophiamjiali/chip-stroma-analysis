@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --output=/cluster/home/t144807uhn/logs/chip-stroma-analysis/%x/%x_%j.out
 #SBATCH --error=/cluster/home/t144807uhn/logs/chip-stroma-analysis/%x/%x_%j.err
-#SBATCH --time=24:00:00
+#SBATCH --time=01:00:00
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=24
-#SBATCH --mem=30G
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8G
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=sophiamjia.li@mail.utoronto.ca
 
@@ -33,7 +33,7 @@ echo "GPU:        $CUDA_VISIBLE_DEVICES"
 echo "Start:      $(date)"
 echo "=========================================="
 
-srun python scripts/preprocess.py \
+srun python scripts/assign_folds.py \
     --config_dir configs/hpc
 
 echo "=========================================="

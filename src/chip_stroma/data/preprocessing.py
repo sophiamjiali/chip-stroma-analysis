@@ -168,6 +168,9 @@ def apply_tissue_filter(src_patch_dir: Path,
         morph_disk_radius = morph_disk_radius
     )
 
+    logger.info(f"Initialized {n_workers} workers for parallelization")
+    logger.info("Beginning tissue detection across all workers")
+
     # Detect tissue content in all patches
     report = []
     with ProcessPoolExecutor(max_workers = n_workers) as pool:
@@ -251,6 +254,9 @@ def apply_artifact_filter(src_dir: Path,
         pen_pixel_ratio      = pen_pixel_ratio
     )
 
+    logger.info(f"Initialized {n_workers} workers for parallelization")
+    logger.info("Beginning artifact detection across all workers")
+
     # Detect artifacts in all patches
     report = []
     with ProcessPoolExecutor(max_workers = n_workers) as pool:
@@ -326,8 +332,10 @@ def normalize_patches(included_patches: pd.DataFrame,
         dst_patch_dir = dst_patch_dir
     )
 
-    # Normalize all patches
+    logger.info(f"Initialized {n_workers} workers for parallelization")
+    logger.info("Beginning normalization across all workers")
 
+    # Normalize all patches
     with ProcessPoolExecutor(max_workers = n_workers) as pool:
         for _ in tqdm(pool.map(worker_fn, rows, chunksize = 20),
                       total = len(rows)):

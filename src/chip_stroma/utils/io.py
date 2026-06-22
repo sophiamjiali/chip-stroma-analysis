@@ -17,6 +17,8 @@ from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
+JOIN_KEY = ['sample_id', 'patch_name']
+
 # =====| Name Sanitization |====================================================
 
 def sanitize_names(src_dir: Path) -> dict:
@@ -153,18 +155,16 @@ def update_vessel_report(manifest: pd.DataFrame,
                          vessel_report: pd.DataFrame) -> pd.DataFrame:
     """Updates the manifest with the vessel report."""
 
-    manifest = manifest.merge(
-        vessel_report[[
-            'sample_id',
-            'patch_name',
-            'vessel_mask',
-            'has_vessel',
-            'vessel_pixel_count'
-        ]],
-        on = ['sample_id', 'patch_name'],
-        how = 'left',
-        validate = 'one_to_one'
-    )
+    vessel_lookup = vessel_report.set_index(JOIN_KEY)
+
+    manifest['vessel_mask'] = (manifest.set_index(JOIN_KEY).index.map(
+        vessel_lookup['vessel_mask'].to_dict()))
+    
+    manifest['has_vessel'] = (manifest.set_index(JOIN_KEY).index.map(
+        vessel_lookup['has_vessel'].to_dict()))
+
+    manifest['vessel_pixel_count'] = (manifest.set_index(JOIN_KEY).index.map(
+        vessel_lookup['vessel_pixel_count'].to_dict()))
 
     return manifest
 
@@ -175,31 +175,21 @@ def update_tissue_report(manifest: pd.DataFrame,
                          ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Updates the manifest and statistics with the tissue report."""
 
-    manifest = manifest.merge(
-        tissue_report[[
-            'sample_id',
-            'patch_name',
-            'passes_tissue',
-            'tissue_mask'
-        ]],
-        on = ['sample_id', 'patch_name'],
-        how = 'left',
-        validate = 'one_to_one'
-    )
+    tissue_lookup = tissue_report.set_index(JOIN_KEY)
+
+    manifest['passes_tissue'] = (manifest.set_index(JOIN_KEY).index.map(
+        tissue_lookup['passes_tissue'].to_dict()))
+
+    manifest['tissue_mask'] = (manifest.set_index(JOIN_KEY).index.map(
+        tissue_lookup['tissue_mask'].to_dict()))
+
     manifest['include'] = manifest['passes_tissue']
 
-    statistics = statistics.merge(
-        tissue_report[[
-            'sample_id',
-            'patch_name',
-            'tissue_ratio'
-        ]],
-        on = ['sample_id', 'patch_name'],
-        how = 'left',
-        validate = 'one_to_one'
-    )
+    statistics['tissue_ratio'] = (statistics.set_index(JOIN_KEY).index.map(
+        tissue_lookup['tissue_ratio'].to_dict()))
 
     return manifest, statistics
+
 
 def update_artifact_report(manifest: pd.DataFrame,
                            statistics: pd.DataFrame, 
@@ -207,16 +197,10 @@ def update_artifact_report(manifest: pd.DataFrame,
                            ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Updates the manifest statistics with the artifact report."""
 
-    manifest = manifest.merge(
-        artifact_report[[
-            'sample_id',
-            'patch_name',
-            'passes_artifact'
-        ]],
-        on = ['sample_id', 'patch_name'],
-        how = 'left',
-        validate = 'one_to_one'
-    )
+    artifact_lookup = artifact_report.set_index(JOIN_KEY)
+
+    manifest['passes_artifact'] = (manifest.set_index(JOIN_KEY).index.map(
+        artifact_lookup['passes_artifact'].to_dict()))
 
     mask = (
         (manifest['include']) &
@@ -224,18 +208,14 @@ def update_artifact_report(manifest: pd.DataFrame,
     )
     manifest.loc[mask, 'include'] = False
 
-    statistics = statistics.merge(
-        artifact_report[[
-            'sample_id',
-            'patch_name',
-            'lap_variance',
-            'dark_ratio',
-            'pen_ratio'
-        ]],
-        on = ['sample_id', 'patch_name'],
-        how = 'left',
-        validate = 'one_to_one'
-    )
+    statistics['lap_variance'] = (statistics.set_index(JOIN_KEY).index.map(
+        artifact_lookup['lap_variance'].to_dict()))
+    
+    statistics['dark_ratio'] = (statistics.set_index(JOIN_KEY).index.map(
+        artifact_lookup['dark_ratio'].to_dict()))
+    
+    statistics['pen_ratio'] = (statistics.set_index(JOIN_KEY).index.map(
+        artifact_lookup['pen_ratio'].to_dict()))
 
     return manifest, statistics
 

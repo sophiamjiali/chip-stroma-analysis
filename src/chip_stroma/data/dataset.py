@@ -60,10 +60,7 @@ class VesselPatchDataset(Dataset):
         self.tissue_mask_dir = tissue_mask_dir
         self.transform       = transform
 
-# =====| Class Overloads |======================================================
-
-    def __len__(self) -> int:
-        return len(self.records)
+    # =====| Class Overloads |==================================================
     
     def __getitem__(self, idx: int) -> dict:
 
@@ -97,3 +94,8 @@ class VesselPatchDataset(Dataset):
             'has_vessel':  bool(row['has_vessel']),
             'sample_id':   str(row['sample_id'])
         }
+    
+    def __len__(self) -> int:
+        return len(self.records)
+    
+# [END]

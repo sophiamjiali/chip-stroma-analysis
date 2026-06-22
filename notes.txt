@@ -41,3 +41,8 @@ Artifact Detection (from all patches):
     - weight each patient's patches equally vs. each patch equally
 - split 16-4-4 stratified by CHIP status
 --------------------------------------
+
+--------------------------------------
+- oversample the full training fold (pos + neg) with controlled pos. probabil.
+- treat positive sampling probability as a tuned hyperparameter 
+--------------------------------------

@@ -44,7 +44,7 @@ def sanitize_names(src_dir: Path) -> dict:
 def save_name_mapping(name_mapping: dict, path: Path) -> None:
     """Persist sanitized name mapping to JSON."""
 
-    f
+    logger.info(f"Successfully saved name mapping to {path}")
 
     path.parent.mkdir(parents = True, exist_ok = True)
     with open(path, "w") as f:

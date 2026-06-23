@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional
 from torch.utils.data import DataLoader
 from chip_stroma.data.dataset import VesselPatchDataset
-from chip_stroma.data.sampler import PositiveWeightedSampler
+from chip_stroma.segmentation.sampler import PositiveWeightedSampler
 from chip_stroma.data.transforms import get_train_transforms, get_val_transforms
 
 

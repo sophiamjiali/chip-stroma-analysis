@@ -21,5 +21,5 @@ artifact_detection:
   pen_pixel_ratio: 0.05
 
 normalization:
-  reference_patch: /Users/sophiali/Desktop/chip-stroma-analysis/data/raw/patches/T25-415 A6-2 H-BMO-73 SMA/tile_12044_raw.png
+  reference_patch: /Users/sophiali/Desktop/chip-stroma-analysis/data/raw/patches/test sample 1/tile_10127_raw.png
   method: vahadane

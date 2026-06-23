@@ -93,7 +93,6 @@ def build_patch_manifest(src_dir: Path,
                 'passes_tissue':      None,
                 'passes_artifact':    None,
                 'include':            None,
-                'norm_status':        None,
                 'patient_pos_count':  None,
                 'fold':               None,
             })
@@ -184,6 +183,9 @@ def update_vessel_report(manifest: pd.DataFrame,
     manifest['vessel_pixel_count'] = (manifest.set_index(JOIN_KEY).index.map(
         vessel_lookup['vessel_pixel_count'].to_dict()))
     
+    manifest['patient_pos_count'] = (manifest.set_index(JOIN_KEY).index.map(
+        vessel_lookup['patient_pos_count'].to_dict()))
+    
     logger.info("Successfully updated patch manifest with vessel report")
 
     return manifest
@@ -249,20 +251,30 @@ def update_artifact_report(manifest: pd.DataFrame,
 
 def prune_tissue_masks(manifest: pd.DataFrame, 
                        src_mask_dir: Path,
-                       n_workers: int | None = None) -> None:
-    """Delete tissue masks for excluded patches."""
+                       n_workers: int | None = None) -> pd.DataFrame:
+    """
+    Delete tissue masks for excluded patches. Returns the manifest with the 
+    tissue_mask set to None for those pruned.
+    """
 
-    excluded = manifest.loc[~manifest["include"], ["sample_id", "patch_name"]]
+    excluded_mask = ~manifest['include']
+
+    excluded = manifest.loc[excluded_mask, ["sample_id", "patch_name"]]
 
     mask_paths = [
-        src_mask_dir / str(row.sample_id) / 
-        str(row.patch_name).replace("_raw.png", "_tissue_mask.png") 
-        for row in excluded.itertuples(index = False)
+        src_mask_dir / str(row.sample_id) /
+        str(row.patch_name).replace("_raw.png", "_tissue_mask.png")
+        for row in excluded.itertuples(index=False)
     ]
 
-    with ProcessPoolExecutor(max_workers = n_workers) as pool:
-        list(tqdm(pool.map(delete_mask, mask_paths, chunksize = 100), 
-                  total = len(mask_paths)))
+    with ProcessPoolExecutor(max_workers=n_workers) as pool:
+        list(tqdm(pool.map(delete_mask, mask_paths, chunksize=100),
+                  total=len(mask_paths)))
+
+    # Set tissue_mask to None for excluded rows
+    manifest.loc[excluded_mask, "tissue_mask"] = None
+
+    return manifest
 
 
 def delete_mask(mask_path: Path) -> None:

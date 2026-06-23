@@ -121,11 +121,12 @@ def main():
     manifest = update_vessel_report(manifest, vessel_report)
 
     # Clean tissue masks of patches that didn't pass downstream filtering
-    prune_tissue_masks(
+    manifest = prune_tissue_masks(
         manifest     = manifest,
         src_mask_dir = config.paths.processed_data.tissue_mask_dir,
         n_workers    = config.preprocess.n_workers
     )
+
 
     # Save metadata generated during preprocessing before normalization
     save_name_mapping( name_mapping, path = config.paths.metadata.name_mapping)

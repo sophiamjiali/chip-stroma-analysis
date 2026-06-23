@@ -95,6 +95,14 @@ def convert_vessel_masks(manifest: pd.DataFrame,
             report.append(r)
     report = pd.DataFrame.from_records(report)
 
+    # Compute per-sample positive patch counts and merge into report
+    pos_counts = (report[report['vessel_pixel_count'] > 0]
+                  .groupby('sample_id').size().rename('patient_pos_count'))
+    
+    report = (report.join(pos_counts, on = 'sample_id')
+              .fillna({'patient_pos_count': 0}))
+    report['patient_pos_count'] = report['patient_pos_count'].astype(int)
+
     n_total  = len(report)
     n_passed = int(report["has_vessel"].sum())
 
@@ -265,10 +273,6 @@ def apply_artifact_filter(src_dir: Path,
             report.append(r)
     report = pd.DataFrame.from_records(report)
 
-    manifest['lap_variance'] = report['lap_variance'].to_numpy()
-    manifest['dark_ratio']   = report['dark_ratio'].to_numpy()
-    manifest['pen_ratio']    = report['pen_ratio'].to_numpy()
-
     n_passed = int(report['passes_artifact'].sum())
     n_total = len(report)
 
@@ -388,12 +392,12 @@ def vessel_worker(row: tuple[str, str, str],
     }
 
 
-def tissue_worker(row: tuple[str, str, str],
-                  src_patch_dir: Path,
-                  dst_mask_dir: Path,
-                  tissue_threshold: float = 0.5,
-                  gaussian_sigma: float = 1.0,
-                  min_region_size: int = 500,
+def tissue_worker(row:               tuple[str, str, str],
+                  src_patch_dir:     Path,
+                  dst_mask_dir:      Path,
+                  tissue_threshold:  float = 0.5,
+                  gaussian_sigma:    float = 1.0,
+                  min_region_size:   int = 500,
                   morph_disk_radius: int = 3) -> dict:
     """Processes a single patch for tissue detection."""
 

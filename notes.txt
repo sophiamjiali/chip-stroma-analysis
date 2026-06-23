@@ -5,7 +5,7 @@ Patch Dimensions: 256 x 256 pixels
 Statistics on All Patches:
     Total Samples: 24
     Total Patches: 943180
-    Total w/Vessels: 1960 (2.07%)
+    Total w/Vessels: 1960 (0.207%)
 
 Statistics on Filtered Patches:
     Total Patches: 39441 (4.18%)
@@ -18,6 +18,9 @@ Tissue Detection (from all patches):
 
 Artifact Detection (from all patches):
     Passed Filter: 123630 (13.1%)
+
+Normalization (from filtered patches):
+    Total Patches: 39441 (100.0%)
 
 --------------------------------------
 - sample 'h-BMO-18' is severe outlier

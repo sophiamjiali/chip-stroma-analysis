@@ -44,6 +44,8 @@ def sanitize_names(src_dir: Path) -> dict:
 def save_name_mapping(name_mapping: dict, path: Path) -> None:
     """Persist sanitized name mapping to JSON."""
 
+    f
+
     path.parent.mkdir(parents = True, exist_ok = True)
     with open(path, "w") as f:
         json.dump(name_mapping, f, indent = 2)
@@ -106,6 +108,8 @@ def build_patch_manifest(src_dir: Path,
 def save_patch_manifest(manifest: pd.DataFrame, path: Path) -> None:
     """Persist patch manifest to CSV."""
 
+    logger.info(f"Successfully saved patch manifest to {path}")
+
     path.parent.mkdir(parents = True, exist_ok = True)
     manifest.to_csv(path, index = False)
     return None
@@ -157,6 +161,8 @@ def build_patch_stats(src_dir: Path,
 def save_patch_stats(stats: pd.DataFrame, path: Path) -> None:
     """Persist patch manifest to CSV."""
 
+    logger.info(f"Successfully saved patch statistics to {path}")
+
     path.parent.mkdir(parents = True, exist_ok = True)
     stats.to_csv(path, index = False)
     return None
@@ -177,6 +183,8 @@ def update_vessel_report(manifest: pd.DataFrame,
 
     manifest['vessel_pixel_count'] = (manifest.set_index(JOIN_KEY).index.map(
         vessel_lookup['vessel_pixel_count'].to_dict()))
+    
+    logger.info("Successfully updated patch manifest with vessel report")
 
     return manifest
 
@@ -199,6 +207,9 @@ def update_tissue_report(manifest: pd.DataFrame,
 
     statistics['tissue_ratio'] = (statistics.set_index(JOIN_KEY).index.map(
         tissue_lookup['tissue_ratio'].to_dict()))
+    
+    logger.info("Successfully updated patch manifest and statistics "
+                "with tissue report")
 
     return manifest, statistics
 
@@ -228,6 +239,9 @@ def update_artifact_report(manifest: pd.DataFrame,
     
     statistics['pen_ratio'] = (statistics.set_index(JOIN_KEY).index.map(
         artifact_lookup['pen_ratio'].to_dict()))
+    
+    logger.info("Successfully updated patch manifest and statistics "
+                "with artifact report")
 
     return manifest, statistics
 
@@ -238,11 +252,11 @@ def prune_tissue_masks(manifest: pd.DataFrame,
                        n_workers: int | None = None) -> None:
     """Delete tissue masks for excluded patches."""
 
-    excluded = manifest.loc[~manifest["include"], ["sample_id", "patch"]]
+    excluded = manifest.loc[~manifest["include"], ["sample_id", "patch_name"]]
 
     mask_paths = [
         src_mask_dir / str(row.sample_id) / 
-        str(row.patch).replace("_raw.png", "_tissue_mask.png") 
+        str(row.patch_name).replace("_raw.png", "_tissue_mask.png") 
         for row in excluded.itertuples(index = False)
     ]
 

@@ -58,7 +58,7 @@ def convert_vessel_masks(manifest: pd.DataFrame,
     Parameters
     ----------
     manifest : pd.DataFrame
-        Patch manifest with columns: 'original_id', 'patch'.
+        Patch manifest with columns: 'original_id', 'patch_name'.
     src_mask_dir : Path
         Root directory containing per-sample mask subdirectories.
 

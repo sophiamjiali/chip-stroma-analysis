@@ -166,6 +166,17 @@ def save_patch_stats(stats: pd.DataFrame, path: Path) -> None:
     stats.to_csv(path, index = False)
     return None
 
+# =====| Patch Statistics |=====================================================
+
+def initialize_train_manifest(train_manifest_path: Path,
+                              patch_manifest_path: Path) -> pd.DataFrame:
+    """Loads or creates the train manifest from the patch manifest."""
+
+    if train_manifest_path.exists(): return pd.read_csv(train_manifest_path)
+
+    manifest = pd.read_csv(patch_manifest_path)
+    return manifest[manifest['include'] == True]
+
 # =====| Report Updates |=======================================================
 
 def update_vessel_report(manifest: pd.DataFrame, 

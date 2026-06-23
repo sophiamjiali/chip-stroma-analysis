@@ -18,6 +18,7 @@ metadata:
   name_mapping: data/metadata/name_mapping.json
   patch_manifest: data/metadata/patch_manifest.csv
   patch_statistics: data/metadata/patch_statistics.csv
+  train_manifest: data/metadata/train_manifest.csv      # include == True
 
 # Key outputs from the full pipeline
 outputs:

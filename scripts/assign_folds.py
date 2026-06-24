@@ -63,6 +63,8 @@ def main():
 
     save_patch_manifest(manifest, path = config.paths.metadata.patch_manifest)
 
+    log_footer(cfg = config.paths)
+
     return
 
 # =====| Helpers |==============================================================

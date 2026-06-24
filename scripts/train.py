@@ -55,7 +55,7 @@ def main():
     metrics = train(
         manifest = manifest,
         project  = config.segmentation.study.project,
-        group    =  config.segmentation.study.group,
+        group    = config.segmentation.study.group,
         paths    = config.paths,
         params   = config.segmentation,
         seed     = config.segmentation.data.seed,

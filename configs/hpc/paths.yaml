@@ -20,11 +20,18 @@ metadata:
   patch_statistics: data/metadata/patch_statistics.csv
   train_manifest: data/metadata/train_manifest.csv      # Only include = True
 
-# Key outputs from the full pipeline
+# Training and sweep output directories
 outputs:
+  training: outputs/training
+  sweeps: outputs/sweeps
+
+# Key results from the full pipeline
+results:
   masks:
-    fibroblasts_dir: outputs/masks/fibroblasts
-    vessels_dir: outputs/masks/vessels
+    fibroblasts_dir: results/masks/fibroblasts
+    vessels_dir: results/masks/vessels
   overlays:
-    fibroblasts_dir: outputs/overlays/fibroblasts
-    vessels_dir: outputs/overlays/vessels
+    fibroblasts_dir: results/overlays/fibroblasts
+    vessels_dir: results/overlays/vessels
+
+# [END]

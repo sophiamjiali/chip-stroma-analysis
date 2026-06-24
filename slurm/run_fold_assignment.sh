@@ -33,8 +33,10 @@ echo "GPU:        $CUDA_VISIBLE_DEVICES"
 echo "Start:      $(date)"
 echo "=========================================="
 
+echo "Before python"
 srun python scripts/assign_folds.py \
     --config_dir configs/hpc
+echo "After python"
 
 echo "=========================================="
 echo "Exit Code: $?"

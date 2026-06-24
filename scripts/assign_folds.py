@@ -6,6 +6,8 @@
 # Date:             06/22/2026
 # ==============================================================================
 
+raise RuntimeError("SCRIPT STARTED")
+
 import logging
 
 import argparse as ap

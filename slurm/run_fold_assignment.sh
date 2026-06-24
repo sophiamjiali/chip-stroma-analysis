@@ -34,7 +34,7 @@ echo "Start:      $(date)"
 echo "=========================================="
 
 echo "Before python"
-srun python scripts/assign_folds.py \
+python scripts/assign_folds.py \
     --config_dir configs/hpc
 echo "After python"
 

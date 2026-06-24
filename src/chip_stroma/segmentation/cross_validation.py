@@ -75,6 +75,7 @@ def assign_folds(manifest: pd.DataFrame,
     patients['fold'] = fold_series
 
     logger.info(f"Successfully assigned all patients to {k} folds")
+    logger.info("=" * 50)
 
     return (
         manifest[['sample_id', 'patch_name']]
@@ -149,6 +150,7 @@ def assign_chip_labels(manifest: pd.DataFrame,
         
     logger.info(f"Mapped {n_chip} patients to CHIP status")
     logger.info(f"Mapped {n_nochip} patients to Non-CHIP status")
+    logger.info("=" * 50)
 
     return manifest
         

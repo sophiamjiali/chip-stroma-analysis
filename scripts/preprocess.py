@@ -6,14 +6,13 @@
 # Date:             06/03/2026
 # ==============================================================================
 
-import logging
-
 import argparse as ap
 
 from pathlib import Path
 from datetime import datetime
 
 from chip_stroma.utils.config import load_configs
+from chip_stroma.utils.logging import setup_logger
 from chip_stroma.utils.io import (
     sanitize_names, 
     prune_tissue_masks,
@@ -34,7 +33,7 @@ from chip_stroma.data.preprocessing import (
     convert_vessel_masks
 )
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 # =====| Workflow Entry Point |=================================================

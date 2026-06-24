@@ -6,8 +6,6 @@
 # Date:             06/22/2026
 # ==============================================================================
 
-import logging
-
 import argparse as ap
 
 from pathlib import Path
@@ -19,25 +17,14 @@ from chip_stroma.segmentation.cross_validation import (
     merge_fold_assignments
 )
 from chip_stroma.utils.config import load_configs
+from chip_stroma.utils.logging import setup_logger
 from chip_stroma.utils.io import (
     load_chip_labels,
     load_patch_manifest, 
     save_patch_manifest
 )
 
-import logging
-
-root = logging.getLogger()
-
-print("ROOT HANDLERS:", root.handlers)
-print("ROOT LEVEL:", root.level)
-
-logger = logging.getLogger(__name__)
-print("LOCAL LOGGER:", logger.name)
-print("LOCAL EFFECTIVE LEVEL:", logger.getEffectiveLevel())
-print("LOCAL HANDLERS:", logger.handlers)
-
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 # =====| Workflow Entry Point |=================================================
@@ -105,13 +92,6 @@ def log_footer(cfg):
     logger.info("=" * 60)
 
 if __name__ == "__main__":
-
-    # Configure the logger for .out file output
-    logging.basicConfig(
-        level  = logging.INFO,
-        format = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-    )
-    
     main()
 
 # [END]

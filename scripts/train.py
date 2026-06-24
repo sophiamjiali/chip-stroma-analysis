@@ -21,7 +21,6 @@
 # ==============================================================================
 
 import argparse as ap
-import lightning.pytorch as pl
 
 from pathlib import Path
 from datetime import datetime
@@ -29,9 +28,7 @@ from datetime import datetime
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import initialize_train_manifest
-from chip_stroma.data.lit_module import VesselSegModule
-from chip_stroma.data.datamodule import VesselSegmentationDataModule
-from chip_stroma.segmentation.model import build_model
+from chip_stroma.segmentation.train import train
 
 logger = setup_logger(__name__)
 
@@ -54,24 +51,18 @@ def main():
         patch_manifest_path = config.paths.metadata.patch_manifest
     )
 
-    # Seed everything using the random state provided from configurations
-    seed = config.segmentation.data.seed
-    logger.info(f"Seeded all processes and workers with random state {seed}")
-    pl.seed_everything(seed, workers = True)
+    # Train the model using the configurations provided in the YAML
+    metrics = train(
+        manifest = manifest,
+        project  = config.segmentation.study.project,
+        group    =  config.segmentation.study.group,
+        paths    = config.paths,
+        params   = config.segmentation,
+        seed     = config.segmentation.data.seed,
+        trial    = None
+    )
 
-    # 3. Initialize the model and all components for training
-    log_initialization_header(config)
-
-    
-    log_initialization_footer()
-
-    # Initialize the output directly; one subdirectory per run...
-
-
-
-
-    
-
+    log_footer(cfg = config.paths, metrics = metrics)
 
     return
 
@@ -93,29 +84,11 @@ def log_header(config_path):
     logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
     logger.info("=" * 60)
 
-def log_initialization_header(cfg):
-    logger.info("=" * 50)
-    logger.info("Step 03: Model Initialization")
-    logger.info(f"- Project: {cfg.study.project}")
-    logger.info(f"- Group: {cfg.study.group}")
-    logger.info(f"- Encoder Name: {cfg.model.encoder_name}")
-    logger.info(f"- Encoder Weight: {cfg.model.encoder_weights}")
-    logger.info("-" * 50)
-
-def log_initialization_footer():
-    logger.info("=" * 50)
-
-def log_footer(cfg):
+def log_footer(cfg, metrics):
     logger.info("=" * 60)
     logger.info("Successfully Completed Pipeline Execution")
     logger.info(f"- Train Manifest: {cfg.metadata.train_manifest}")
-
-
-    # ... include more
-
-
-
-
+    logger.info(f"- Validation Loss: {metrics.get('val_loss')}")
     logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
     logger.info("=" * 60)
 

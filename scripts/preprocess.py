@@ -153,7 +153,7 @@ def log_header(config_path):
     logger.info("- Pipeline Stage: Preprocessing")
     logger.info(f"- Configurations: {config_path}")
     logger.info(f"- Working Directory: {Path.cwd()}")
-    logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 60)
 
 
@@ -165,7 +165,7 @@ def log_footer(cfg):
     logger.info(f"- Vessel Mask Directory: {cfg.processed_data.vessel_mask_dir}")
     logger.info(f"- Name Mapping: {cfg.metadata.name_mapping}")
     logger.info(f"- Patch Manifest: {cfg.metadata.patch_manifest}")
-    logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 60)
 
 if __name__ == "__main__":

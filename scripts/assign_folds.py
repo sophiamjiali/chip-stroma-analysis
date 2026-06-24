@@ -34,6 +34,8 @@ def main():
     args = parse_args()
     log_header(config_path = Path(args.config_dir) / "cross_validation.yaml")
 
+    print("MAIN STARTED", flush=True)
+
     # 1. Load workflow and path configurations
     config = load_configs(
         pipeline = Path(args.config_dir) / "cross_validation.yaml",

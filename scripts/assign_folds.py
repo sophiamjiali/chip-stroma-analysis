@@ -95,6 +95,13 @@ def log_footer(cfg):
     logger.info("=" * 60)
 
 if __name__ == "__main__":
+
+    # Configure the logger for .out file output
+    logging.basicConfig(
+        level  = logging.INFO,
+        format = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+    )
+    
     main()
 
 # [END]

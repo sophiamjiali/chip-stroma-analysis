@@ -6,6 +6,10 @@
 # Date:             06/03/2026
 # ==============================================================================
 
+study:
+  project: chip-stroma     # Main project container
+  group: test              # Sweep name (grouping)
+
 data: 
   fold: 0         # Which StratifiedGroupKFold fold to train on
   batch_size: 16
@@ -31,4 +35,7 @@ module:
 trainer:
   max_epochs: 100
   early_stopping_patience: 10   # Isensee et al. (2021) Nat Methods
-  log_every_n_steps: 10
+  early_stopping_min_delta: 0.00001
+  gradient_clip_val: 1.0
+
+# [END]

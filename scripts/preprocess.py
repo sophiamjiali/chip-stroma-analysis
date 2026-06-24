@@ -12,7 +12,7 @@ from pathlib import Path
 from datetime import datetime
 
 from chip_stroma.utils.config import load_configs
-from chip_stroma.utils.logging import setup_logger
+from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import (
     sanitize_names, 
     prune_tissue_masks,

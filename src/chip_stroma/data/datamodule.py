@@ -7,7 +7,7 @@
 # ==============================================================================
 
 import pandas as pd
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 
 from pathlib import Path
 from typing import Optional

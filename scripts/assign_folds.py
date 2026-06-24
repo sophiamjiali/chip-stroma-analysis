@@ -17,7 +17,7 @@ from chip_stroma.segmentation.cross_validation import (
     merge_fold_assignments
 )
 from chip_stroma.utils.config import load_configs
-from chip_stroma.utils.logging import setup_logger
+from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import (
     load_chip_labels,
     load_patch_manifest, 

@@ -5,3 +5,7 @@
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
 # Date:             06/03/2026
 # ==============================================================================
+
+study:
+  project: chip-stroma   # Main project container
+  group: v1                         # Sweep name (grouping)

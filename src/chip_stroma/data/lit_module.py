@@ -11,7 +11,7 @@
 #                   report foreground (vessel) content only
 # ==============================================================================
 
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torch.nn as nn
 
 from torchmetrics.segmentation import MeanIoU, DiceScore

@@ -30,8 +30,13 @@ logger = logging.getLogger(__name__)
 # =====| Workflow Entry Point |=================================================
 
 def main():
+
+    logger.info("A")
+
     args = parse_args()
     log_header(config_path = Path(args.config_dir) / "cross_validation.yaml")
+
+    logger.info("B")
 
     # 1. Load workflow and path configurations
     config = load_configs(
@@ -39,9 +44,13 @@ def main():
         paths    = Path(args.config_dir) / "paths.yaml"
     )  
 
+    logger.info("C")
+
     # Load the patch manifest and CHIP labels
     manifest = load_patch_manifest(path = config.paths.metadata.patch_manifest)
     chip_labels = load_chip_labels(path = config.paths.metadata.chip_labels)
+
+    logger.info("D")
 
     # Merge the CHIP labels into the manifest
     manifest = assign_chip_labels(
@@ -51,6 +60,8 @@ def main():
         negative_label = config.cross_validation.negative_label,
     )
 
+    logger.info("E")
+
     # 2. Assign patient-level stratified k-fold indices to the patch manifest
     fold_assignments = assign_folds(
         manifest = manifest,
@@ -58,10 +69,16 @@ def main():
         seed     = config.cross_validation.seed
     )
 
+    logger.info("F")
+
     # Merge the assignments with the patch manifest and save it
     manifest = merge_fold_assignments(manifest, fold_assignments)
 
+    logger.info("G")
+
     save_patch_manifest(manifest, path = config.paths.metadata.patch_manifest)
+
+    logger.info("H")
 
     return
 

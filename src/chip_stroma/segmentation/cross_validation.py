@@ -123,7 +123,8 @@ def assign_chip_labels(manifest: pd.DataFrame,
     for sample_id in sample_ids:
 
         # Find all matching labels to the sample ID (substring)
-        matches = labels[labels['SampleID'].apply(lambda sid: sid in sample_id)]
+        matches = labels[labels['SampleID'].apply(lambda sid: sid.lower() 
+                                                  in sample_id.lower())]
         
         # All sample IDs must match to a CHIP status label
         if matches.empty: raise ValueError(f"No CHIP label found for "

@@ -25,6 +25,18 @@ from chip_stroma.utils.io import (
     save_patch_manifest
 )
 
+import logging
+
+root = logging.getLogger()
+
+print("ROOT HANDLERS:", root.handlers)
+print("ROOT LEVEL:", root.level)
+
+logger = logging.getLogger(__name__)
+print("LOCAL LOGGER:", logger.name)
+print("LOCAL EFFECTIVE LEVEL:", logger.getEffectiveLevel())
+print("LOCAL HANDLERS:", logger.handlers)
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,8 +45,6 @@ logger = logging.getLogger(__name__)
 def main():
     args = parse_args()
     log_header(config_path = Path(args.config_dir) / "cross_validation.yaml")
-
-    print("MAIN STARTED", flush=True)
 
     # 1. Load workflow and path configurations
     config = load_configs(

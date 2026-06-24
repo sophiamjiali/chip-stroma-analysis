@@ -27,6 +27,7 @@ from chip_stroma.utils.io import (
 
 logger = logging.getLogger(__name__)
 
+
 # =====| Workflow Entry Point |=================================================
 
 def main():

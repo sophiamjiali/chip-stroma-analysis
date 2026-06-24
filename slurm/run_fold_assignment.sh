@@ -37,5 +37,6 @@ srun python scripts/assign_folds.py \
     --config_dir configs/hpc
 
 echo "=========================================="
+echo "Exit Code: $?"
 echo "End: $(date)"
 echo "=========================================="

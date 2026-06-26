@@ -159,8 +159,10 @@ def suggest_sampler(params: Box, trial: Trial) -> Box:
 def suggest_trainer(params: Box, trial: Trial) -> Box:
     """Provides in-place suggestions for the Trainer."""
 
-    params.trainer.gradient_clip_val = trial.suggest_float(
-        "gradient_clip_val", *params.trainer.gradient_clip_val, log = True
+    params.trainer.gradient_clip_val = (
+        trial.suggest_float("gradient_clip_val", *params.trainer.gradient_clip_val, log = True)
+        if isinstance(params.trainer.gradient_clip_val, (list, tuple))
+        else params.trainer.gradient_clip_val
     )
 
     logger.info("Successfulyl suggested gradient clip value for Trainer")

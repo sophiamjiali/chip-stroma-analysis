@@ -82,7 +82,8 @@ def main():
 
     # If a valid timeout was provided, overwrite n_trials
     if config.sweep.experiment.timeout != -1:
-        timeout, n_trials = config.sweep.experiment.timeout, None
+        timeout = config.sweep.experiment.timeout * 3600
+        n_trials = None
     else:
         timeout, n_trials = None, config.sweep.experiment.n_trials
 

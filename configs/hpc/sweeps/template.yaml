@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script:           v1.yaml
+# Script:           template.yaml
 # Purpose:          Template for WandB sweep configurations
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
@@ -12,7 +12,7 @@
 
 study: 
   project: chip-stroma        # Main project container
-  group  : v1                 # Sweep name (grouping)
+  group  : template           # Sweep name (grouping)
 
 experiment:
   n_trials        : 10  # Number of trials to perform
@@ -25,7 +25,7 @@ data:
   batch_size : 8
   num_workers: 4
   seed       : 42
-  pos_prob   : 0.5     # Balance positive exposure; 0.5 is neutral prior
+  pos_prob   : [0.3, 0.7]     # Balance positive exposure; 0.5 is neutral prior
 
 model:
   encoder_name   : resnet34
@@ -45,6 +45,6 @@ trainer:
   max_epochs              : 50       # Keep 50 for testing, 100 for final sweep
   early_stopping_patience : 10       # Isensee et al. (2021) Nat Methods
   early_stopping_min_delta: 0.00001
-  gradient_clip_val       : 1.0   # Log-uniform; standard clipping range
+  gradient_clip_val       : [0.1, 10.0]   # Log-uniform; standard clipping range
 
 # [END]

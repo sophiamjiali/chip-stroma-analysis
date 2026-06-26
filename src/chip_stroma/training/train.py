@@ -92,7 +92,7 @@ def train(manifest: pd.DataFrame,
         weight_decay = params.module.weight_decay,
         T_max        = params.trainer.max_epochs,
         ftl_alpha    = params.module.ftl_alpha,
-        ftl_beta     = params.module.ftl_beta,
+        ftl_beta     = 1 - params.module.ftl_alpha,
         ftl_gamma    = params.module.ftl_gamma,
         ftl_weight   = params.module.ftl_weight,
         smooth       = params.module.smooth

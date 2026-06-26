@@ -10,8 +10,8 @@
 #                   Fold is fixed (fold 0) during sweeps; hyperparameters are
 #                   tuned on a single fold then applied across all folds in the
 #                   final run (Raschka, 2018; Cawley & Talbot, 2010).
-#                   alpha + beta = 1 constraint (Abraham & Khan, 2019) is
-#                   enforced by deriving ftl_beta from ftl_alpha.
+#
+#                   Sweep ranges provided in the configuration YAML file can be #                   overwritten by constants to hold constant in the sweep.
 # ==============================================================================
 
 import pandas as pd
@@ -24,6 +24,7 @@ from chip_stroma.training.train import train
 from chip_stroma.utils.loggers import setup_logger
 
 logger = setup_logger(__name__)
+
 
 def objective(trial: Trial,
               manifest: pd.DataFrame,
@@ -55,7 +56,7 @@ def objective(trial: Trial,
     """
 
     logger.info("=" * 50)
-    logger.info("Step 02: Hyperparameter Suggestion")
+    logger.info("Step 05: Hyperparameter Suggestion")
     logger.info(f"- Trial: {trial.number}")
     logger.info("-" * 50)
 
@@ -96,12 +97,16 @@ def objective(trial: Trial,
 def suggest_optimizer(params: Box, trial: Trial) -> Box:
     """Provides in-place suggestions for optimizer parameters."""
 
-    params.module.lr = trial.suggest_float(
-        "lr", *params.module.lr, log = True
+    params.module.lr = (
+        trial.suggest_float("lr", *params.module.lr, log = True)
+        if isinstance(params.module.lr, (list, tuple))
+        else params.module.lr
     )
 
-    params.module.weight_decay = trial.suggest_float(
-        "weight_decay", *params.module.weight_decay, log = True
+    params.module.weight_decay = (
+        trial.suggest_float("weight_decay",*params.module.weight_decay,log=True)
+        if isinstance(params.module.weight_decay, (list, tuple))
+        else params.module.weight_decay
     )
 
     logger.info("Successfully suggested learning rate and weight decay "
@@ -112,18 +117,24 @@ def suggest_optimizer(params: Box, trial: Trial) -> Box:
 def suggest_focal_loss(params: Box, trial: Trial) -> Box:
     """Provides in-place suggestions for Focal Tversky Loss parameters."""
 
-    # Derive the betea term from the suggested alpha value
-    params.module.ftl_alpha = trial.suggest_float(
-        "ftl_alpha", *params.module.ftl_alpha
+    # Derive the beta term from the suggested alpha value
+    params.module.ftl_alpha = (
+        trial.suggest_float("ftl_alpha", *params.module.ftl_alpha)
+        if isinstance(params.module.ftl_alpha, (list, tuple))
+        else params.module.ftl_alpha
     )
     params.module.ftl_beta = 1.0 - params.module.ftl_alpha
 
-    params.ftl_gamma = trial.suggest_float(
-        "ftl_gamma", *params.module.ftl_gamma
+    params.module.ftl_gamma = (
+        trial.suggest_float("ftl_gamma", *params.module.ftl_gamma)
+        if isinstance(params.module.ftl_gamma, (list, tuple))
+        else params.module.ftl_gamma
     )
     
-    params.ftl_weight = trial.suggest_float(
-        "ftl_weight", *params.module.ftl_weight
+    params.module.ftl_weight = (
+        trial.suggest_float("ftl_weight", *params.module.ftl_weight)
+        if isinstance(params.module.ftl_weight, (list, tuple))
+        else params.module.ftl_weight
     )
 
     logger.info("Successfully suggested alpha, beta, gamma, and weight values "
@@ -134,8 +145,10 @@ def suggest_focal_loss(params: Box, trial: Trial) -> Box:
 def suggest_sampler(params: Box, trial: Trial) -> Box:
     """Provides in-place suggestions for the sampler."""
 
-    params.data.pos_prob = trial.suggest_float(
-        "pos_prob", *params.data.pos_prob
+    params.data.pos_prob = (
+        trial.suggest_float("pos_prob", *params.data.pos_prob)
+        if isinstance(params.data.pos_prob, (list, tuple))
+        else params.data.pos_prob
     )
 
     logger.info("Successfully suggested positive probability for "

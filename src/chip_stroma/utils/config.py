@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 
 # =====| Main API |=============================================================
 
-def load_configs(pipeline: Path, paths: Path) -> Box:
+def load_configs(pipeline: Path, 
+                 paths: Path, 
+                 config_name: str | None = None) -> Box:
     "Loads all configurations nested by their file name."
 
     logger.info("=" * 50)
@@ -28,8 +30,11 @@ def load_configs(pipeline: Path, paths: Path) -> Box:
     logger.info(f"- Paths: {paths}")
     logger.info("-" * 50)
 
+    # If a sweep, override the configuration name with just 'sweep'
+    name = config_name if config_name else pipeline.stem
+
     config = {
-        pipeline.stem: load_config(pipeline),
+        name: load_config(pipeline),
         "paths": load_paths_config(paths)
     }
 

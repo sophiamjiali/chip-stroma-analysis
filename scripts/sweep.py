@@ -6,29 +6,39 @@
 # Date:             06/03/2026
 # ==============================================================================
 
+import optuna
+
 import argparse as ap
 
+from box import Box
 from pathlib import Path
 from datetime import datetime
+from functools import partial
+from optuna.pruners import MedianPruner
+from optuna.samplers import TPESampler
+from optuna.trial import FrozenTrial, TrialState
 
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import initialize_train_manifest
-from chip_stroma.training.train import train
+from chip_stroma.training.objective import objective
 
 logger = setup_logger(__name__)
+
 
 # =====| Workflow Entry Point |=================================================
 
 def main():
     args = parse_args()
-    log_header(config_path = Path(args.config_dir) / f"{args.version}.yaml",
+    pipeline_path = Path(args.config_dir) / "sweeps" / f"{args.version}.yaml"
+    log_header(config_path = pipeline_path,
                version     = args.version)
     
-    # 1. Load workflow and path configurations
+    # 1. Load workflow and path configurations; sweeps are nested in a folder
     config = load_configs(
-        pipeline = Path(args.config_dir) / "segmentation.yaml",
-        paths    = Path(args.config_dir) / "paths.yaml"
+        pipeline    = pipeline_path,
+        paths       = Path(args.config_dir) / "paths.yaml",
+        config_name = "sweep"
     )
 
     # 2. Verify that the training manifest was created, else create it
@@ -36,8 +46,81 @@ def main():
         train_manifest_path = config.paths.metadata.train_manifest,
         patch_manifest_path = config.paths.metadata.patch_manifest
     )
-    
 
+    logger.info("=" * 50)
+    logger.info("Step 03: Study Creation")
+    logger.info("- Optimization Direction: maximize")
+    logger.info(f"- Study Name (Group): {config.sweep.study.group}")
+    logger.info(f"- Startup Trials: {config.experiment.n_startup_trials}")
+    logger.info(f"- Warmup Steps: {config.experiment.n_warmup_steps}")
+    logger.info("-" * 50)
+
+    # 3. Initialize the sampler and pruner for the trial
+    logger.info("Successfully initialized the TPESampler")
+    sampler = TPESampler(
+        seed             = config.sweep.data.seed,
+        multivariate     = True,
+        n_startup_trials = config.experiment.n_startup_trials
+    )
+    
+    logger.info("Successfully initialized the MedianPruner")
+    pruner = MedianPruner(
+        n_startup_trials = config.experiment.n_startup_trials,
+        n_warmup_steps   = config.experiment.n_warmup_steps
+    )
+
+    logger.info("Successfuly initialized the Optuna study for sweeping")
+    study = optuna.create_study(
+        direction  = "maximize",
+        sampler    = sampler,
+        pruner     = pruner,
+        study_name = config.sweep.study.group
+    )
+
+    logger.info("=" * 50)
+
+    # If a valid timeout was provided, overwrite n_trials
+    if config.sweep.experiment.timeout != -1:
+        timeout, n_trials = config.sweep.experiment.timeout, None
+    else:
+        timeout, n_trials = None, config.sweep.experiment.n_trials
+
+    logger.info("=" * 50)
+    logger.info("Step 04: Hyperparameter Sweep")
+    logger.info(f"- Timeout: {timeout}")
+    logger.info(f"- Trials: {n_trials}")
+    logger.info("-" * 50)
+    logger.info("Beginning hyperparameter sweep")
+
+    study.optimize(
+        partial(
+            objective, 
+            manifest = manifest,
+            project  = config.sweep.study.project,
+            group    = config.sweep.study.group,
+            paths    = config.paths,
+            params   = config.sweep,
+            seed     = config.sweep.data.seed
+        ),
+        n_trials = n_trials,
+        timeout  = timeout
+    )
+
+    n_trials         = len(study.trials)
+    trials_completed = len(study.get_trials(states = [TrialState.COMPLETE]))
+    trials_pruned    = len(study.get_trials(states = [TrialState.PRUNED]))
+    trials_failed    = len(study.get_trials(states = [TrialState.FAIL]))
+
+    logger.info("Successfully completed hyperparameter sweep")
+    logger.info(f"- Total Trials: {n_trials}")
+    logger.info(f"- Completed Trials: {trials_completed}")
+    logger.info(f"- Pruned Trials: {trials_pruned}")
+    logger.info(f"- Failed Trails: {trials_failed}")
+    logger.info("=" * 50)
+
+    log_footer(config.paths, trial = study.best_trial)
+
+    return
 
 
 # =====| Helpers |==============================================================
@@ -60,13 +143,12 @@ def log_header(config_path: Path, version: str):
     logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
     logger.info("=" * 60)
 
-def log_footer(cfg, metrics):
+
+def log_footer(cfg: Box, trial: FrozenTrial):
     logger.info("=" * 60)
     logger.info("Successfully Completed Pipeline Execution")
-    logger.info(f"- Train Manifest: {cfg.metadata.train_manifest}")
-    logger.info(f"- Validation Loss: {metrics.get('val/loss')}")
-    logger.info(f"- Validation Dice Score: {metrics.get('val/dice')}")
-    logger.info(f"- Validation IoU Score: {metrics.get('val/iou')}")
+    logger.info(f"- Best Trial: {trial.number}")
+    logger.info(f"- Best Validation Dice Score: {trial.value:.4f}")
     logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
     logger.info("=" * 60)
 

@@ -27,7 +27,7 @@ module:
   lr: 1e-4
   weight_decay: 1e-2
   ftl_alpha: 0.3             # FTL FP weight (Abraham & Khan, 2019)
-  ftl_beta: 0.7              # FTL FN weight
+  ftl_beta: 0.7              # FTL FN weight (should be 1 - ftl_alpha)
   ftl_gamma: 0.75            # FTL focal exponent
   ftl_weight: 0.5            # composite: ftl_weight*FTL + (1-ftl_weight)*Dice
   smooth: 1.0

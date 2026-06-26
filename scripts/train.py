@@ -28,7 +28,7 @@ from datetime import datetime
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import initialize_train_manifest
-from chip_stroma.segmentation.train import train
+from chip_stroma.training.train import train
 
 logger = setup_logger(__name__)
 
@@ -69,7 +69,7 @@ def main():
 # =====| Helpers |==============================================================
 
 def parse_args():
-    parser = ap.ArgumentParser(description = "Process raw patches and masks.")
+    parser = ap.ArgumentParser(description = "Train a single run of the model.")
     parser.add_argument("--config_dir", type = str, default = "configs/")
     
     return parser.parse_args()
@@ -78,7 +78,7 @@ def parse_args():
 def log_header(config_path):
     logger.info("=" * 60)
     logger.info("Starting Pipeline Execution")
-    logger.info("- Pipeline Stage: Segmentation UNet Training")
+    logger.info("- Pipeline Stage: Segmentation UNet Training - Single Run")
     logger.info(f"- Configurations: {config_path}")
     logger.info(f"- Working Directory: {Path.cwd()}")
     logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
@@ -88,7 +88,9 @@ def log_footer(cfg, metrics):
     logger.info("=" * 60)
     logger.info("Successfully Completed Pipeline Execution")
     logger.info(f"- Train Manifest: {cfg.metadata.train_manifest}")
-    logger.info(f"- Validation Loss: {metrics.get('val_loss')}")
+    logger.info(f"- Validation Loss: {metrics.get('val/loss')}")
+    logger.info(f"- Validation Dice Score: {metrics.get('val/dice')}")
+    logger.info(f"- Validation IoU Score: {metrics.get('val/iou')}")
     logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
     logger.info("=" * 60)
 

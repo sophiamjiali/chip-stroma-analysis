@@ -11,7 +11,7 @@ import argparse as ap
 from pathlib import Path
 from datetime import datetime
 
-from chip_stroma.segmentation.cross_validation import (
+from chip_stroma.training.cross_validation import (
     assign_folds,
     assign_chip_labels,
     merge_fold_assignments

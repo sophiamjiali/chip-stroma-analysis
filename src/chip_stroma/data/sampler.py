@@ -55,7 +55,7 @@ class PositiveWeightedSampler(Sampler):
 
         # Per-patient inverse-frequency weights for positive patches
         pos_manifest     = manifest.loc[pos_mask, 'sample_id']
-        patient_counts   = pos_manifest.value.counts()
+        patient_counts   = pos_manifest.value_counts()
         patient_weights  = 1.0 / patient_counts
         patch_weights    = pos_manifest.map(patient_weights).to_numpy()
         self.pos_weights = patch_weights / patch_weights.sum()

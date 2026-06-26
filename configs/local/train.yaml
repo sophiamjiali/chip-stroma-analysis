@@ -12,8 +12,8 @@ study:
 
 data: 
   fold: 0         # Which StratifiedGroupKFold fold to train on
-  batch_size: 16
-  num_workers: 4
+  batch_size: 1
+  num_workers: 1
   seed: 42
   pos_prob: 0.5   # PositiveWeightedSampler positive-patch probability
 
@@ -33,7 +33,7 @@ module:
   smooth: 1.0
  
 trainer:
-  max_epochs: 100
+  max_epochs: 10
   early_stopping_patience: 10   # Isensee et al. (2021) Nat Methods
   early_stopping_min_delta: 0.00001
   gradient_clip_val: 1.0

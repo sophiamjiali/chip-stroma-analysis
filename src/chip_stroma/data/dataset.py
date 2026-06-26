@@ -70,10 +70,10 @@ class VesselPatchDataset(Dataset):
         with Image.open(patch_path) as img: patch = np.array(img.convert('RGB'))
 
         # Load the binary masks (0/255 uint8, mode 'L')
-        vessel_path = self.vessel_mask_dir / row['sample_id'] /row['patch_name']
+        vessel_path = self.vessel_mask_dir / row['sample_id']/row['vessel_mask']
         with Image.open(vessel_path) as img: vessel_mask = np.array(img)
 
-        tissue_path = self.tissue_mask_dir / row['sample_id'] /row['patch_name']
+        tissue_path = self.tissue_mask_dir / row['sample_id']/row['tissue_mask']
         with Image.open(tissue_path) as img: tissue_mask = np.array(img)
 
         # Apply joint spatial transforms to patch and vessel masks (not tissue)

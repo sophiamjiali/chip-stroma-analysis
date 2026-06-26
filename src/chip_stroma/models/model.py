@@ -60,7 +60,7 @@ def build_model(encoder_name:     str = "resnet34",
         Initialized smp U-Net with pretrained encoder.
     """
 
-    # Return the pretrained ImageNet encoder
+    # Return the pretrained ImageNet encoder; loads pre-downloaded, offline
     return smp.Unet(
         encoder_name     = encoder_name,
         encoder_weights  = encoder_weights,

@@ -39,6 +39,9 @@ unset SLURM_JOB_NAME
 export CUDA_VISIBLE_DEVICES=""
 export PYTORCH_ENABLE_MPS_FALLBACK=0
 
+# Point to the pre-downloaded Resnet34 imagenet weights
+export TORCH_HOME="$HOME/.cache/torch"
+
 CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs/hpc
 
 srun python scripts/sweep.py \

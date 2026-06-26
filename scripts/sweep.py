@@ -38,7 +38,8 @@ def main():
     config = load_configs(
         pipeline    = pipeline_path,
         paths       = Path(args.config_dir) / "paths.yaml",
-        config_name = "sweep"
+        config_name = "sweep",
+        frozen      = False
     )
 
     # 2. Verify that the training manifest was created, else create it

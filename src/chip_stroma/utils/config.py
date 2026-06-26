@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 
 def load_configs(pipeline: Path, 
                  paths: Path, 
-                 config_name: str | None = None) -> Box:
+                 config_name: str | None = None,
+                 frozen: bool = False) -> Box:
     "Loads all configurations nested by their file name."
 
     logger.info("=" * 50)
@@ -41,7 +42,7 @@ def load_configs(pipeline: Path,
     logger.info("Successfully loaded and merged both configuration files")
     logger.info("=" * 50)
 
-    return Box(config, frozen_box = True)
+    return Box(config, frozen_box = frozen)
     
 
 # =====| Helper Functions |=====================================================

@@ -18,6 +18,7 @@ import pandas as pd
 
 from box import Box
 from optuna import Trial
+from datetime import datetime
 
 from chip_stroma.training.train import train
 from chip_stroma.utils.loggers import setup_logger
@@ -52,5 +53,104 @@ def objective(trial: Trial,
     -------
     float : val/dice at end of trial (higher = better).
     """
+
+    logger.info("=" * 50)
+    logger.info("Step 02: Hyperparameter Suggestion")
+    logger.info(f"- Trial: {trial.number}")
+    logger.info("-" * 50)
+
+    # Suggest hyperparameters from the provided sweep configuration ranges
+    params = suggest_optimizer(params = params, trial = trial)
+    params = suggest_focal_loss(params = params, trial = trial)
+    params = suggest_sampler(params = params, trial = trial)
+    params = suggest_trainer(params = params, trial = trial)
+
+    logger.info("=" * 50)
+
+    # Train the model with the suggested parameters
+    metrics = train(
+        manifest = manifest,
+        project  = project,
+        group    = group,
+        paths    = paths,
+        params   = params,
+        seed     = seed,
+        trial    = trial
+    )
+
+    logger.info("~" * 50)
+    logger.info(f"Project {project} - Group {group}: "
+                f"trial {trial.number} results")
+    logger.info(f"- Validation Loss: {metrics.get('val/loss')}")
+    logger.info(f"- Validation Dice Score: {metrics.get('val/dice')}")
+    logger.info(f"- Validation IoU Score: {metrics.get('val/iou')}")
+    logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    logger.info("~" * 50)
+
+    # Return the validation Dice score as the key metric
+    return float(metrics.get('val/dice', 0.0))
+
+
+# =====| Helpers |==============================================================
+
+def suggest_optimizer(params: Box, trial: Trial) -> Box:
+    """Provides in-place suggestions for optimizer parameters."""
+
+    params.module.lr = trial.suggest_float(
+        "lr", *params.module.lr, log = True
+    )
+
+    params.module.weight_decay = trial.suggest_float(
+        "weight_decay", *params.module.weight_decay, log = True
+    )
+
+    logger.info("Successfully suggested learning rate and weight decay "
+                "values for Optimizer")
+    return params
+
+
+def suggest_focal_loss(params: Box, trial: Trial) -> Box:
+    """Provides in-place suggestions for Focal Tversky Loss parameters."""
+
+    # Derive the betea term from the suggested alpha value
+    params.module.ftl_alpha = trial.suggest_float(
+        "ftl_alpha", *params.module.ftl_alpha
+    )
+    params.module.ftl_beta = 1.0 - params.module.ftl_alpha
+
+    params.ftl_gamma = trial.suggest_float(
+        "ftl_gamma", *params.module.ftl_gamma
+    )
+    
+    params.ftl_weight = trial.suggest_float(
+        "ftl_weight", *params.module.ftl_weight
+    )
+
+    logger.info("Successfully suggested alpha, beta, gamma, and weight values "
+                "for Focal Tversky Loss")
+    return params
+
+
+def suggest_sampler(params: Box, trial: Trial) -> Box:
+    """Provides in-place suggestions for the sampler."""
+
+    params.data.pos_prob = trial.suggest_float(
+        "pos_prob", *params.data.pos_prob
+    )
+
+    logger.info("Successfully suggested positive probability for "
+                "Sampler")
+    return params
+
+
+def suggest_trainer(params: Box, trial: Trial) -> Box:
+    """Provides in-place suggestions for the Trainer."""
+
+    params.trainer.gradient_clip_val = trial.suggest_float(
+        "gradient_clip_val", *params.trainer.gradient_clip_val, log = True
+    )
+
+    logger.info("Successfulyl suggested gradient clip value for Trainer")
+    return params
 
 # [END]

@@ -51,8 +51,8 @@ def main():
     logger.info("Step 03: Study Creation")
     logger.info("- Optimization Direction: maximize")
     logger.info(f"- Study Name (Group): {config.sweep.study.group}")
-    logger.info(f"- Startup Trials: {config.experiment.n_startup_trials}")
-    logger.info(f"- Warmup Steps: {config.experiment.n_warmup_steps}")
+    logger.info(f"- Startup Trials: {config.sweep.experiment.n_startup_trials}")
+    logger.info(f"- Warmup Steps: {config.sweep.experiment.n_warmup_steps}")
     logger.info("-" * 50)
 
     # 3. Initialize the sampler and pruner for the trial
@@ -60,13 +60,13 @@ def main():
     sampler = TPESampler(
         seed             = config.sweep.data.seed,
         multivariate     = True,
-        n_startup_trials = config.experiment.n_startup_trials
+        n_startup_trials = config.sweep.experiment.n_startup_trials
     )
     
     logger.info("Successfully initialized the MedianPruner")
     pruner = MedianPruner(
-        n_startup_trials = config.experiment.n_startup_trials,
-        n_warmup_steps   = config.experiment.n_warmup_steps
+        n_startup_trials = config.sweep.experiment.n_startup_trials,
+        n_warmup_steps   = config.sweep.experiment.n_warmup_steps
     )
 
     logger.info("Successfuly initialized the Optuna study for sweeping")

@@ -3,7 +3,7 @@
 #SBATCH --error=/cluster/home/t144807uhn/logs/chip-stroma-analysis/train/%x/%x_%j.err
 #SBATCH --time=06:30:00
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=24G
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=sophiamjia.li@mail.utoronto.ca
@@ -26,10 +26,14 @@ echo "GPU:                $CUDA_VISIBLE_DEVICES"
 echo "Start time:         $(date)"
 echo "=========================================="
 
+# Configure WandB tracking for offline only (compute nodes have no internet)
 export WANDB_PROJECT="chip-stroma"
 export WANDB_MODE=offline
 export WANDB_DIR="/cluster/home/t144807uhn/logs/chip-stroma-analysis/wandb/train/$1"
 mkdir -p "$WANDB_DIR"
+
+# Mask Albumentions from checking for updates (no internet)
+export NO_ALBUMENTATIONS_UPDATE=1
 
 export OPTUNA_SQLITE_TIMEOUT=300
 
@@ -38,6 +42,7 @@ unset SLURM_JOB_NAME
 
 export CUDA_VISIBLE_DEVICES=""
 export PYTORCH_ENABLE_MPS_FALLBACK=0
+unset SLURM_NTASKS
 
 CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs/hpc
 

@@ -159,6 +159,15 @@ class VesselSegModule(pl.LightningModule):
 
         return loss
     
+    
+    def on_train_epoch_end(self) -> None:
+        """Add an indicator the epoch ended without the messy progress bar."""
+        epoch = self.current_epoch
+        loss = self.trainer.callback_metrics.get('train/loss_epoch', 'N/A')
+        print(f"Epoch {epoch} complete | train/loss: {loss:.4f}", flush=True)
+        return
+
+    
     def validation_step(self, batch: dict, batch_idx: int) -> None:
         loss, logits_sq, vessel_mask = self._shared_step(batch)
 
@@ -174,10 +183,21 @@ class VesselSegModule(pl.LightningModule):
         return
     
     def on_validation_epoch_end(self) -> None:
-        self.log('val/dice', self.val_dice.compute(), prog_bar = True)
+        self.log('val/dice', self.val_dice.compute(), prog_bar = False)
         self.log('val/iou', self.val_iou.compute(), prog_bar = False)
         self.val_dice.reset()
         self.val_iou.reset()
+
+        metrics = self.trainer.callback_metrics
+        print(
+            f"Epoch {self.current_epoch} | "
+            f"val/loss: {metrics.get('val/loss', 'N/A'):.4f} | "
+            f"val/dice: {metrics.get('val/dice', 'N/A'):.4f} | "
+            f"val/iou: {metrics.get('val/iou', 'N/A'):.4f}",
+            flush=True
+        )
+
+        return
 
 
     def configure_optimizers(self) -> OptimizerLRScheduler:

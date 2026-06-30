@@ -37,11 +37,11 @@ logger = setup_logger(__name__)
 
 def main():
     args = parse_args()
-    log_header(config_path = Path(args.config_dir) / "segmentation.yaml")
+    log_header(config_path = Path(args.config_dir) / "train.yaml")
 
     # 1. Load workflow and path configurations
     config = load_configs(
-        pipeline = Path(args.config_dir) / "segmentation.yaml",
+        pipeline = Path(args.config_dir) / "train.yaml",
         paths    = Path(args.config_dir) / "paths.yaml"
     )
 

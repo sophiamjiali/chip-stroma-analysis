@@ -12,9 +12,8 @@
 mkdir -p /cluster/home/t144807uhn/logs/chip-stroma-analysis/sweep/$1
 
 # Activate the virtual environment
-module load gcc/12   # or newer available
 source /cluster/home/t144807uhn/envs/chip-stroma-env/bin/activate
-export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/cluster/home/t144807uhn/envs/chip-stroma-env/lib:$LD_LIBRARY_PATH
 
 # Ensure that all commands resolve back to the proper root directory
 cd /cluster/home/t144807uhn/chip-stroma-analysis

@@ -6,6 +6,7 @@
 # Date:             06/03/2026
 # ==============================================================================
 
+import torch
 import optuna
 
 import argparse as ap
@@ -93,6 +94,8 @@ def main():
     logger.info(f"- Trials: {n_trials}")
     logger.info("-" * 50)
     logger.info("Beginning hyperparameter sweep")
+
+    torch.set_num_threads(1)
 
     study.optimize(
         partial(

@@ -30,7 +30,7 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
     Parameters
     ----------
     trial                    : Optuna Trial, if running a sweep
-    early_stopping_patience  : Epochs without val_loss improve. before stopping.
+    early_stopping_patience  : Epochs without val/loss improve. before stopping.
     early_stopping_min_delta : Minimum improvement threshold for early stopping.
     """
 
@@ -47,7 +47,7 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
 
     logger.info("Successfully configured the EarlyStopping callback")
     early_stop_callback = EarlyStopping(
-        monitor                  = "val_loss",
+        monitor                  = "val/loss",
         mode                     = "min",
         patience                 = early_stopping_patience,
         min_delta                = early_stopping_min_delta,
@@ -71,7 +71,7 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
                     "PyTorchLightningPruningCallback")
         callbacks.append(optuna.integration.PyTorchLightningPruningCallback(
             trial   = trial,
-            monitor = "val_loss"
+            monitor = "val/loss"
         ))
 
     logger.info("=" * 50)

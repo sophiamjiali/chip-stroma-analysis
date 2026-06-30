@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script:           segmentation.yaml
+# Script:           train.yaml
 # Purpose:          U-Net hyperparameters, augmentation, and training
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT

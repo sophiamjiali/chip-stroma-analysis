@@ -1,6 +1,6 @@
 # ==============================================================================
 # Script:           train.yaml
-# Purpose:          Train the UNet for vessel segmentation
+# Purpose:          Train the UNet for vessel train
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
 # Date:             06/04/2026
@@ -54,11 +54,11 @@ def main():
     # Train the model using the configurations provided in the YAML
     metrics = train(
         manifest = manifest,
-        project  = config.segmentation.study.project,
-        group    = config.segmentation.study.group,
+        project  = config.train.study.project,
+        group    = config.train.study.group,
         paths    = config.paths,
-        params   = config.segmentation,
-        seed     = config.segmentation.data.seed,
+        params   = config.train,
+        seed     = config.train.data.seed,
         trial    = None
     )
 
@@ -78,7 +78,7 @@ def parse_args():
 def log_header(config_path):
     logger.info("=" * 60)
     logger.info("Starting Pipeline Execution")
-    logger.info("- Pipeline Stage: Segmentation UNet Training - Single Run")
+    logger.info("- Pipeline Stage: train UNet Training - Single Run")
     logger.info(f"- Configurations: {config_path}")
     logger.info(f"- Working Directory: {Path.cwd()}")
     logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")

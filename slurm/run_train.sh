@@ -42,7 +42,7 @@ export PYTORCH_ENABLE_MPS_FALLBACK=0
 CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs/hpc
 
 srun python scripts/train.py \
-    --config_dir $CONFIG_PATH
+    --config_dir $CONFIG_DIR
 
 echo "=========================================="
 echo "End time: $(date)"

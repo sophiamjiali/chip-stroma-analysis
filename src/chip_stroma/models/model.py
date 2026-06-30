@@ -127,6 +127,20 @@ class VesselSegModule(pl.LightningModule):
         return self.model(x)
     
 
+    # =====| Debugging Statements |=============================================
+
+    def on_train_start(self):
+        print("Starting model training", flush = True)
+
+    def on_train_batch_start(self, batch, batch_idx):
+        if batch_idx == 0: print("First batch started", flush = True)
+
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        if batch_idx == 0: print("First batch complete", flush = True)
+
+
+    # =====| Steps |============================================================
+    
     def _shared_step(self, batch: dict) -> tuple[torch.Tensor, ...]:
         """
         Returns (loss, logits, vessel_mask). The corresponding vessel mask is applied inside each loss to exclude background pixels.
@@ -182,6 +196,7 @@ class VesselSegModule(pl.LightningModule):
         
         return
     
+
     def on_validation_epoch_end(self) -> None:
         self.log('val/dice', self.val_dice.compute(), prog_bar = False)
         self.log('val/iou', self.val_iou.compute(), prog_bar = False)
@@ -200,6 +215,8 @@ class VesselSegModule(pl.LightningModule):
         return
 
 
+    # =====| Optimizers |=======================================================
+    
     def configure_optimizers(self) -> OptimizerLRScheduler:
 
         optimizer = torch.optim.AdamW(

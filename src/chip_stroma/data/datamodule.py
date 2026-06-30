@@ -12,9 +12,13 @@ import lightning.pytorch as pl
 from pathlib import Path
 from typing import Optional
 from torch.utils.data import DataLoader
+
+from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.data.dataset import VesselPatchDataset
 from chip_stroma.data.sampler import PositiveWeightedSampler
 from chip_stroma.data.transforms import get_train_transforms, get_val_transforms
+
+logger = setup_logger(__name__)
 
 
 class VesselSegmentationDataModule(pl.LightningDataModule):
@@ -121,6 +125,9 @@ class VesselSegmentationDataModule(pl.LightningDataModule):
             transform       = get_val_transforms()
         )
 
+        logger.info("DataModule setup complete")
+        return
+
     # =====| DataLoaders |======================================================
 
     def train_dataloader(self) -> DataLoader:
@@ -135,6 +142,8 @@ class VesselSegmentationDataModule(pl.LightningDataModule):
         pin_memory = True: accelerates CPU-to-GPU transfer for patch tensors
         (PyTorch docs, 2024).
         """
+
+        logger.info("Building train dataloader")
 
         assert self.train_dataset is not None, (
             "train_dataset is None - ensure setup()"
@@ -158,6 +167,7 @@ class VesselSegmentationDataModule(pl.LightningDataModule):
             drop_last          = True
         )
     
+    
     def val_dataloader(self) -> DataLoader:
         """
         Validation DataLoader with sequential sampling.
@@ -168,6 +178,8 @@ class VesselSegmentationDataModule(pl.LightningDataModule):
         avoid biased Dice estimation at small fold sizes (Bradshaw et al.,
         Radiol Artif Intell, 2023).
         """
+
+        logger.info("Building validation dataloader")
 
         assert self.val_dataset is not None, (
             "val_dataset is None - ensure setup()"

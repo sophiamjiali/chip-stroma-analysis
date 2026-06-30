@@ -15,6 +15,10 @@ mkdir -p /cluster/home/t144807uhn/logs/chip-stroma-analysis/sweep/$1
 source /cluster/home/t144807uhn/envs/chip-stroma-env/bin/activate
 export LD_LIBRARY_PATH=/cluster/home/t144807uhn/envs/chip-stroma-env/lib:$LD_LIBRARY_PATH
 
+export PATH=/cluster/home/t144807uhn/envs/chip-stroma-env/bin:$PATH
+which python
+python -c "import sys; print(sys.executable)"
+
 # Ensure that all commands resolve back to the proper root directory
 cd /cluster/home/t144807uhn/chip-stroma-analysis
 

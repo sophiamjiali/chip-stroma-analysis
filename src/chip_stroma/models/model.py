@@ -26,6 +26,12 @@ from chip_stroma.models.loss import FocalTverskyLoss, MaskedDiceLoss
 
 logger = setup_logger(__name__)
 last_log_time = time.time()
+last_epoch_time = time.time()
+
+# Toggle debugging logs for training/validation steps
+LOG_TIME = False
+LOG_TRAIN_STEP = True
+LOG_TRAIN_STEP_INTERVAL = 500
 
 
 def build_model(encoder_name:     str = "resnet34",
@@ -136,23 +142,11 @@ class VesselSegModule(pl.LightningModule):
 
     def on_train_start(self):
         logger.info("-" * 50)
-        logger.info("Starting model training")
+        logger.info("-- | Starting model training")
 
-    def on_train_batch_start(self, batch, batch_idx):
-        if batch_idx == 0: logger.info("First training batch started")
-
-    def on_train_batch_end(self, outputs, batch, batch_idx):
-        if batch_idx == 0: logger.info("First training batch complete")
-
-    def on_validation_start(self):
-        logger.info("Validation started")
-
-    def on_validation_batch_start(self, batch, batch_idx, dataloader_idx = 0):
-        if batch_idx == 0: logger.info("First validation batch started")
-
-    def on_validation_batch_end(self, outputs, batch, 
-                                batch_idx, dataloader_idx = 0):
-        if batch_idx == 0: logger.info("First validation batch complete")
+    def on_train_end(self):
+        logger.info("-- | Completing model training")
+        logger.info("-" * 50)
 
 
     # =====| Steps |============================================================
@@ -185,18 +179,20 @@ class VesselSegModule(pl.LightningModule):
         global last_log_time
         loss, _, _ = self._shared_step(batch)
 
-        # Log every 100 steps
-        if batch_idx % 100 == 0:
-            logger.info(f"Epoch {self.current_epoch} | Step {batch_idx} | "
-                        f"train/loss: {loss:.4f}")
+        # Log every X steps
+        if LOG_TRAIN_STEP:
+            if batch_idx % LOG_TRAIN_STEP_INTERVAL == 0:
+                logger.info(f"Epoch {self.current_epoch} | Step {batch_idx} | "
+                            f"train/loss: {loss:.4f}")
             
-        # Detect if the model training is stalling
-        if batch_idx % 50 == 0:
-            now = time.time()
-            logger.info(f"Alive check | Epoch {self.current_epoch} | "
-                        f"Step {batch_idx} | "
-                        f"Time since last log: {now - last_log_time:.1f}s")
-            last_log_time = now
+        # Detect if the model training is stalling; only if logging is enabled
+        if LOG_TIME:
+            if batch_idx % 50 == 0:
+                now = time.time()
+                logger.info(f"Alive check | Epoch {self.current_epoch} | "
+                            f"Step {batch_idx} | "
+                            f"Time since last log: {now - last_log_time:.1f}s")
+                last_log_time = now
 
         self.log('train/loss', loss, on_step = True, on_epoch = True,
                  prog_bar = False, sync_dist = False)
@@ -207,15 +203,19 @@ class VesselSegModule(pl.LightningModule):
     def on_train_epoch_start(self):
         """Add an indicator when the epoch starts without messy progress bar."""
         epoch = self.current_epoch
-        logger.info(f"Epoch {epoch} started...")
+        logger.info(f"-- | Epoch {epoch} started...")
         return
 
 
     def on_train_epoch_end(self) -> None:
         """Add an indicator when the epoch ends without messy progress bar."""
+        global last_epoch_time
+        
         epoch = self.current_epoch
         loss = self.trainer.callback_metrics.get('train/loss_epoch', 'N/A')
-        logger.info(f"Epoch {epoch} complete | train/loss: {loss:.4f}")
+
+        logger.info(f"-- | Epoch {epoch} complete | train/loss: {loss:.4f} | "
+                    f"Time elapsed: {time.time() - last_epoch_time:.1f}s")
         return
 
     

@@ -28,7 +28,7 @@ prometheus_client==0.25.0
 pydantic_core==2.46.4
 python-box==7.4.1
 segmentation_models_pytorch==0.5.0
-simpleitk==2.5.5
+SimpleITK==2.4.0
 tiatoolbox==1.6.0
 timeago==1.0.14
 torchstain==1.4.1

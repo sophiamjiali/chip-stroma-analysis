@@ -66,17 +66,21 @@ class VesselPatchDataset(Dataset):
 
         # Load the normalized RGB patch from the patch directory
         row = self.records.iloc[idx]
+        print(f"[{idx}] Reading patch", flush=True)
         patch_path = self.patch_dir / row['sample_id'] / row['patch_name']
         with Image.open(patch_path) as img: patch = np.array(img.convert('RGB'))
 
         # Load the binary masks (0/255 uint8, mode 'L')
+        print(f"[{idx}] Reading vessel mask", flush=True)
         vessel_path = self.vessel_mask_dir / row['sample_id']/row['vessel_mask']
         with Image.open(vessel_path) as img: vessel_mask = np.array(img)
 
+        print(f"[{idx}] Reading tissue mask", flush=True)
         tissue_path = self.tissue_mask_dir / row['sample_id']/row['tissue_mask']
         with Image.open(tissue_path) as img: tissue_mask = np.array(img)
 
         # Apply joint spatial transforms to patch and vessel masks (not tissue)
+        print(f"[{idx}] Applying transforms", flush=True)
         if self.transform is not None:
             transformed = self.transform(image = patch, mask = vessel_mask)
             patch       = transformed['image']
@@ -86,6 +90,8 @@ class VesselPatchDataset(Dataset):
         patch       = torch.from_numpy(patch).permute(2, 0, 1).float() / 255.0
         vessel_mask = torch.from_numpy(vessel_mask).unsqueeze(0).float() / 255.0
         tissue_mask = torch.from_numpy(tissue_mask).squeeze(0).float() / 255.0
+
+        print(f"[{idx}] Done", flush=True)
 
         return {
             'patch':       patch,

@@ -135,7 +135,7 @@ class VesselSegModule(pl.LightningModule):
     # =====| Debugging Statements |=============================================
 
     def on_train_start(self):
-        logger.info("=" * 50)
+        logger.info("-" * 50)
         logger.info("Starting model training")
 
     def on_train_batch_start(self, batch, batch_idx):

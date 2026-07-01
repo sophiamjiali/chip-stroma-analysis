@@ -23,6 +23,7 @@ nest_asyncio==1.6.0
 notebook_shim==0.2.4
 optuna==4.6.0
 optuna-integration==4.9.0
+wandb==0.28.0
 pip-chill==1.0.5
 prometheus_client==0.25.0
 pydantic_core==2.46.4

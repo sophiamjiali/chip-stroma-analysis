@@ -127,7 +127,8 @@ def train(manifest: pd.DataFrame,
         gradient_clip_algorithm = "norm",
         check_val_every_n_epoch = 1,
         enable_checkpointing    = False,
-        enable_progress_bar     = False
+        enable_progress_bar     = False,
+        fast_dev_run = True
     )
 
     logger.info("=" * 50)

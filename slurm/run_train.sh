@@ -16,7 +16,8 @@ mkdir -p /cluster/home/t144807uhn/logs/chip-stroma-analysis/train/$1
 
 # Activate the virtual environment
 module load python3/3.12.11
-source /cluster/home/t144807uhn/envs/chip-stroma-env/bin/activate
+#source /cluster/home/t144807uhn/envs/chip-stroma-env/bin/activate
+source /cluster/home/t144807uhn/envs/chip-stroma-env-gpu/bin/activate
 
 # Ensure that all commands resolve back to the proper root directory
 cd /cluster/home/t144807uhn/chip-stroma-analysis

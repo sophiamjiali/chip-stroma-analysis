@@ -118,7 +118,7 @@ def train(manifest: pd.DataFrame,
         max_epochs              = params.trainer.max_epochs,
         callbacks               = callbacks,
         logger                  = ml_loggers,
-        accelerator             = "cpu",
+        accelerator             = "gpu",
         devices                 = 1,
         num_nodes               = 1,
         deterministic           = False,
@@ -127,8 +127,7 @@ def train(manifest: pd.DataFrame,
         gradient_clip_algorithm = "norm",
         check_val_every_n_epoch = 1,
         enable_checkpointing    = False,
-        enable_progress_bar     = False,
-        fast_dev_run = True
+        enable_progress_bar     = False
     )
 
     logger.info("=" * 50)

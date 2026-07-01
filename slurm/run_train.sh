@@ -42,7 +42,6 @@ unset SLURM_JOB_NAME
 
 export CUDA_VISIBLE_DEVICES=""
 export PYTORCH_ENABLE_MPS_FALLBACK=0
-unset SLURM_NTASKS
 
 CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs/hpc
 

@@ -1,6 +1,9 @@
 #!/bin/bash
 #SBATCH --output=/cluster/home/t144807uhn/logs/chip-stroma-analysis/sweep/%x/%x_%j.out
 #SBATCH --error=/cluster/home/t144807uhn/logs/chip-stroma-analysis/sweep/%x/%x_%j.err
+#SBATCH --account=kumargroup_gpu
+#SBATCH -p gpu
+#SBATCH --gres=gpu:1
 #SBATCH --time=24:30:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
@@ -40,7 +43,6 @@ export OPTUNA_SQLITE_TIMEOUT=300
 unset SLURM_NTASKS
 unset SLURM_JOB_NAME
 
-export CUDA_VISIBLE_DEVICES=""
 export PYTORCH_ENABLE_MPS_FALLBACK=0
 
 # Point to the pre-downloaded Resnet34 imagenet weights

@@ -1,10 +1,13 @@
 #!/bin/bash
 #SBATCH --output=/cluster/home/t144807uhn/logs/chip-stroma-analysis/train/%x/%x_%j.out
 #SBATCH --error=/cluster/home/t144807uhn/logs/chip-stroma-analysis/train/%x/%x_%j.err
-#SBATCH --time=06:30:00
+#SBATCH --account=kumargroup_gpu
+#SBATCH -p gpu
+#SBATCH --gres=gpu:1
+#SBATCH --time=24:30:00
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=24G
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=32G
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=sophiamjia.li@mail.utoronto.ca
 
@@ -40,8 +43,10 @@ export OPTUNA_SQLITE_TIMEOUT=300
 unset SLURM_NTASKS
 unset SLURM_JOB_NAME
 
-export CUDA_VISIBLE_DEVICES=""
 export PYTORCH_ENABLE_MPS_FALLBACK=0
+
+# Point to the pre-downloaded Resnet34 imagenet weights
+export TORCH_HOME="$HOME/.cache/torch"
 
 CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs/hpc
 

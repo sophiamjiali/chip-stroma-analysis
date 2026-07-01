@@ -24,8 +24,8 @@ model:
   out_classes    : 1
  
 module:
-  lr          : 1e-4
-  weight_decay: 1e-2
+  lr          : 0.0001
+  weight_decay: 0.001
   ftl_alpha   : 0.3   # FTL FP weight (Abraham & Khan, 2019)
   ftl_beta    : 0.7   # FTL FN weight (should be 1 - ftl_alpha)
   ftl_gamma   : 0.75  # FTL focal exponent
@@ -33,7 +33,7 @@ module:
   smooth      : 1.0
  
 trainer:
-  max_epochs              : 100
+  max_epochs              : 50
   early_stopping_patience : 10       # Isensee et al. (2021) Nat Methods
   early_stopping_min_delta: 0.00001
   gradient_clip_val       : 1.0

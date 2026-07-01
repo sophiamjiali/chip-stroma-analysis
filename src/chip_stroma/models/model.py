@@ -11,6 +11,8 @@
 #                   report foreground (vessel) content only
 # ==============================================================================
 
+from typing import Any
+
 import torch
 
 import segmentation_models_pytorch as smp
@@ -20,7 +22,10 @@ import torch.nn as nn
 from torchmetrics.segmentation import MeanIoU, DiceScore
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
+from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.models.loss import FocalTverskyLoss, MaskedDiceLoss
+
+logger = setup_logger(__name__)
 
 
 def build_model(encoder_name:     str = "resnet34",
@@ -130,13 +135,24 @@ class VesselSegModule(pl.LightningModule):
     # =====| Debugging Statements |=============================================
 
     def on_train_start(self):
-        print("Starting model training", flush = True)
+        logger.info("=" * 50)
+        logger.info("Starting model training")
 
     def on_train_batch_start(self, batch, batch_idx):
-        if batch_idx == 0: print("First batch started", flush = True)
+        if batch_idx == 0: logger.info("First training batch started")
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
-        if batch_idx == 0: print("First batch complete", flush = True)
+        if batch_idx == 0: logger.info("First training batch complete")
+
+    def on_validation_start(self):
+        logger.info("Validation started")
+
+    def on_validation_batch_start(self, batch, batch_idx, dataloader_idx = 0):
+        if batch_idx == 0: logger.info("First validation batch started")
+
+    def on_validation_batch_end(self, outputs, batch, 
+                                batch_idx, dataloader_idx = 0):
+        if batch_idx == 0: logger.info("First validation batch complete")
 
 
     # =====| Steps |============================================================
@@ -178,7 +194,7 @@ class VesselSegModule(pl.LightningModule):
         """Add an indicator the epoch ended without the messy progress bar."""
         epoch = self.current_epoch
         loss = self.trainer.callback_metrics.get('train/loss_epoch', 'N/A')
-        print(f"Epoch {epoch} complete | train/loss: {loss:.4f}", flush=True)
+        logger.info(f"Epoch {epoch} complete | train/loss: {loss:.4f}")
         return
 
     
@@ -204,19 +220,18 @@ class VesselSegModule(pl.LightningModule):
         self.val_iou.reset()
 
         metrics = self.trainer.callback_metrics
-        print(
+        logger.info(
             f"Epoch {self.current_epoch} | "
             f"val/loss: {metrics.get('val/loss', 'N/A'):.4f} | "
             f"val/dice: {metrics.get('val/dice', 'N/A'):.4f} | "
-            f"val/iou: {metrics.get('val/iou', 'N/A'):.4f}",
-            flush=True
+            f"val/iou: {metrics.get('val/iou', 'N/A'):.4f}"
         )
 
         return
 
 
     # =====| Optimizers |=======================================================
-    
+
     def configure_optimizers(self) -> OptimizerLRScheduler:
 
         optimizer = torch.optim.AdamW(

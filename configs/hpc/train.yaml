@@ -12,8 +12,8 @@ study:
 
 data: 
   fold       : 0    # Which StratifiedGroupKFold fold to train on
-  batch_size : 16
-  num_workers: 0
+  batch_size : 32
+  num_workers: 4
   seed       : 42
   pos_prob   : 0.5  # PositiveWeightedSampler positive-patch probability
 

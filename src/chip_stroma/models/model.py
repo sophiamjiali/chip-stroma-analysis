@@ -11,8 +11,7 @@
 #                   report foreground (vessel) content only
 # ==============================================================================
 
-from typing import Any
-
+import time
 import torch
 
 import segmentation_models_pytorch as smp
@@ -26,6 +25,7 @@ from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.models.loss import FocalTverskyLoss, MaskedDiceLoss
 
 logger = setup_logger(__name__)
+last_log_time = time.time()
 
 
 def build_model(encoder_name:     str = "resnet34",
@@ -182,16 +182,37 @@ class VesselSegModule(pl.LightningModule):
     
 
     def training_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
+        global last_log_time
         loss, _, _ = self._shared_step(batch)
 
+        # Log every 100 steps
+        if batch_idx % 100 == 0:
+            logger.info(f"Epoch {self.current_epoch} | Step {batch_idx} | "
+                        f"train/loss: {loss:.4f}")
+            
+        # Detect if the model training is stalling
+        if batch_idx % 50 == 0:
+            now = time.time()
+            logger.info(f"Alive check | Epoch {self.current_epoch} | "
+                        f"Step {batch_idx} | "
+                        f"Time since last log: {now - last_log_time:.1f}s")
+            last_log_time = now
+
         self.log('train/loss', loss, on_step = True, on_epoch = True,
-                 prog_bar = True, sync_dist = False)
+                 prog_bar = False, sync_dist = False)
 
         return loss
     
     
+    def on_train_epoch_start(self):
+        """Add an indicator when the epoch starts without messy progress bar."""
+        epoch = self.current_epoch
+        logger.info(f"Epoch {epoch} started...")
+        return
+
+
     def on_train_epoch_end(self) -> None:
-        """Add an indicator the epoch ended without the messy progress bar."""
+        """Add an indicator when the epoch ends without messy progress bar."""
         epoch = self.current_epoch
         loss = self.trainer.callback_metrics.get('train/loss_epoch', 'N/A')
         logger.info(f"Epoch {epoch} complete | train/loss: {loss:.4f}")
@@ -208,7 +229,7 @@ class VesselSegModule(pl.LightningModule):
         self.val_iou.update(preds, vessel_mask)
 
         self.log('val/loss', loss, on_step = False, on_epoch = True,
-                 prog_bar = True, sync_dist = False)
+                 prog_bar = False, sync_dist = False)
         
         return
     

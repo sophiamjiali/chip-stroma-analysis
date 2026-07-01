@@ -162,8 +162,8 @@ class VesselSegmentationDataModule(pl.LightningDataModule):
             sampler            = sampler,
             num_workers        = self.num_workers,
             shuffle            = False,
-            pin_memory         = False,
-            persistent_workers = False,
+            pin_memory         = self.num_workers > 0,
+            persistent_workers = self.num_workers > 0,
             drop_last          = True
         )
     
@@ -191,8 +191,8 @@ class VesselSegmentationDataModule(pl.LightningDataModule):
             batch_size         = self.batch_size,
             shuffle            = False,
             num_workers        = self.num_workers,
-            pin_memory         = False,
-            persistent_workers = False,
+            pin_memory         = self.num_workers > 0,
+            persistent_workers = self.num_workers > 0,
             drop_last          = False
         )
     

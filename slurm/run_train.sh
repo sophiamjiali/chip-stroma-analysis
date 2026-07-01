@@ -4,10 +4,10 @@
 #SBATCH --account=kumargroup_gpu
 #SBATCH -p gpu
 #SBATCH --gres=gpu:1
-#SBATCH --time=4:30:00
+#SBATCH --time=12:30:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=24G
+#SBATCH --mem=32G
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=sophiamjia.li@mail.utoronto.ca
 
@@ -51,7 +51,7 @@ export TORCH_HOME="$HOME/.cache/torch"
 
 CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs/hpc
 
-python scripts/train.py \
+srun python scripts/train.py \
     --config_dir $CONFIG_DIR
 
 echo "=========================================="

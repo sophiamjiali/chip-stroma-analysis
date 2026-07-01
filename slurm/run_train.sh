@@ -4,10 +4,10 @@
 #SBATCH --account=kumargroup_gpu
 #SBATCH -p gpu
 #SBATCH --gres=gpu:1
-#SBATCH --time=12:30:00
+#SBATCH --time=4:30:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=32G
+#SBATCH --mem=24G
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=sophiamjia.li@mail.utoronto.ca
 

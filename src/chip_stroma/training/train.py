@@ -110,7 +110,7 @@ def train(manifest: pd.DataFrame,
     ml_loggers = configure_loggers(
         project = project,
         group   = group,
-        trial   = trial,
+        trial   = trial
     )
 
     # Initialize the Trainer and fit the model

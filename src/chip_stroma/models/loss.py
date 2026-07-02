@@ -95,7 +95,7 @@ class MaskedDiceLoss(nn.Module):
 
         # Compute the intersection as the loss value
         intersection = (probs * targets).sum()
-        return 1 - (2 * intersection + self.smooth) / (
+        return 1 - (2 * intersection) / (
             probs.sum() + targets.sum() + self.smooth
         )
     

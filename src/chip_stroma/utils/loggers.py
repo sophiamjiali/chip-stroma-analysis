@@ -25,7 +25,7 @@ def setup_logger(name: str | None = None) -> logging.Logger:
     """
 
     logging.basicConfig(
-        level=logging.INFO,
+        level    = logging.INFO,
         format   = "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
         handlers = [logging.StreamHandler(sys.stdout)],
         force    = True,

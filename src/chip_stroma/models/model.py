@@ -20,17 +20,19 @@ import torch.nn as nn
 
 from torchmetrics.segmentation import MeanIoU, DiceScore
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
+from typing import cast
 
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.models.loss import FocalTverskyLoss, MaskedDiceLoss
 
 logger = setup_logger(__name__)
-last_log_time = time.time()
+last_log_time   = time.time()
 last_epoch_time = time.time()
+start_time      = time.time()
 
 # Toggle debugging logs for training/validation steps
-LOG_TIME = False
-LOG_TRAIN_STEP = True
+LOG_TIME                = False
+LOG_TRAIN_STEP          = False
 LOG_TRAIN_STEP_INTERVAL = 500
 
 
@@ -100,7 +102,7 @@ class VesselSegModule(pl.LightningModule):
                  model:        nn.Module,
                  lr:           float = 1e-4,
                  weight_decay: float = 1e-2,
-                 T_max:        int = 50,
+                 T_max:        int   = 25,
                  ftl_alpha:    float = 0.3,
                  ftl_beta:     float = 0.7,
                  ftl_gamma:    float = 0.75,
@@ -131,7 +133,12 @@ class VesselSegModule(pl.LightningModule):
         )
 
         # Initialize Mean IoU as one-hot input, converted in validation step
-        self.val_iou = MeanIoU(num_classes = 2, input_format = "index")
+        self.val_iou = MeanIoU(
+            num_classes        = 2,
+            include_background = False,
+            per_class          = False,
+            input_format       = "index"
+        )
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -163,13 +170,11 @@ class VesselSegModule(pl.LightningModule):
         logits    = self(images)              # (B, 1, H, W)  raw logits
         logits_sq = logits.squeeze(1)         # (B, H, W)
 
-        prob = torch.sigmoid(logits_sq)       # (B, H, W)     [0, 1]
-
         loss = (
             float(self.hparams['ftl_weight']) * 
-            self.ftl(prob, vessel_mask, tissue_mask)
+            self.ftl(logits_sq, vessel_mask, tissue_mask)
             + (1 - float(self.hparams['ftl_weight'])) * 
-            self.dice_loss(prob, vessel_mask, tissue_mask)
+            self.dice_loss(logits_sq, vessel_mask, tissue_mask)
         )
 
         return loss, logits_sq, vessel_mask
@@ -202,20 +207,25 @@ class VesselSegModule(pl.LightningModule):
     
     def on_train_epoch_start(self):
         """Add an indicator when the epoch starts without messy progress bar."""
+        global start_time
+
         epoch = self.current_epoch
-        logger.info(f"-- | Epoch {epoch} started...")
+        logger.info(f"-- | Epoch {epoch} started | "
+                    f"Total runtime: {time.time() - start_time:.1f}s")
         return
 
 
     def on_train_epoch_end(self) -> None:
         """Add an indicator when the epoch ends without messy progress bar."""
         global last_epoch_time
+        now = time.time()
         
         epoch = self.current_epoch
         loss = self.trainer.callback_metrics.get('train/loss_epoch', 'N/A')
 
         logger.info(f"-- | Epoch {epoch} complete | train/loss: {loss:.4f} | "
-                    f"Time elapsed: {time.time() - last_epoch_time:.1f}s")
+                    f"Time elapsed: {now - start_time:.1f}s")
+        last_epoch_time = now
         return
 
     
@@ -255,16 +265,21 @@ class VesselSegModule(pl.LightningModule):
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
 
-        optimizer = torch.optim.AdamW(
-            params       = self.model.parameters(),
-            lr           = float(self.hparams['lr']),
-            weight_decay = float(self.hparams['weight_decay'])
+        lr = float(self.hparams['lr'])
+        wd = float(self.hparams['weight_decay'])
+
+        param_groups = (
+            self.get_groups(cast(nn.Module, self.model.encoder), lr * 0.1, wd) +
+            self.get_groups(cast(nn.Module, self.model.decoder), lr, wd) +
+            self.get_groups(cast(nn.Module, self.model.segmentation_head),lr,wd)
         )
+
+        optimizer = torch.optim.AdamW(param_groups)
 
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer = optimizer,
             T_max     = int(self.hparams['T_max']),
-            eta_min   = float(self.hparams['lr']) * 1e-2
+            eta_min   = lr * 1e-2
         )
 
         return {
@@ -275,5 +290,22 @@ class VesselSegModule(pl.LightningModule):
                 "monitor":   "val/loss"
             }
         }
+    
+    def get_groups(self, 
+                         module: nn.Module, 
+                         lr: float, 
+                         weight_decay: float) -> list[dict]:
+        decay, no_decay = [], []
+        for n, p in module.named_parameters():
+            if not p.requires_grad:
+                continue
+            if p.ndim <= 1 or n.endswith(".bias"):
+                no_decay.append(p)
+            else:
+                decay.append(p)
+        return [
+            {"params": decay, "lr": lr, "weight_decay": weight_decay},
+            {"params": no_decay, "lr": lr, "weight_decay": 0.0},
+        ]
     
 # [END]

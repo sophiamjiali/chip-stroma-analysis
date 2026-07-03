@@ -10,3 +10,4 @@ seed: 42
 positive_label: CH
 negative_label: NC
 k: 6
+n_pos_bins: 2

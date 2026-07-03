@@ -53,9 +53,10 @@ def main():
 
     # 2. Assign patient-level stratified k-fold indices to the patch manifest
     fold_assignments = assign_folds(
-        manifest = manifest,
-        k        = config.cross_validation.k,
-        seed     = config.cross_validation.seed
+        manifest   = manifest,
+        k          = config.cross_validation.k,
+        seed       = config.cross_validation.seed,
+        n_pos_bins = config.cross_validation.n_pos_bins
     )
 
     # Merge the assignments with the patch manifest and save it

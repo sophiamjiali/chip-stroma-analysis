@@ -21,7 +21,7 @@ JOIN_KEY = ['sample_id', 'patch_name']
 def assign_folds(manifest:   pd.DataFrame,
                  k:          int,
                  seed:       int,
-                 n_pos_bins: int = 3) -> pd.DataFrame:
+                 n_pos_bins: int) -> pd.DataFrame:
     """
     Assign patient-level stratified k-fold indices to patches.
 

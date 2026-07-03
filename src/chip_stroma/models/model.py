@@ -15,9 +15,11 @@ import time
 import torch
 
 import segmentation_models_pytorch as smp
+import torch.nn.functional as F
 import lightning.pytorch as pl
 import torch.nn as nn
 
+from monai.metrics.surface_dice import SurfaceDiceMetric
 from torchmetrics.segmentation import MeanIoU, DiceScore
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from typing import cast
@@ -100,15 +102,16 @@ class VesselSegModule(pl.LightningModule):
     """
 
     def __init__(self,
-                 model:        nn.Module,
-                 lr:           float = 1e-4,
-                 weight_decay: float = 1e-2,
-                 T_max:        int   = 25,
-                 ftl_alpha:    float = 0.3,
-                 ftl_beta:     float = 0.7,
-                 ftl_gamma:    float = 0.75,
-                 ftl_weight:   float = 0.5,
-                 smooth:       float = 1.0):
+                 model:         nn.Module,
+                 lr:            float = 1e-4,
+                 weight_decay:  float = 1e-2,
+                 T_max:         int   = 25,
+                 ftl_alpha:     float = 0.3,
+                 ftl_beta:      float = 0.7,
+                 ftl_gamma:     float = 0.75,
+                 ftl_weight:    float = 0.5,
+                 smooth:        float = 1.0,
+                 nsd_tolerance: float = 2.0):
         
         super().__init__()
         self.save_hyperparameters(ignore = ['model'])
@@ -141,6 +144,13 @@ class VesselSegModule(pl.LightningModule):
             per_class          = False,
             input_format       = "index"
         )
+
+        self.val_nsd = SurfaceDiceMetric(
+            class_thresholds = [nsd_tolerance],
+            include_background = False,
+            distance_metric = "euclidean"
+        )
+        self._val_patient_nsd = defaultdict(list)
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -236,10 +246,20 @@ class VesselSegModule(pl.LightningModule):
 
         # Hard predictions for metric computation
         preds = (torch.sigmoid(logits_sq) > 0.5).long()     # (B, H, W)  {0, 1}
-
         patient_ids = batch['patient_id']
+
+        preds_oh  = F.one_hot(preds, num_classes = 2).permute(0, 3, 1, 2)
+        target_oh = F.one_hot(vessel_mask, num_classes = 2).permute(0, 3, 1, 2)
+        nsd_out = self.val_nsd(preds_oh, target_oh)
+        if isinstance(nsd_out, torch.Tensor): nsd_per_sample = nsd_out
+        else: nsd_per_sample = torch.stack(cast(list[torch.Tensor], 
+                                                list(nsd_out)))
+        nsd_per_sample = nsd_per_sample.squeeze(-1)
+
         per_sample_dice = self.val_dice(preds, vessel_mask)
+
         for i, pid in enumerate(patient_ids):
+            self._val_patient_nsd[pid].append(nsd_per_sample[i].item())
             self._val_patient_dice[pid].append(per_sample_dice[i].item())
 
         self.val_iou.update(preds, vessel_mask)
@@ -251,14 +271,22 @@ class VesselSegModule(pl.LightningModule):
     
 
     def on_validation_epoch_end(self) -> None:
-        patient_means = [sum(v)/len(v) for v in self._val_patient_dice.values()]
-        val_dice = torch.tensor(patient_means).mean()
-        val_dice_std = torch.tensor(patient_means).std()
+        dice_means = [sum(v)/len(v) for v in self._val_patient_dice.values()]
+        nsd_means  = [sum(v)/len(v) for v in self._val_patient_nsd.values()]
 
-        self.log('val/dice', val_dice, prog_bar = False)
+        val_dice     = torch.tensor(dice_means).mean()
+        val_dice_std = torch.tensor(dice_means).std()
+
+        val_nsd     = torch.tensor(nsd_means).mean()
+        val_nsd_std = torch.tensor(nsd_means).std()
+
+        self.log('val/dice',     val_dice, prog_bar = False)
         self.log('val/dice_std', val_dice_std, prog_bar = False)
-        self.log('val/iou', self.val_iou.compute(), prog_bar = False)
+        self.log('val/nsd',      val_nsd, prog_bar = False)
+        self.log('val/nsd_std',  val_nsd_std, prog_bar = False)
+        self.log('val/iou',      self.val_iou.compute(), prog_bar = False)
 
+        self._val_patient_dice.clear()
         self._val_patient_dice.clear()
         self.val_iou.reset()
 

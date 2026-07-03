@@ -42,7 +42,7 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
 
     logger.info("Successfully configured the LearningRateMonitor callback")
     logger.info("Successfully configured the GradientNormCallback callback")
-    lr_monitor = LearningRateMonitor(logging_interval = "step")
+    lr_monitor = LearningRateMonitor(logging_interval = "epoch")
     grad_norm_callback = GradientNormCallback(log_every_n_steps = 50)
 
     logger.info("Successfully configured the EarlyStopping callback")

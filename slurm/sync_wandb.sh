@@ -2,7 +2,7 @@
 
 # Define the environment and the path to search
 ENV_PATH="/cluster/home/t144807uhn/envs/chip-stroma-env/bin/activate"
-SEARCH_PATH="/cluster/home/t144807uhn/tmp/"
+SEARCH_PATH="/cluster/home/t144807uhn/logs/chip-stroma-analysis"
 
 # 1. Activate the environment
 source "$ENV_PATH"

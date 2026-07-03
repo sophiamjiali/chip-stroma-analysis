@@ -47,13 +47,14 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
 
     logger.info("Successfully configured the EarlyStopping callback")
     early_stop_callback = EarlyStopping(
-        monitor                  = "val/loss",
-        mode                     = "min",
+        monitor                  = "val/dice",
+        mode                     = "max",
         patience                 = early_stopping_patience,
         min_delta                = early_stopping_min_delta,
         strict                   = False,
         check_on_train_epoch_end = False,
-        check_finite             = True
+        check_finite             = True,
+        verbose                  = True
     )
 
     # Safe-guard against false initialization typing

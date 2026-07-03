@@ -18,15 +18,19 @@ JOIN_KEY = ['sample_id', 'patch_name']
 
 # =====| Main Functions |=======================================================
 
-def assign_folds(manifest: pd.DataFrame,
-                 k: int,
-                 seed: int) -> pd.DataFrame:
+def assign_folds(manifest:   pd.DataFrame,
+                 k:          int,
+                 seed:       int,
+                 n_pos_bins: int = 3) -> pd.DataFrame:
     """
     Assign patient-level stratified k-fold indices to patches.
 
     StratifiedGroupKFold preserves CHIP status distribution across folds
     while enforcing patient-level grouping to prevent data leakage
     (Bradshaw et al., Radiol Artif Intell, 2023; scikit-learn docs).
+
+    Join stratification is required because CHIP status alone does not control 
+    for patient-level positive imbalance.
 
     Parameters
     ----------
@@ -36,6 +40,8 @@ def assign_folds(manifest: pd.DataFrame,
         Number of folds.
     seed : int
         Random seed for reproducibility (Colliot et al., ML for Brain Disorders, 2023).
+    n_pos_bins : int
+        Number of quantile bins for patient_pos_count stratification.
 
     Returns
     -------
@@ -50,15 +56,27 @@ def assign_folds(manifest: pd.DataFrame,
     logger.info("-" * 50)
 
     # Extract all patients and their CHIP status label
-    patients = (manifest[['sample_id', 'chip_status']]
+    patients = (manifest[['sample_id', 'chip_status', 'patient_pos_count']]
                 .drop_duplicates('sample_id').copy())
     patients['fold'] = -1
 
     logger.info(f"Identified {len(patients)} patients for fold assignment")
+
+    # Bin vessel-positive burden and combine with CHIP status
+    patients['pos_bin'] = pd.qcut(
+        x          = patients['patient_pos_count'],
+        q          = n_pos_bins,
+        labels     = False,
+        duplicates = 'drop'
+    )
+    patients['strat_label'] = (
+        patients['chip_status'].astype(str) + '_' + 
+        patients['pos_bin'].astype(str)
+    )
     
     # Stratify K folds at the patient level by CHIP status
     sgkf = StratifiedGroupKFold(
-        n_splits     = k, 
+        n_splits     = k,
         shuffle      = True, 
         random_state = seed
     )
@@ -67,12 +85,27 @@ def assign_folds(manifest: pd.DataFrame,
     fold_series = pd.Series(-1, index = patients.index)
     for fold_idx, (_, val_idx) in enumerate(sgkf.split(
         X      = patients,
-        y      = patients['chip_status'],
+        y      = patients['strat_label'],
         groups = patients['sample_id']
     )):
         fold_series.iloc[val_idx] = fold_idx
 
     patients['fold'] = fold_series
+
+    # Post-hoc audit: ensure no fold is disproportionately over-under rep.
+    fold_pos_counts = patients.groupby('fold')['patient_pos_count'].sum()
+    expected = fold_pos_counts.sum() / k
+
+    logger.info("Verifying all folds are proportionately represented:")
+
+    for fold_idx, count in fold_pos_counts.items():
+        ratio = count / expected
+        logger.info(f"- Fold {fold_idx}: positive count = {count} "
+                    f"({ratio:.2f}x expected)")
+        if ratio > 2.0 or ratio < 0.5:
+            logger.warning(f"Fold {fold_idx} deviates >2x from "
+                           f"expected positive burden")
+
 
     logger.info(f"Successfully assigned all patients to {k} folds")
     logger.info("=" * 50)

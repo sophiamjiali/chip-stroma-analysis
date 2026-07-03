@@ -21,6 +21,7 @@ import torch.nn as nn
 from torchmetrics.segmentation import MeanIoU, DiceScore
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from typing import cast
+from collections import defaultdict
 
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.models.loss import FocalTverskyLoss, MaskedDiceLoss
@@ -128,9 +129,10 @@ class VesselSegModule(pl.LightningModule):
         self.val_dice = DiceScore(
             num_classes        = 2,
             include_background = False,
-            aggregation_level  = "global",
+            aggregation_level  = "samplewise",
             input_format       = "index"
         )
+        self._val_patient_dice = defaultdict(list)
 
         # Initialize Mean IoU as one-hot input, converted in validation step
         self.val_iou = MeanIoU(
@@ -235,7 +237,11 @@ class VesselSegModule(pl.LightningModule):
         # Hard predictions for metric computation
         preds = (torch.sigmoid(logits_sq) > 0.5).long()     # (B, H, W)  {0, 1}
 
-        self.val_dice.update(preds, vessel_mask)
+        patient_ids = batch['patient_id']
+        per_sample_dice = self.val_dice(preds, vessel_mask)
+        for i, pid in enumerate(patient_ids):
+            self._val_patient_dice[pid].append(per_sample_dice[i].item())
+
         self.val_iou.update(preds, vessel_mask)
 
         self.log('val/loss', loss, on_step = False, on_epoch = True,
@@ -245,9 +251,15 @@ class VesselSegModule(pl.LightningModule):
     
 
     def on_validation_epoch_end(self) -> None:
-        self.log('val/dice', self.val_dice.compute(), prog_bar = False)
+        patient_means = [sum(v)/len(v) for v in self._val_patient_dice.values()]
+        val_dice = torch.tensor(patient_means).mean()
+        val_dice_std = torch.tensor(patient_means).std()
+
+        self.log('val/dice', val_dice, prog_bar = False)
+        self.log('val/dice_std', val_dice_std, prog_bar = False)
         self.log('val/iou', self.val_iou.compute(), prog_bar = False)
-        self.val_dice.reset()
+
+        self._val_patient_dice.clear()
         self.val_iou.reset()
 
         metrics = self.trainer.callback_metrics
@@ -255,6 +267,7 @@ class VesselSegModule(pl.LightningModule):
             f"Epoch {self.current_epoch} | "
             f"val/loss: {metrics.get('val/loss', 'N/A'):.4f} | "
             f"val/dice: {metrics.get('val/dice', 'N/A'):.4f} | "
+            f"val/dice_std: {metrics.get('val/dice_std', 'N/A'):.4f} | "
             f"val/iou: {metrics.get('val/iou', 'N/A'):.4f}"
         )
 

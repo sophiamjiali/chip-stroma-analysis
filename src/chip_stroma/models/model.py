@@ -255,7 +255,10 @@ class VesselSegModule(pl.LightningModule):
                                                 list(nsd_out)))
         nsd_per_sample = nsd_per_sample.squeeze(-1)
 
-        per_sample_dice = torch.atleast_1d(self.val_dice(preds, vessel_mask))
+        per_sample_dice = self._per_sample_dice(preds, vessel_mask, 
+                                                num_classes = 2, 
+                                                include_background = False)
+        self.val_dice.update(preds, vessel_mask)
 
         for i, pid in enumerate(sample_ids):
             self._val_sample_nsd[pid].append(nsd_per_sample[i].item())
@@ -267,6 +270,17 @@ class VesselSegModule(pl.LightningModule):
                  prog_bar = False, sync_dist = False)
         
         return
+    
+
+    def _per_sample_dice(self, preds, target, num_classes=2, include_background=False, eps=1e-6):
+        preds_oh = F.one_hot(preds, num_classes).permute(0, 3, 1, 2).bool()
+        target_oh = F.one_hot(target, num_classes).permute(0, 3, 1, 2).bool()
+        if not include_background:
+            preds_oh, target_oh = preds_oh[:, 1:], target_oh[:, 1:]
+        dims = tuple(range(2, preds_oh.ndim))
+        intersection = (preds_oh & target_oh).sum(dim=dims + (1,)).float()
+        union = preds_oh.sum(dim=dims + (1,)).float() + target_oh.sum(dim=dims + (1,)).float()
+        return (2 * intersection + eps) / (union + eps)  # shape (N,)
     
 
     def on_validation_epoch_end(self) -> None:

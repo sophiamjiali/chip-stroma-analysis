@@ -9,17 +9,17 @@
 
 # Normalized and name-sanitized patches and masks
 processed_data:
-  processed_dir  : data
-  patch_dir      : data/patches
-  vessel_mask_dir: data/vessel_masks
-  tissue_mask_dir: data/tissue_masks
+  processed_dir  : /cluster/projects/kumargroup/sophia/chip-stroma-analysis/data
+  patch_dir      : /cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/patches
+  vessel_mask_dir: /cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/vessel_masks
+  tissue_mask_dir: /cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/tissue_masks
 
 metadata:
-  chip_labels     : data/metadata/CHIP_IDs.csv
-  name_mapping    : data/metadata/name_mapping.json
-  patch_manifest  : data/metadata/patch_manifest.csv
-  patch_statistics: data/metadata/patch_statistics.csv
-  train_manifest  : data/metadata/train_manifest.csv    # Only include = True
+  chip_labels     : /cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/metadata/CHIP_IDs.csv
+  name_mapping    : cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/metadata/nname_mapping.json
+  patch_manifest  : cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/metadata/patch_manifest.csv
+  patch_statistics: cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/metadata/patch_statistics.csv
+  train_manifest  : cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/metadata/train_manifest.csv    # Only include = True
 
 # Training and sweep output directories
 outputs:

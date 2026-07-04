@@ -255,7 +255,7 @@ class VesselSegModule(pl.LightningModule):
                                                 list(nsd_out)))
         nsd_per_sample = nsd_per_sample.squeeze(-1)
 
-        per_sample_dice = self.val_dice(preds, vessel_mask)
+        per_sample_dice = torch.atleast_1d(self.val_dice(preds, vessel_mask))
 
         for i, pid in enumerate(sample_ids):
             self._val_sample_nsd[pid].append(nsd_per_sample[i].item())

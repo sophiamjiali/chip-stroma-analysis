@@ -19,7 +19,8 @@ import torch.nn.functional as F
 import lightning.pytorch as pl
 import torch.nn as nn
 
-from monai.metrics.surface_dice import SurfaceDiceMetric
+from surface_distance import compute_surface_distances, compute_surface_dice_at_tolerance
+
 from torchmetrics.segmentation import MeanIoU, DiceScore
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from typing import cast
@@ -146,16 +147,14 @@ class VesselSegModule(pl.LightningModule):
         )
 
         self.val_nsd = SurfaceDiceMetric(
-            class_thresholds = [nsd_tolerance],
-            include_background = False,
-            distance_metric = "euclidean"
+            class_thresholds   = [nsd_tolerance],
+            include_background = False
         )
         self._val_patient_nsd = defaultdict(list)
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
-    
 
     # =====| Debugging Statements |=============================================
 
@@ -349,4 +348,36 @@ class VesselSegModule(pl.LightningModule):
             {"params": no_decay, "lr": lr, "weight_decay": 0.0},
         ]
     
+class SurfaceDiceMetric:
+    """Stateful NSD accumulator, API-compatible with MONAI's CumulativeIterationMetric."""
+    def __init__(self, class_thresholds, include_background=False, spacing_mm=(1.0, 1.0)):
+        self.class_thresholds = class_thresholds
+        self.include_background = include_background
+        self.spacing_mm = spacing_mm
+        self._buffer = []
+
+    def __call__(self, y_pred, y):
+        start_c = 0 if self.include_background else 1
+        batch_vals = []
+        for b in range(y_pred.shape[0]):
+            per_class = []
+            for c in range(start_c, y_pred.shape[1]):
+                sd = compute_surface_distances(
+                    y[b, c].cpu().numpy().astype(bool),
+                    y_pred[b, c].cpu().numpy().astype(bool),
+                    self.spacing_mm,
+                )
+                tol = self.class_thresholds[c - start_c]
+                per_class.append(compute_surface_dice_at_tolerance(sd, tol))
+            batch_vals.append(per_class)
+        self._buffer.extend(batch_vals)
+        return torch.tensor(batch_vals)
+
+    def aggregate(self):
+        import numpy as np
+        return torch.tensor(np.nanmean(self._buffer))
+
+    def reset(self):
+        self._buffer = []
+
 # [END]

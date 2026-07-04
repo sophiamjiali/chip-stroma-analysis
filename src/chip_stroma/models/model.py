@@ -49,7 +49,7 @@ def build_model(encoder_name:     str = "resnet34",
     Factory function for smp U-Net vessel segmentation model.
 
     ResNet34 encoder selected for optimal capacity/overfitting tradeoff
-    at n=24 patients (Raghu et al., NeurIPS, 2019; Talo et al.,
+    at n=24 samples (Raghu et al., NeurIPS, 2019; Talo et al.,
     Comput Biol Med, 2019). ImageNet pretraining improves convergence
     on small medical imaging datasets (Chen et al., CVPR, 2021).
 
@@ -136,7 +136,7 @@ class VesselSegModule(pl.LightningModule):
             aggregation_level  = "samplewise",
             input_format       = "index"
         )
-        self._val_patient_dice = defaultdict(list)
+        self._val_sample_dice = defaultdict(list)
 
         # Initialize Mean IoU as one-hot input, converted in validation step
         self.val_iou = MeanIoU(
@@ -150,7 +150,7 @@ class VesselSegModule(pl.LightningModule):
             class_thresholds   = [nsd_tolerance],
             include_background = False
         )
-        self._val_patient_nsd = defaultdict(list)
+        self._val_sample_nsd = defaultdict(list)
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -245,7 +245,7 @@ class VesselSegModule(pl.LightningModule):
 
         # Hard predictions for metric computation
         preds = (torch.sigmoid(logits_sq) > 0.5).long()     # (B, H, W)  {0, 1}
-        patient_ids = batch['patient_id']
+        sample_ids = batch['sample_id']
 
         preds_oh  = F.one_hot(preds, num_classes = 2).permute(0, 3, 1, 2)
         target_oh = F.one_hot(vessel_mask, num_classes = 2).permute(0, 3, 1, 2)
@@ -257,9 +257,9 @@ class VesselSegModule(pl.LightningModule):
 
         per_sample_dice = self.val_dice(preds, vessel_mask)
 
-        for i, pid in enumerate(patient_ids):
-            self._val_patient_nsd[pid].append(nsd_per_sample[i].item())
-            self._val_patient_dice[pid].append(per_sample_dice[i].item())
+        for i, pid in enumerate(sample_ids):
+            self._val_sample_nsd[pid].append(nsd_per_sample[i].item())
+            self._val_sample_dice[pid].append(per_sample_dice[i].item())
 
         self.val_iou.update(preds, vessel_mask)
 
@@ -270,8 +270,8 @@ class VesselSegModule(pl.LightningModule):
     
 
     def on_validation_epoch_end(self) -> None:
-        dice_means = [sum(v)/len(v) for v in self._val_patient_dice.values()]
-        nsd_means  = [sum(v)/len(v) for v in self._val_patient_nsd.values()]
+        dice_means = [sum(v)/len(v) for v in self._val_sample_dice.values()]
+        nsd_means  = [sum(v)/len(v) for v in self._val_sample_nsd.values()]
 
         val_dice     = torch.tensor(dice_means).mean()
         val_dice_std = torch.tensor(dice_means).std()
@@ -285,8 +285,8 @@ class VesselSegModule(pl.LightningModule):
         self.log('val/nsd_std',  val_nsd_std, prog_bar = False)
         self.log('val/iou',      self.val_iou.compute(), prog_bar = False)
 
-        self._val_patient_dice.clear()
-        self._val_patient_dice.clear()
+        self._val_sample_dice.clear()
+        self._val_sample_dice.clear()
         self.val_iou.reset()
 
         metrics = self.trainer.callback_metrics

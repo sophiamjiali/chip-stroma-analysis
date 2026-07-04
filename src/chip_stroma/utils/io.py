@@ -187,7 +187,7 @@ def initialize_train_manifest(train_manifest_path: Path,
     else:
         logger.info("Failed to detect an existing train manifest")
 
-        assert patch_manifest_path.exists(), "Patch manifest could not be found"
+        assert patch_manifest_path.exists(), f"Patch manifest could not be found at path: {patch_manifest_path}"
         logger.info("Successfully detected patch manifest")
 
         logger.info("Creating a train manifest from the patch manifest")

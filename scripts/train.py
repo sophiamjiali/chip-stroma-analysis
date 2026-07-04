@@ -81,7 +81,7 @@ def log_header(config_path):
     logger.info("- Pipeline Stage: train UNet Training - Single Run")
     logger.info(f"- Configurations: {config_path}")
     logger.info(f"- Working Directory: {Path.cwd()}")
-    logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 60)
 
 def log_footer(cfg, metrics):
@@ -91,7 +91,7 @@ def log_footer(cfg, metrics):
     logger.info(f"- Validation Loss: {metrics.get('val/loss')}")
     logger.info(f"- Validation Dice Score: {metrics.get('val/dice')}")
     logger.info(f"- Validation IoU Score: {metrics.get('val/iou')}")
-    logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 60)
 
 if __name__ == "__main__":

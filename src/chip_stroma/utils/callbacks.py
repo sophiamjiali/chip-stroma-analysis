@@ -6,7 +6,6 @@
 # Date:             06/24/2026
 # ==============================================================================
 
-import logging
 import optuna
 import torch
 
@@ -58,7 +57,7 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
     )
 
     # Safe-guard against false initialization typing
-    early_stop_callback.best_score = torch.tensor(float('inf'))
+    early_stop_callback.best_score = torch.tensor(float('-inf'))
 
     callbacks = [
         early_stop_callback,
@@ -72,7 +71,7 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
                     "PyTorchLightningPruningCallback")
         callbacks.append(optuna.integration.PyTorchLightningPruningCallback(
             trial   = trial,
-            monitor = "val/loss"
+            monitor = "val/dice"
         ))
 
     logger.info("=" * 50)

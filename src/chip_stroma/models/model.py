@@ -18,6 +18,7 @@ import segmentation_models_pytorch as smp
 import torch.nn.functional as F
 import lightning.pytorch as pl
 import torch.nn as nn
+import numpy as np
 
 from surface_distance import compute_surface_distances, compute_surface_dice_at_tolerance
 
@@ -235,7 +236,7 @@ class VesselSegModule(pl.LightningModule):
         loss = self.trainer.callback_metrics.get('train/loss_epoch', 'N/A')
 
         logger.info(f"-- | Epoch {epoch} complete | train/loss: {loss:.4f} | "
-                    f"Time elapsed: {now - start_time:.1f}s")
+                    f"Time elapsed: {now - last_epoch_time:.1f}s")
         last_epoch_time = now
         return
 
@@ -264,7 +265,9 @@ class VesselSegModule(pl.LightningModule):
             self._val_sample_nsd[pid].append(nsd_per_sample[i].item())
             self._val_sample_dice[pid].append(per_sample_dice[i].item())
 
-        self.val_iou.update(preds, vessel_mask)
+        # Only update IOU if there is at least one positive pixel in target/pred
+        if (vessel_mask.sum() > 0) or (preds.sum() > 0):
+            self.val_iou.update(preds, vessel_mask)
 
         self.log('val/loss', loss, on_step = False, on_epoch = True,
                  prog_bar = False, sync_dist = False)
@@ -272,23 +275,39 @@ class VesselSegModule(pl.LightningModule):
         return
     
 
-    def _per_sample_dice(self, preds, target, num_classes=2, include_background=False, eps=1e-6):
-        preds_oh = F.one_hot(preds, num_classes).permute(0, 3, 1, 2).bool()
+    def _per_sample_dice(self, 
+                         preds, 
+                         target, 
+                         num_classes        = 2, 
+                         include_background = False, 
+                         eps                = 1e-6):
+        """Excludes empty reference and prediction from aggregation"""
+
+        preds_oh  = F.one_hot(preds, num_classes).permute(0, 3, 1, 2).bool()
         target_oh = F.one_hot(target, num_classes).permute(0, 3, 1, 2).bool()
+
         if not include_background:
             preds_oh, target_oh = preds_oh[:, 1:], target_oh[:, 1:]
+
         dims = tuple(range(2, preds_oh.ndim))
-        intersection = (preds_oh & target_oh).sum(dim=dims + (1,)).float()
-        union = preds_oh.sum(dim=dims + (1,)).float() + target_oh.sum(dim=dims + (1,)).float()
-        return (2 * intersection + eps) / (union + eps)  # shape (N,)
+
+        intersection = (preds_oh & target_oh).sum(dim = dims + (1,)).float()
+        union = (preds_oh.sum(dim = dims + (1,)).float() 
+                 + target_oh.sum(dim = dims + (1,)).float())
+        
+        # Exclude empty reference + prediction samples from aggregation
+        dice = (2 * intersection + eps) / (union + eps)
+        dice[union == 0] = float('nan')
+
+        return dice
     
 
     def on_validation_epoch_end(self) -> None:
-        dice_means = [sum(v)/len(v) for v in self._val_sample_dice.values()]
+        dice_means = [np.nanmean(v) for v in self._val_sample_dice.values()]
         nsd_means  = [sum(v)/len(v) for v in self._val_sample_nsd.values()]
 
-        val_dice     = torch.tensor(dice_means).mean()
-        val_dice_std = torch.tensor(dice_means).std()
+        val_dice     = torch.tensor(np.nanmean(dice_means))
+        val_dice_std = torch.tensor(np.nanstd(dice_means))
 
         val_nsd     = torch.tensor(nsd_means).mean()
         val_nsd_std = torch.tensor(nsd_means).std()
@@ -300,7 +319,7 @@ class VesselSegModule(pl.LightningModule):
         self.log('val/iou',      self.val_iou.compute(), prog_bar = False)
 
         self._val_sample_dice.clear()
-        self._val_sample_dice.clear()
+        self._val_sample_nsd.clear()
         self.val_iou.reset()
 
         metrics = self.trainer.callback_metrics

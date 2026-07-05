@@ -281,7 +281,10 @@ class VesselSegModule(pl.LightningModule):
                          num_classes        = 2, 
                          include_background = False, 
                          eps                = 1e-6):
-        """Excludes empty reference and prediction from aggregation"""
+        """
+        Per-sample foreground Dice score; excludes samples with no 
+        positive pixels in either prediction or target.
+        """
 
         preds_oh  = F.one_hot(preds, num_classes).permute(0, 3, 1, 2).bool()
         target_oh = F.one_hot(target, num_classes).permute(0, 3, 1, 2).bool()
@@ -295,7 +298,7 @@ class VesselSegModule(pl.LightningModule):
         union = (preds_oh.sum(dim = dims + (1,)).float() 
                  + target_oh.sum(dim = dims + (1,)).float())
         
-        # Exclude empty reference + prediction samples from aggregation
+        # Exclude true-negative samples from aggregation
         dice = (2 * intersection + eps) / (union + eps)
         dice[union == 0] = float('nan')
 
@@ -304,13 +307,13 @@ class VesselSegModule(pl.LightningModule):
 
     def on_validation_epoch_end(self) -> None:
         dice_means = [np.nanmean(v) for v in self._val_sample_dice.values()]
-        nsd_means  = [sum(v)/len(v) for v in self._val_sample_nsd.values()]
+        nsd_means  = [np.nanmean(v) for v in self._val_sample_nsd.values()]
 
         val_dice     = torch.tensor(np.nanmean(dice_means))
         val_dice_std = torch.tensor(np.nanstd(dice_means))
 
-        val_nsd     = torch.tensor(nsd_means).mean()
-        val_nsd_std = torch.tensor(nsd_means).std()
+        val_nsd     = torch.tensor(np.nanmean(nsd_means))
+        val_nsd_std = torch.tensor(np.nanstd(nsd_means))
 
         self.log('val/dice',     val_dice, prog_bar = False)
         self.log('val/dice_std', val_dice_std, prog_bar = False)

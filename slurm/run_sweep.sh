@@ -13,7 +13,7 @@ mkdir -p /cluster/home/t144807uhn/logs/chip-stroma-analysis/sweep/$1
 
 # Activate the virtual environment
 export LD_LIBRARY_PATH=/cluster/home/t111631uhn/miniconda3/lib:$LD_LIBRARY_PATH
-source /cluster/home/t144807uhn/envs/chip-stroma-env/bin/activate
+source /cluster/home/t144807uhn/envs/chip-stroma-env-gpu/bin/activate
 
 # Ensure that all commands resolve back to the proper root directory
 cd /cluster/home/t144807uhn/chip-stroma-analysis

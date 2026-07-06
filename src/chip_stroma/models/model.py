@@ -255,14 +255,17 @@ class VesselSegModule(pl.LightningModule):
         # Guard against empty-union samples (no positive pixels in preds/target)
         has_signal     = (preds.sum(dim = (1, 2)) + 
                           vessel_mask.sum(dim = (1, 2,))) > 0
-        nsd_per_sample = torch.full((preds.shape[0],), float('nan'), 
-                                     device = preds.device)
+        nsd_per_sample = torch.full(
+            (preds.shape[0],), float('nan'), 
+            device = preds.device,
+            dtype  = preds_oh.dtype if False else torch.float32
+        )
         
         if has_signal.any():
             nsd_out = self.val_nsd(preds_oh[has_signal], target_oh[has_signal])
             vals = (nsd_out if isinstance(nsd_out, torch.Tensor) 
                     else torch.stack(list(nsd_out)))
-            nsd_per_sample[has_signal] = vals.squeeze(-1)
+            nsd_per_sample[has_signal] = vals.squeeze(-1).float()
 
         per_sample_dice = self._per_sample_dice(preds, vessel_mask, 
                                                 num_classes = 2, 

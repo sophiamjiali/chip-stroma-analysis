@@ -85,7 +85,7 @@ def objective(trial: Trial,
     logger.info(f"- Validation Loss: {metrics.get('val/loss')}")
     logger.info(f"- Validation Dice Score: {metrics.get('val/dice')}")
     logger.info(f"- Validation IoU Score: {metrics.get('val/iou')}")
-    logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("~" * 50)
 
     # Return the validation Dice score as the key metric

@@ -245,6 +245,9 @@ class VesselSegModule(pl.LightningModule):
     def validation_step(self, batch: dict, batch_idx: int) -> None:
         loss, logits_sq, vessel_mask = self._shared_step(batch)
 
+        if batch_idx == 0:
+            logger.info(f"Validation batch vessel_mask sum: {vessel_mask.sum().item()}")
+
         # Hard predictions for metric computation
         preds = (torch.sigmoid(logits_sq) > 0.5).long()     # (B, H, W)  {0, 1}
         sample_ids = batch['sample_id']

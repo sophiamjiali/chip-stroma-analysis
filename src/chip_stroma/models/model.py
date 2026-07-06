@@ -219,26 +219,28 @@ class VesselSegModule(pl.LightningModule):
         return loss
     
     
-    def on_train_epoch_start(self):
-        """Add an indicator when the epoch starts without messy progress bar."""
-        global start_time
+    # def on_train_epoch_start(self):
+    #     """Add an indicator when the epoch starts without messy progress bar."""
+    #     global start_time
 
-        epoch = self.current_epoch
-        logger.info(f"-- | Epoch {epoch} started | "
-                    f"Total runtime: {time.time() - start_time:.1f}s")
-        return
+    #     epoch = self.current_epoch
+    #     logger.info(f"-- | Epoch {epoch} started | "
+    #                 f"Total runtime: {time.time() - start_time:.1f}s")
+    #     return
 
 
     def on_train_epoch_end(self) -> None:
         """Add an indicator when the epoch ends without messy progress bar."""
         global last_epoch_time
+        global start_time
         now = time.time()
         
         epoch = self.current_epoch
         loss = self.trainer.callback_metrics.get('train/loss_epoch', 'N/A')
 
-        logger.info(f"-- | Epoch {epoch} complete | train/loss: {loss:.4f} | "
-                    f"Time elapsed: {now - last_epoch_time:.1f}s")
+        logger.info(f"-- | Epoch {epoch} Complete  | train/loss: {loss:.4f} | "
+                    f"Time elapsed: {now - last_epoch_time:.1f}s | "
+                    f"Total runtime: {now - start_time:.1f}s")
         last_epoch_time = now
         return
 
@@ -360,7 +362,7 @@ class VesselSegModule(pl.LightningModule):
 
         metrics = self.trainer.callback_metrics
         logger.info(
-            f"-- | Epoch {self.current_epoch} validation | "
+            f"-- | Epoch {self.current_epoch} Validation | "
             f"val/loss: {metrics.get('val/loss', 'N/A'):.4f} | "
             f"val/dice: {metrics.get('val/dice', 'N/A'):.4f} | "
             f"val/dice_std: {metrics.get('val/dice_std', 'N/A'):.4f} | "

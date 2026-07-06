@@ -101,6 +101,9 @@ class VesselSegmentationDataModule(pl.LightningDataModule):
         (PyTorch Lightning docs, 2024).
         """
 
+        # Explicitly cast folds to avoid silent failures
+        self.manifest['fold'] = self.manifest['fold'].astype(int)
+
         # Extract the train and validation sets based on the current fold
         train_manifest = (self.manifest[self.manifest['fold'] != self.fold]
                           .reset_index(drop = True))

@@ -360,7 +360,7 @@ class VesselSegModule(pl.LightningModule):
 
         metrics = self.trainer.callback_metrics
         logger.info(
-            f"Epoch {self.current_epoch} | "
+            f"-- | Epoch {self.current_epoch} validation | "
             f"val/loss: {metrics.get('val/loss', 'N/A'):.4f} | "
             f"val/dice: {metrics.get('val/dice', 'N/A'):.4f} | "
             f"val/dice_std: {metrics.get('val/dice_std', 'N/A'):.4f} | "

@@ -265,7 +265,8 @@ class VesselSegModule(pl.LightningModule):
             nsd_out = self.val_nsd(preds_oh[has_signal], target_oh[has_signal])
             vals = (nsd_out if isinstance(nsd_out, torch.Tensor) 
                     else torch.stack(list(nsd_out)))
-            nsd_per_sample[has_signal] = vals.squeeze(-1).float()
+            nsd_per_sample[has_signal] = (vals.squeeze(-1).float()
+                                          .to(preds.device))
 
         per_sample_dice = self._per_sample_dice(preds, vessel_mask, 
                                                 num_classes = 2, 

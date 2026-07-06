@@ -52,7 +52,7 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
         min_delta                = early_stopping_min_delta,
         strict                   = False,
         check_on_train_epoch_end = False,
-        check_finite             = True,
+        check_finite             = False,
         verbose                  = True
     )
 

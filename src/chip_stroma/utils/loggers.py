@@ -58,7 +58,8 @@ def configure_loggers(project: str,
             project = project,
             group   = group,
             name    = f"trial_{trial.number}",
-            config  = trial.params
+            config  = trial.params,
+            reinit = True
         )
 
 

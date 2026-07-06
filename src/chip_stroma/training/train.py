@@ -7,6 +7,7 @@
 # ==============================================================================
 
 import logging
+import wandb
 
 import lightning.pytorch as pl
 import pandas as pd
@@ -137,11 +138,16 @@ def train(manifest: pd.DataFrame,
     logger.info("-" * 50)
     logger.info("Beginning model training")
 
-    trainer.fit(model = lit_module, datamodule = datamodule)
+    try:
+        trainer.fit(model = lit_module, datamodule = datamodule)
 
-    logger.info("Successfully completed model training")
-    logger.info("=" * 50)
+        logger.info("Successfully completed model training")
+        logger.info("=" * 50)
+
+        return trainer.callback_metrics
     
-    return trainer.callback_metrics
+    finally: wandb.finish()
+    
+    
 
 # [END]

@@ -40,6 +40,7 @@ start_time      = time.time()
 LOG_TIME                = False
 LOG_TRAIN_STEP          = False
 LOG_TRAIN_STEP_INTERVAL = 500
+LOG_DEBUGGING           = False
 
 
 def build_model(encoder_name:     str = "resnet34",
@@ -329,8 +330,7 @@ class VesselSegModule(pl.LightningModule):
 
     def on_validation_epoch_end(self) -> None:
 
-        # Debugging
-        logger.info(f"Debugging - Epoch {self.current_epoch} | Total validation postiive pixels: {self._val_epoch_pos_count}")
+        if LOG_DEBUGGING: logger.info(f"Debugging - Epoch {self.current_epoch} | Total validation postiive pixels: {self._val_epoch_pos_count}")
         
         # Block against NaN warnings; valid outcome, not error
         with warnings.catch_warnings():

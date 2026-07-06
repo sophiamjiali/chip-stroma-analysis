@@ -145,7 +145,7 @@ def log_header(config_path: Path, version: str):
     logger.info(f"- Version: {version}")
     logger.info(f"- Configurations: {config_path}")
     logger.info(f"- Working Directory: {Path.cwd()}")
-    logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 60)
 
 
@@ -154,7 +154,7 @@ def log_footer(cfg: Box, trial: FrozenTrial):
     logger.info("Successfully Completed Pipeline Execution")
     logger.info(f"- Best Trial: {trial.number}")
     logger.info(f"- Best Validation Dice Score: {trial.value:.4f}")
-    logger.info(f"- Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 60)
 
 if __name__ == "__main__":

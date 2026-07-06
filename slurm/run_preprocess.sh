@@ -12,7 +12,7 @@
 mkdir -p /cluster/home/t144807uhn/logs/chip-stroma-analysis/$1
 
 # Activate the virtual environment
-source /cluster/home/t144807uhn/envs/chip-stroma-env-gpu/bin/activate
+source /cluster/home/t144807uhn/envs/chip-stroma-env/bin/activate
 
 # Ensure that all commands resolve back to the proper root directory
 cd /cluster/home/t144807uhn/chip-stroma-analysis

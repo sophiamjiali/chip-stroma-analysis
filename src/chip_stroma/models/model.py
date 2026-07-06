@@ -11,6 +11,7 @@
 #                   report foreground (vessel) content only
 # ==============================================================================
 
+import warnings
 import time
 import torch
 
@@ -250,11 +251,18 @@ class VesselSegModule(pl.LightningModule):
 
         preds_oh  = F.one_hot(preds, num_classes = 2).permute(0, 3, 1, 2)
         target_oh = F.one_hot(vessel_mask, num_classes = 2).permute(0, 3, 1, 2)
-        nsd_out = self.val_nsd(preds_oh, target_oh)
-        if isinstance(nsd_out, torch.Tensor): nsd_per_sample = nsd_out
-        else: nsd_per_sample = torch.stack(cast(list[torch.Tensor], 
-                                                list(nsd_out)))
-        nsd_per_sample = nsd_per_sample.squeeze(-1)
+
+        # Guard against empty-union samples (no positive pixels in preds/target)
+        has_signal     = (preds.sum(dim = (1, 2)) + 
+                          vessel_mask.sum(dim = (1, 2,))) > 0
+        nsd_per_sample = torch.full((preds.shape[0],), float('nan'), 
+                                     device = preds.device)
+        
+        if has_signal.any():
+            nsd_out = self.val_nsd(preds_oh[has_signal], target_oh[has_signal])
+            vals = (nsd_out if isinstance(nsd_out, torch.Tensor) 
+                    else torch.stack(list(nsd_out)))
+            nsd_per_sample[has_signal] = vals.squeeze(-1)
 
         per_sample_dice = self._per_sample_dice(preds, vessel_mask, 
                                                 num_classes = 2, 
@@ -270,7 +278,8 @@ class VesselSegModule(pl.LightningModule):
             self.val_iou.update(preds, vessel_mask)
 
         self.log('val/loss', loss, on_step = False, on_epoch = True,
-                 prog_bar = False, sync_dist = False)
+                 prog_bar = False, sync_dist = False, 
+                 batch_size = preds.shape[0])
         
         return
     
@@ -306,20 +315,28 @@ class VesselSegModule(pl.LightningModule):
     
 
     def on_validation_epoch_end(self) -> None:
-        dice_means = [np.nanmean(v) for v in self._val_sample_dice.values()]
-        nsd_means  = [np.nanmean(v) for v in self._val_sample_nsd.values()]
+        
+        # Block against NaN warnings; valid outcome, not error
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', category = RuntimeWarning)
 
-        val_dice     = torch.tensor(np.nanmean(dice_means))
-        val_dice_std = torch.tensor(np.nanstd(dice_means))
+            dice_means = [np.nanmean(v) for v in self._val_sample_dice.values()]
+            nsd_means  = [np.nanmean(v) for v in self._val_sample_nsd.values()]
 
-        val_nsd     = torch.tensor(np.nanmean(nsd_means))
-        val_nsd_std = torch.tensor(np.nanstd(nsd_means))
+            val_dice     = torch.tensor(np.nanmean(dice_means))
+            val_dice_std = torch.tensor(np.nanstd(dice_means))
+
+            val_nsd     = torch.tensor(np.nanmean(nsd_means))
+            val_nsd_std = torch.tensor(np.nanstd(nsd_means))
+
+        val_iou = (self.val_iou.compute() if self.val_iou.update_count > 0 
+                   else torch.tensor(float('nan')))
 
         self.log('val/dice',     val_dice, prog_bar = False)
         self.log('val/dice_std', val_dice_std, prog_bar = False)
         self.log('val/nsd',      val_nsd, prog_bar = False)
         self.log('val/nsd_std',  val_nsd_std, prog_bar = False)
-        self.log('val/iou',      self.val_iou.compute(), prog_bar = False)
+        self.log('val/iou',      val_iou, prog_bar = False)
 
         self._val_sample_dice.clear()
         self._val_sample_nsd.clear()

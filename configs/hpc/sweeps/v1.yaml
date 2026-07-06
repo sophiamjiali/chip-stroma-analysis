@@ -22,8 +22,8 @@ experiment:
 
 data: 
   fold       : 0    # Which StratifiedGroupKFold fold to train on
-  batch_size : 16
-  num_workers: 0
+  batch_size : 32
+  num_workers: 4
   seed       : 42
   pos_prob   : 0.5     # Balance positive exposure; 0.5 is neutral prior
 
@@ -44,7 +44,7 @@ module:
 trainer:
   max_epochs              : 50       # Keep 50 for testing, 100 for final sweep
   early_stopping_patience : 10       # Isensee et al. (2021) Nat Methods
-  early_stopping_min_delta: 0.00001
+  early_stopping_min_delta: 0.0001
   gradient_clip_val       : 1.0   # Log-uniform; standard clipping range
 
 # [END]

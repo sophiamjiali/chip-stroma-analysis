@@ -245,8 +245,10 @@ class VesselSegModule(pl.LightningModule):
     def validation_step(self, batch: dict, batch_idx: int) -> None:
         loss, logits_sq, vessel_mask = self._shared_step(batch)
 
-        if batch_idx == 0:
-            logger.info(f"Validation batch vessel_mask sum: {vessel_mask.sum().item()}")
+
+        # Debugging
+        self._val_epoch_pos_count += vessel_mask.sum().item() 
+    
 
         # Hard predictions for metric computation
         preds = (torch.sigmoid(logits_sq) > 0.5).long()     # (B, H, W)  {0, 1}
@@ -320,8 +322,15 @@ class VesselSegModule(pl.LightningModule):
 
         return dice
     
+    def on_validation_epoch_start(self):
+        # Reset epoch-wide positive-pixel counter for diagnostic aggregation
+        self._val_epoch_pos_count = 0
+
 
     def on_validation_epoch_end(self) -> None:
+
+        # Debugging
+        logger.info(f"Debugging - Epoch {self.current_epoch} | Total validation postiive pixels: {self._val_epoch_pos_count}")
         
         # Block against NaN warnings; valid outcome, not error
         with warnings.catch_warnings():

@@ -72,11 +72,16 @@ def main():
     )
 
     logger.info("Successfuly initialized the Optuna study for sweeping")
+    study_name = config.sweep.study.group
+    storage = f"sqlite:///{config.paths.outputs.studies}/{study_name}.db"
+
     study = optuna.create_study(
-        direction  = "maximize",
-        sampler    = sampler,
-        pruner     = pruner,
-        study_name = config.sweep.study.group
+        study_name     = study_name,
+        storage        = storage,
+        direction      = "maximize",
+        sampler        = sampler,
+        pruner         = pruner,
+        load_if_exists = True
     )
 
     logger.info("=" * 50)
@@ -108,7 +113,8 @@ def main():
             seed     = config.sweep.data.seed
         ),
         n_trials = n_trials,
-        timeout  = timeout
+        timeout  = timeout,
+        catch    = (RuntimeError,)
     )
 
     n_trials         = len(study.trials)

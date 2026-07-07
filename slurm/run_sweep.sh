@@ -13,6 +13,7 @@
 
 # Make the project-specific logs directory
 mkdir -p /cluster/home/t144807uhn/logs/chip-stroma-analysis/sweep/$1
+mkdir -p /cluster/home/t144807uhn/chip-stroma-analysis/studies
 
 # Activate the virtual environment
 export LD_LIBRARY_PATH=/cluster/home/t111631uhn/miniconda3/lib:$LD_LIBRARY_PATH

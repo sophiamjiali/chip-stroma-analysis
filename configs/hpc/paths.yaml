@@ -25,6 +25,7 @@ metadata:
 outputs:
   training: outputs/training
   sweeps  : outputs/sweeps
+  studies: /cluster/home/t144807uhn/chip-stroma-analysis/studies
 
 # Key results from the full pipeline
 results:

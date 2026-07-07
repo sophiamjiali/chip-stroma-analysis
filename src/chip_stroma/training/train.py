@@ -8,6 +8,8 @@
 
 import logging
 import wandb
+import torch
+import gc
 
 import lightning.pytorch as pl
 import pandas as pd
@@ -122,7 +124,7 @@ def train(manifest: pd.DataFrame,
         accelerator             = "gpu",
         devices                 = 1,
         num_nodes               = 1,
-        deterministic           = False,
+        deterministic           = True,
         log_every_n_steps       = 50,
         gradient_clip_val       = params.trainer.gradient_clip_val,
         gradient_clip_algorithm = "norm",
@@ -146,7 +148,13 @@ def train(manifest: pd.DataFrame,
 
         return trainer.callback_metrics
     
-    finally: wandb.finish()
+    finally: 
+        wandb.finish()
+
+        # Release GPU memory between trials to avoid accumulation
+        del lit_module, model, datamodule, trainer
+        torch.cuda.empty_cache()
+        gc.collect()
     
     
 

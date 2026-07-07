@@ -58,8 +58,10 @@ def configure_loggers(project: str,
             project = project,
             group   = group,
             name    = f"trial_{trial.number}",
+            id      = f"{group}_trial_{trial.number}",
+            resume  = "never",
             config  = trial.params,
-            reinit = True
+            reinit  = True
         )
 
 

@@ -14,6 +14,8 @@
 #                   Sweep ranges provided in the configuration YAML file can be #                   overwritten by constants to hold constant in the sweep.
 # ==============================================================================
 
+import torch
+
 import pandas as pd
 
 from box import Box
@@ -89,7 +91,12 @@ def objective(trial: Trial,
     logger.info("~" * 50)
 
     # Return the validation Dice score as the key metric
-    return float(metrics.get('val/dice', 0.0))
+    # Guard against NaN/pruned trials polluting best-trial selection
+    val_dice = metrics.get('val/dice', float('nan'))
+    if not torch.isfinite(torch.tensor(val_dice)):
+        raise optuna.TrialPruned()
+    
+    return float(val_dice)
 
 
 # =====| Helpers |==============================================================

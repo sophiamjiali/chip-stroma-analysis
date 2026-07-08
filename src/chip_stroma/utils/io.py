@@ -59,6 +59,7 @@ def load_chip_labels(path: Path) -> pd.DataFrame:
     """Loads the patch manifest from the path."""
     return pd.read_csv(path)
 
+
 # =====| Patch Manifest |=======================================================
 
 def build_patch_manifest(src_dir: Path, 
@@ -118,6 +119,7 @@ def save_patch_manifest(manifest: pd.DataFrame, path: Path) -> None:
 def load_patch_manifest(path: Path) -> pd.DataFrame:
     """Loads the patch manifest from the path."""
     return pd.read_csv(path)
+    
 
 # =====| Patch Statistics |=====================================================
 

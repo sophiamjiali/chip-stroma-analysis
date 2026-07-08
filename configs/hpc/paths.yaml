@@ -23,6 +23,7 @@ metadata:
 
 # Training and sweep output directories
 outputs:
+  checkpoints: outputs/checkpoints
   training: outputs/training
   sweeps  : outputs/sweeps
   studies: /cluster/home/t144807uhn/chip-stroma-analysis/studies

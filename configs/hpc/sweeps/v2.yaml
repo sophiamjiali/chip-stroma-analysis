@@ -1,0 +1,50 @@
+# ==============================================================================
+# Script:           v2.yaml
+# Purpose:          Template for WandB sweep configurations
+# Author:           Sophia Mengjia Li
+# Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
+# Date:             06/03/2026
+#
+# Notes:            Sweep ranges can be overwritten with constant values to 
+#                   remove them from the sweep. Useful for conducting 
+#                   exploratory mini sweeps for debugging and testing.
+# ==============================================================================
+
+study: 
+  project: chip-stroma        # Main project container
+  group  : v2                 # Sweep name (grouping)
+
+experiment:
+  n_trials        : 12  # Number of trials to perform
+  timeout         : 16  # Provide in hours; overwrites n_trials, else -1
+  n_startup_trials: 3   # Number of warmup trials to initialize pruner
+  n_warmup_steps  : 15
+
+data: 
+  fold       : 0    # Which StratifiedGroupKFold fold to train on
+  batch_size : 32
+  num_workers: 4
+  seed       : 42
+  pos_prob   : 0.5     # Balance positive exposure; 0.5 is neutral prior
+
+model:
+  encoder_name   : resnet34
+  encoder_weights: imagenet
+  in_channels    : 3
+  out_classes    : 1
+ 
+module:
+  lr          : [0.00001, 0.01]   # Log-uniform; standard AdamW in medical imag.
+  weight_decay: 0.001             # Log-uniform; L2 range for small datasets
+  ftl_alpha   : [0.1, 0.4]        # Derives ftl_beta = 1 - ftl_alpha
+  ftl_gamma   : 0.75              # < 1 less focus, > 1 harder mining
+  ftl_weight  : 0.5               # Composite balance; symmetric around 0.5
+  smooth      : 1.0
+ 
+trainer:
+  max_epochs              : 60       # Keep 50 for testing, 100 for final sweep
+  early_stopping_patience : 15       # Isensee et al. (2021) Nat Methods
+  early_stopping_min_delta: 0.0001
+  gradient_clip_val       : [0.5, 2.0]   # Log-uniform; standard clipping range
+
+# [END]

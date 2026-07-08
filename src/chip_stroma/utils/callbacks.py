@@ -6,11 +6,14 @@
 # Date:             06/24/2026
 # ==============================================================================
 
+import shutil
 import optuna
+import json
 import torch
 
 import lightning.pytorch as pl
 
+from pathlib import Path
 from typing import Optional
 from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor
 
@@ -58,6 +61,9 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
 
     # Safe-guard against false initialization typing
     early_stop_callback.best_score = torch.tensor(float('-inf'))
+
+    # Save the best trial's checkpoint
+    save_best = save_best_after_trial()
 
     callbacks = [
         early_stop_callback,
@@ -108,5 +114,20 @@ class GradientNormCallback(pl.Callback):
         ) ** 0.5
         pl_module.log("grad_norm", total_norm)
 
+
+# =====| Checkpointing |========================================================
+
+def save_best_after_trial(study, trial, checkpoint_dir: Path):
+    """Optuna callback — fires after each trial completes."""
+
+    if study.best_trial.number == trial.number:
+        best_ckpt = checkpoint_dir / f"trial_{trial.number}.ckpt"
+        shutil.copy(best_ckpt, checkpoint_dir / "best_trial.ckpt")
+
+        with open(checkpoint_dir / "best_trial.json", "w") as f:
+            json.dump({
+                "trial_number": trial.number, 
+                "params"      : trial.params, 
+                "val_dice"    : trial.value}, f)
 
 # [END]

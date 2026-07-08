@@ -14,6 +14,7 @@
 #                   Sweep ranges provided in the configuration YAML file can be #                   overwritten by constants to hold constant in the sweep.
 # ==============================================================================
 
+import optuna
 import torch
 
 import pandas as pd

@@ -23,6 +23,7 @@ from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import initialize_train_manifest
 from chip_stroma.training.objective import objective
+from chip_stroma.utils.callbacks import make_checkpoint_callback
 
 logger = setup_logger(__name__)
 
@@ -102,6 +103,11 @@ def main():
 
     torch.set_num_threads(1)
 
+    # Initialize checkpointing callback for best trial
+    checkpoint_callback = make_checkpoint_callback(
+        checkpoint_dir = config.paths.outputs.checkpoints
+    )
+
     study.optimize(
         partial(
             objective, 
@@ -112,9 +118,10 @@ def main():
             params   = config.sweep,
             seed     = config.sweep.data.seed
         ),
-        n_trials = n_trials,
-        timeout  = timeout,
-        catch    = (RuntimeError,)
+        n_trials  = n_trials,
+        timeout   = timeout,
+        catch     = (RuntimeError,),
+        callbacks = [checkpoint_callback]
     )
 
     n_trials         = len(study.trials)

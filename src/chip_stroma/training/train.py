@@ -146,6 +146,11 @@ def train(manifest: pd.DataFrame,
         logger.info("Successfully completed model training")
         logger.info("=" * 50)
 
+        # Save the checkpoint; both for train and sweep protocols
+        ckpt_name = (f"trial_{trial.number}.ckpt" if trial is not None 
+                     else "single_run.ckpt")
+        trainer.save_checkpoint(paths.outputs.checkpoints / ckpt_name)
+
         return trainer.callback_metrics
     
     finally: 

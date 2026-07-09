@@ -13,6 +13,7 @@
 
 import warnings
 import time
+import wandb
 import torch
 
 import segmentation_models_pytorch as smp
@@ -21,15 +22,19 @@ import lightning.pytorch as pl
 import torch.nn as nn
 import numpy as np
 
-from surface_distance import compute_surface_distances, compute_surface_dice_at_tolerance
-
-from torchmetrics.segmentation import MeanIoU, DiceScore
+from torchmetrics.segmentation import MeanIoU
+from torchmetrics.classification import BinaryPrecision, BinaryRecall
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from typing import cast
 from collections import defaultdict
+from pytorch_lightning.loggers import WandbLogger
 
 from chip_stroma.utils.loggers import setup_logger
-from chip_stroma.models.loss import FocalTverskyLoss, MaskedDiceLoss
+from chip_stroma.models.loss import (
+    FocalTverskyLoss, 
+    MaskedDiceLoss, 
+    SurfaceDiceMetric
+)
 
 logger = setup_logger(__name__)
 last_log_time   = time.time()
@@ -42,6 +47,8 @@ LOG_TRAIN_STEP          = False
 LOG_TRAIN_STEP_INTERVAL = 500
 LOG_DEBUGGING           = False
 
+
+# =====| Model Creation Entry-Point |===========================================
 
 def build_model(encoder_name:     str = "resnet34",
                 encoder_weights:  str = "imagenet",
@@ -91,6 +98,8 @@ def build_model(encoder_name:     str = "resnet34",
     )
 
 
+# =====| Lightning Module |=====================================================
+
 class VesselSegModule(pl.LightningModule):
     """
     Args:
@@ -109,7 +118,7 @@ class VesselSegModule(pl.LightningModule):
                  model:         nn.Module,
                  lr:            float = 1e-4,
                  weight_decay:  float = 1e-2,
-                 T_max:         int   = 25,
+                 T_max:         int   = 60,
                  ftl_alpha:     float = 0.3,
                  ftl_beta:      float = 0.7,
                  ftl_gamma:     float = 0.75,
@@ -132,13 +141,7 @@ class VesselSegModule(pl.LightningModule):
         # Initialize masked Dice Loss function
         self.dice_loss = MaskedDiceLoss(smooth = smooth)
 
-        # Dice Score is initialized with a global aggregation level
-        self.val_dice = DiceScore(
-            num_classes        = 2,
-            include_background = False,
-            aggregation_level  = "samplewise",
-            input_format       = "index"
-        )
+        # Dice Score is initialized per sample
         self._val_sample_dice = defaultdict(list)
 
         # Initialize Mean IoU as one-hot input, converted in validation step
@@ -155,6 +158,10 @@ class VesselSegModule(pl.LightningModule):
         )
         self._val_sample_nsd = defaultdict(list)
 
+        # Precision and recall for positive vessels
+        self.val_precision = BinaryPrecision()
+        self.val_recall    = BinaryRecall()
+
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
@@ -170,7 +177,7 @@ class VesselSegModule(pl.LightningModule):
         logger.info("-" * 50)
 
 
-    # =====| Steps |============================================================
+    # =====| Training Step |====================================================
     
     def _shared_step(self, batch: dict) -> tuple[torch.Tensor, ...]:
         """
@@ -218,16 +225,6 @@ class VesselSegModule(pl.LightningModule):
 
         return loss
     
-    
-    # def on_train_epoch_start(self):
-    #     """Add an indicator when the epoch starts without messy progress bar."""
-    #     global start_time
-
-    #     epoch = self.current_epoch
-    #     logger.info(f"-- | Epoch {epoch} started | "
-    #                 f"Total runtime: {time.time() - start_time:.1f}s")
-    #     return
-
 
     def on_train_epoch_end(self) -> None:
         """Add an indicator when the epoch ends without messy progress bar."""
@@ -244,95 +241,72 @@ class VesselSegModule(pl.LightningModule):
         last_epoch_time = now
         return
 
+
+    # =====| Validation Step |==================================================
     
     def validation_step(self, batch: dict, batch_idx: int) -> None:
         loss, logits_sq, vessel_mask = self._shared_step(batch)
 
-
-        # Debugging
-        self._val_epoch_pos_count += vessel_mask.sum().item() 
-    
-
         # Hard predictions for metric computation
-        preds = (torch.sigmoid(logits_sq) > 0.5).long()     # (B, H, W)  {0, 1}
+        preds      = (torch.sigmoid(logits_sq) > 0.5).long()
         sample_ids = batch['sample_id']
 
         preds_oh  = F.one_hot(preds, num_classes = 2).permute(0, 3, 1, 2)
         target_oh = F.one_hot(vessel_mask, num_classes = 2).permute(0, 3, 1, 2)
 
         # Guard against empty-union samples (no positive pixels in preds/target)
-        has_signal     = (preds.sum(dim = (1, 2)) + 
-                          vessel_mask.sum(dim = (1, 2,))) > 0
+        has_signal = (preds.sum(dim = (1,2)) + vessel_mask.sum(dim = (1,2))) > 0
+
+        # Compute NSD per sample, nan-filled for no-signal samples
         nsd_per_sample = torch.full(
-            (preds.shape[0],), float('nan'), 
-            device = preds.device,
-            dtype  = preds_oh.dtype if False else torch.float32
+            (preds.shape[0],), float('nan'),
+            device = preds.device, 
+            dtype = torch.float32
         )
         
-        if has_signal.any():
+        # Only update the global metric if there was signal in the sample
+        if has_signal.any(): 
             nsd_out = self.val_nsd(preds_oh[has_signal], target_oh[has_signal])
-            vals = (nsd_out if isinstance(nsd_out, torch.Tensor) 
-                    else torch.stack(list(nsd_out)))
+            vals    = (nsd_out if isinstance(nsd_out, torch.Tensor) 
+                       else torch.stack(list(nsd_out)))
             nsd_per_sample[has_signal] = (vals.squeeze(-1).float()
                                           .to(preds.device))
 
-        per_sample_dice = self._per_sample_dice(preds, vessel_mask, 
-                                                num_classes = 2, 
-                                                include_background = False)
-        self.val_dice.update(preds, vessel_mask)
+        # Compute per-sample dice; already has NaN-guards internally
+        per_sample_dice = self._per_sample_dice(
+            preds              = preds,
+            target             = vessel_mask,
+            num_classes        = 2,
+            include_background = False
+        )
 
+        # Aggregate IoU guarded against NaN
+        if (vessel_mask.sum() > 0) or (preds.sum() > 0):
+            self.val_iou.update(preds, vessel_mask)
+
+        # Compute precision and recall, guarded against NaN
+        if has_signal.any():
+            self.val_precision.update(preds[has_signal],vessel_mask[has_signal])
+            self.val_recall.update(preds[has_signal], vessel_mask[has_signal])
+
+        # Track positive-patch count for imbalance sanity-checking
+        self.log('val/n_pos_in_batch', has_signal.sum(), on_step = False,
+                 on_epoch = True, reduce_fx = 'sum', prog_bar = False,
+                 batch_size = preds.shape[0])
+
+        # Per-patient accumulation using nan-safe values
         for i, pid in enumerate(sample_ids):
             self._val_sample_nsd[pid].append(nsd_per_sample[i].item())
             self._val_sample_dice[pid].append(per_sample_dice[i].item())
-
-        # Only update IOU if there is at least one positive pixel in target/pred
-        if (vessel_mask.sum() > 0) or (preds.sum() > 0):
-            self.val_iou.update(preds, vessel_mask)
 
         self.log('val/loss', loss, on_step = False, on_epoch = True,
                  prog_bar = False, sync_dist = False, 
                  batch_size = preds.shape[0])
         
         return
-    
-
-    def _per_sample_dice(self, 
-                         preds, 
-                         target, 
-                         num_classes        = 2, 
-                         include_background = False, 
-                         eps                = 1e-6):
-        """
-        Per-sample foreground Dice score; excludes samples with no 
-        positive pixels in either prediction or target.
-        """
-
-        preds_oh  = F.one_hot(preds, num_classes).permute(0, 3, 1, 2).bool()
-        target_oh = F.one_hot(target, num_classes).permute(0, 3, 1, 2).bool()
-
-        if not include_background:
-            preds_oh, target_oh = preds_oh[:, 1:], target_oh[:, 1:]
-
-        dims = tuple(range(2, preds_oh.ndim))
-
-        intersection = (preds_oh & target_oh).sum(dim = dims + (1,)).float()
-        union = (preds_oh.sum(dim = dims + (1,)).float() 
-                 + target_oh.sum(dim = dims + (1,)).float())
-        
-        # Exclude true-negative samples from aggregation
-        dice = (2 * intersection + eps) / (union + eps)
-        dice[union == 0] = float('nan')
-
-        return dice
-    
-    def on_validation_epoch_start(self):
-        # Reset epoch-wide positive-pixel counter for diagnostic aggregation
-        self._val_epoch_pos_count = 0
 
 
     def on_validation_epoch_end(self) -> None:
-
-        if LOG_DEBUGGING: logger.info(f"Debugging - Epoch {self.current_epoch} | Total validation postiive pixels: {self._val_epoch_pos_count}")
         
         # Block against NaN warnings; valid outcome, not error
         with warnings.catch_warnings():
@@ -346,19 +320,41 @@ class VesselSegModule(pl.LightningModule):
 
             val_nsd     = torch.tensor(np.nanmean(nsd_means))
             val_nsd_std = torch.tensor(np.nanstd(nsd_means))
+        
+        # Compute metrics with a signal guard
+        val_iou       = (self.val_iou.compute() if self.val_iou.update_count >0 
+                         else torch.tensor(float('nan')))
+        val_precision = (self.val_precision.compute() if self.val_precision.
+                         update_count > 0 else torch.tensor(float('nan')))
+        val_recall    = (self.val_recall.compute() if self.val_recall.
+                         update_count > 0 else torch.tensor(float('nan')))
 
-        val_iou = (self.val_iou.compute() if self.val_iou.update_count > 0 
-                   else torch.tensor(float('nan')))
+        self.log('val/dice',      val_dice,      prog_bar = False)
+        self.log('val/dice_std',  val_dice_std,  prog_bar = False)
+        self.log('val/nsd',       val_nsd,       prog_bar = False)
+        self.log('val/nsd_std',   val_nsd_std,   prog_bar = False)
+        self.log('val/iou',       val_iou,       prog_bar = False)
+        self.log('val/precision', val_precision, prog_bar = False)
+        self.log('val/recall',    val_recall,    prog_bar = False)
 
-        self.log('val/dice',     val_dice, prog_bar = False)
-        self.log('val/dice_std', val_dice_std, prog_bar = False)
-        self.log('val/nsd',      val_nsd, prog_bar = False)
-        self.log('val/nsd_std',  val_nsd_std, prog_bar = False)
-        self.log('val/iou',      val_iou, prog_bar = False)
-
+        # Compute per-patient Dice table for post-hoc inter-patient variance
+        per_patient_dice = {pid: np.nanmean(v) for pid, v in 
+                            self._val_sample_dice.items()}
+        
+        if isinstance(self.trainer.logger, WandbLogger):
+            self.trainer.logger.experiment.log({
+                'val/dice_per_patient': wandb.Table(
+                    columns = ['patient_id', 'mean_dice', 'n_patches'],
+                    data = [[pid, m, len(self._val_sample_dice[pid])] for 
+                            pid, m in per_patient_dice.items()]
+            )})
+        
+        # Clear all validation metrics for the next iteration
         self._val_sample_dice.clear()
         self._val_sample_nsd.clear()
         self.val_iou.reset()
+        self.val_precision.reset()
+        self.val_recall.reset()
 
         metrics = self.trainer.callback_metrics
         logger.info(
@@ -366,7 +362,9 @@ class VesselSegModule(pl.LightningModule):
             f"val/loss: {metrics.get('val/loss', 'N/A'):.4f} | "
             f"val/dice: {metrics.get('val/dice', 'N/A'):.4f} | "
             f"val/dice_std: {metrics.get('val/dice_std', 'N/A'):.4f} | "
-            f"val/iou: {metrics.get('val/iou', 'N/A'):.4f}"
+            f"val/iou: {metrics.get('val/iou', 'N/A'):.4f} | "
+            f"val/precision: {metrics.get('val/precision', 'N/A'):.4f} | "
+            f"val/recall: {metrics.get('val/recall', 'N/A'):.4f}"
         )
 
         return
@@ -419,36 +417,36 @@ class VesselSegModule(pl.LightningModule):
             {"params": no_decay, "lr": lr, "weight_decay": 0.0},
         ]
     
-class SurfaceDiceMetric:
-    """Stateful NSD accumulator, API-compatible with MONAI's CumulativeIterationMetric."""
-    def __init__(self, class_thresholds, include_background=False, spacing_mm=(1.0, 1.0)):
-        self.class_thresholds = class_thresholds
-        self.include_background = include_background
-        self.spacing_mm = spacing_mm
-        self._buffer = []
 
-    def __call__(self, y_pred, y):
-        start_c = 0 if self.include_background else 1
-        batch_vals = []
-        for b in range(y_pred.shape[0]):
-            per_class = []
-            for c in range(start_c, y_pred.shape[1]):
-                sd = compute_surface_distances(
-                    y[b, c].cpu().numpy().astype(bool),
-                    y_pred[b, c].cpu().numpy().astype(bool),
-                    self.spacing_mm,
-                )
-                tol = self.class_thresholds[c - start_c]
-                per_class.append(compute_surface_dice_at_tolerance(sd, tol))
-            batch_vals.append(per_class)
-        self._buffer.extend(batch_vals)
-        return torch.tensor(batch_vals)
+    # =====| Helpers |==========================================================
+    
+    def _per_sample_dice(self, 
+                         preds, 
+                         target, 
+                         num_classes        = 2, 
+                         include_background = False, 
+                         eps                = 1e-6):
+        """
+        Per-sample foreground Dice score; excludes samples with no 
+        positive pixels in either prediction or target.
+        """
 
-    def aggregate(self):
-        import numpy as np
-        return torch.tensor(np.nanmean(self._buffer))
+        preds_oh  = F.one_hot(preds, num_classes).permute(0, 3, 1, 2).bool()
+        target_oh = F.one_hot(target, num_classes).permute(0, 3, 1, 2).bool()
 
-    def reset(self):
-        self._buffer = []
+        if not include_background:
+            preds_oh, target_oh = preds_oh[:, 1:], target_oh[:, 1:]
+
+        dims = tuple(range(2, preds_oh.ndim))
+
+        intersection = (preds_oh & target_oh).sum(dim = dims + (1,)).float()
+        union = (preds_oh.sum(dim = dims + (1,)).float() 
+                 + target_oh.sum(dim = dims + (1,)).float())
+        
+        # Exclude true-negative samples from aggregation
+        dice = (2 * intersection + eps) / (union + eps)
+        dice[union == 0] = float('nan')
+
+        return dice
 
 # [END]

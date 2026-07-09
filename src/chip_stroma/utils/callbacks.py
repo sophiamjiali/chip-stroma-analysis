@@ -62,9 +62,6 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
     # Safe-guard against false initialization typing
     early_stop_callback.best_score = torch.tensor(float('-inf'))
 
-    # Save the best trial's checkpoint
-    save_best = save_best_after_trial()
-
     callbacks = [
         early_stop_callback,
         lr_monitor,
@@ -117,17 +114,32 @@ class GradientNormCallback(pl.Callback):
 
 # =====| Checkpointing |========================================================
 
-def save_best_after_trial(study, trial, checkpoint_dir: Path):
-    """Optuna callback — fires after each trial completes."""
+def make_checkpoint_callback(checkpoint_dir: Path):
+    """Wrapper for study-level callback. Keeps only one checkpoint 
+    corresponding to the best (current) trial of the sweep."""
 
-    if study.best_trial.number == trial.number:
-        best_ckpt = checkpoint_dir / f"trial_{trial.number}.ckpt"
-        shutil.copy(best_ckpt, checkpoint_dir / "best_trial.ckpt")
+    def save_best_after_trial(study: optuna.Study, 
+                            trial: optuna.trial.FrozenTrial) -> None:
+        """Optuna callback — fires after each trial completes."""
 
-        with open(checkpoint_dir / "best_trial.json", "w") as f:
-            json.dump({
-                "trial_number": trial.number, 
-                "params"      : trial.params, 
-                "val_dice"    : trial.value}, f)
+        trial_ckpt = checkpoint_dir / f"trial_{trial.number}.ckpt"
+
+        # If the best trial was found, delete all other checkpoint(s)
+        if study.best_trial.number == trial.number:
+            best_ckpt = checkpoint_dir / f"best_trial.ckpt"
+            shutil.copy(trial_ckpt, best_ckpt)
+
+            with open(checkpoint_dir / "best_trial.json", "w") as f:
+                json.dump({
+                    "trial_number": trial.number, 
+                    "params"      : trial.params, 
+                    "val_dice"    : trial.value,
+                    "encoder_name": "resnet34"
+                }, f)
+
+        # Delete this trials checkpoint; turned into best-so-far if so
+        trial_ckpt.unlink(missing_ok = True)
+                
+    return save_best_after_trial
 
 # [END]

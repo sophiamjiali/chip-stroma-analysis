@@ -8,7 +8,7 @@
 
 study:
   project: chip-stroma  # Main project container
-  group  : test         # Sweep name (grouping)
+  group  : v0         # Sweep name (grouping)
 
 data: 
   fold       : 0    # Which StratifiedGroupKFold fold to train on
@@ -24,16 +24,16 @@ model:
   out_classes    : 1
  
 module:
-  lr          : 0.0001
+  lr          : 0.0001329291894316216
   weight_decay: 0.001
-  ftl_alpha   : 0.3   # FTL FP weight (Abraham & Khan, 2019)
-  ftl_beta    : 0.7   # FTL FN weight (should be 1 - ftl_alpha)
+  ftl_alpha   : 0.3852142919229749
+  ftl_beta    : 0.6147857080770252
   ftl_gamma   : 0.75  # FTL focal exponent
   ftl_weight  : 0.5   # composite: ftl_weight*FTL + (1-ftl_weight)*Dice
   smooth      : 1.0
  
 trainer:
-  max_epochs              : 25
+  max_epochs              : 70
   early_stopping_patience : 10        # Isensee et al. (2021) Nat Methods
   early_stopping_min_delta: 0.0001
   gradient_clip_val       : 1.0

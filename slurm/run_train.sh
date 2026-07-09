@@ -4,7 +4,7 @@
 #SBATCH --account=kumargroup_gpu
 #SBATCH -p gpu
 #SBATCH --gres=gpu:1
-#SBATCH --time=4:30:00
+#SBATCH --time=12:30:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=24G
@@ -13,8 +13,10 @@
 
 # Make the project-specific logs directory
 mkdir -p /cluster/home/t144807uhn/logs/chip-stroma-analysis/train/$1
+mkdir -p /cluster/home/t144807uhn/chip-stroma-analysis/studies
 
 # Activate the virtual environment
+export LD_LIBRARY_PATH=/cluster/home/t111631uhn/miniconda3/lib:$LD_LIBRARY_PATH
 source /cluster/home/t144807uhn/envs/chip-stroma-env-gpu/bin/activate
 
 # Ensure that all commands resolve back to the proper root directory

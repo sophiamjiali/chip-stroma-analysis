@@ -235,7 +235,7 @@ class VesselSegModule(pl.LightningModule):
         epoch = self.current_epoch
         loss = self.trainer.callback_metrics.get('train/loss_epoch', 'N/A')
 
-        logger.info(f"-- | Epoch {epoch} Complete  | train/loss: {loss:.4f} | "
+        logger.info(f"-- | Epoch {epoch} Complete   | train/loss: {loss:.4f} | "
                     f"Time elapsed: {now - last_epoch_time:.1f}s | "
                     f"Total runtime: {now - start_time:.1f}s")
         last_epoch_time = now

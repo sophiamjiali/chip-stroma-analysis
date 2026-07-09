@@ -30,6 +30,7 @@ outputs:
 
 # Key results from the full pipeline
 results:
+  evaluation: results/evaluation
   masks:
     fibroblasts_dir: results/masks/fibroblasts
     vessels_dir    : results/masks/vessels

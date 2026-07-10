@@ -96,16 +96,17 @@ def main():
             
             # Extract patch data from the dataset
             sample = dataset[idx]
-            image       = sample["patch"].unsqueeze(0).to(device)
+            image_cpu   = sample['patch']
+            image_gpu   = image_cpu.unsqueeze(0).to(device)
             vessel_mask = sample["vessel_mask"].long().to(device)
             tissue_mask = sample["tissue_mask"].long().to(device)
 
-            logits = model(image).squeeze()
+            logits = model(image_gpu).squeeze()
             pred = (torch.sigmoid(logits) > 0.5).long() * tissue_mask
             target = vessel_mask * tissue_mask
 
             # Undo normalization upon the patch for display
-            raw = image.squeeze(0).permute(1, 2, 0).numpy()
+            raw = image_cpu.squeeze(0).permute(1, 2, 0).numpy()
             raw = (raw - raw.min()) / (raw.max() - raw.min() + 1e-8)
 
             # Generate an overlay of the prediction upon the ground-truth

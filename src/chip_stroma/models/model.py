@@ -248,14 +248,19 @@ class VesselSegModule(pl.LightningModule):
         loss, logits_sq, vessel_mask = self._shared_step(batch)
 
         # Hard predictions for metric computation
-        preds      = (torch.sigmoid(logits_sq) > 0.5).long()
-        sample_ids = batch['sample_id']
+        preds       = (torch.sigmoid(logits_sq) > 0.5).long()
+        sample_ids  = batch['sample_id']
+        tissue_mask = batch['tissue_mask'].long()
 
-        preds_oh  = F.one_hot(preds, num_classes = 2).permute(0, 3, 1, 2)
-        target_oh = F.one_hot(vessel_mask, num_classes = 2).permute(0, 3, 1, 2)
+        # Restrict preds/target to tisuse region before metric computation
+        preds_m       = preds * tissue_mask
+        vessel_mask_m = vessel_mask * tissue_mask
+
+        preds_oh  = F.one_hot(preds_m, num_classes = 2).permute(0, 3, 1, 2)
+        target_oh = F.one_hot(vessel_mask_m, num_classes=2).permute(0, 3, 1, 2)
 
         # Guard against empty-union samples (no positive pixels in preds/target)
-        has_signal = (preds.sum(dim = (1,2)) + vessel_mask.sum(dim = (1,2))) > 0
+        has_signal = vessel_mask_m.sum(dim = (1, 2)) > 0
 
         # Compute NSD per sample, nan-filled for no-signal samples
         nsd_per_sample = torch.full(
@@ -274,20 +279,22 @@ class VesselSegModule(pl.LightningModule):
 
         # Compute per-sample dice; already has NaN-guards internally
         per_sample_dice = self._per_sample_dice(
-            preds              = preds,
-            target             = vessel_mask,
+            preds              = preds_m,
+            target             = vessel_mask_m,
             num_classes        = 2,
             include_background = False
         )
 
         # Aggregate IoU guarded against NaN
         if (vessel_mask.sum() > 0) or (preds.sum() > 0):
-            self.val_iou.update(preds, vessel_mask)
+            self.val_iou.update(preds_m[has_signal], vessel_mask_m[has_signal])
 
         # Compute precision and recall, guarded against NaN
         if has_signal.any():
-            self.val_precision.update(preds[has_signal],vessel_mask[has_signal])
-            self.val_recall.update(preds[has_signal], vessel_mask[has_signal])
+            self.val_precision.update(preds_m[has_signal], 
+                                      vessel_mask_m[has_signal])
+            self.val_recall.update(preds_m[has_signal], 
+                                   vessel_mask_m[has_signal])
 
         # Track positive-patch count for imbalance sanity-checking
         self.log('val/n_pos_in_batch', has_signal.sum(), on_step = False,

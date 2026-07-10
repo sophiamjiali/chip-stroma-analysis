@@ -20,8 +20,8 @@ from pathlib import Path
 from datetime import datetime
 from torchmetrics.classification import BinaryF1Score
 
-from chip_stroma.model import load_model_from_ckpt
-from chip_stroma.data import build_eval_dataloader
+from chip_stroma.models.model import VesselSegModule
+from chip_stroma.data.dataset import VesselPatchDataset
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.config import load_configs
 
@@ -44,7 +44,10 @@ def main():
 
     # Load the model and dataloader as specified in the configurations
     checkpoint_path = Path(config.evaluate.checkpoint_path)
-    model           = load_model_from_ckpt(checkpoint_path).to(args.device)
+    model           = VesselSegModule.load_from_checkpoint(
+        checkpoint_path = checkpoint_path,
+        map_location    = args.device
+    )
     dataloader      = build_eval_dataloader()
 
     # Compute patch-evel metrics

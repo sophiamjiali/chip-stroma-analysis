@@ -18,6 +18,7 @@
 
 import torch
 import torch.nn as nn
+import numpy as np
 
 from surface_distance import (
     compute_surface_distances, 
@@ -131,10 +132,19 @@ class SurfaceDiceMetric:
         return torch.tensor(batch_vals)
 
     def aggregate(self):
-        import numpy as np
         return torch.tensor(np.nanmean(self._buffer))
 
     def reset(self):
         self._buffer = []
+
+
+def dice_score(pred, true, eps=1e-8):
+    """Per-sample Dice; smooth in denominator only (MONAI issue #807 convention)."""
+    dims = tuple(range(1, pred.ndim))
+    intersection = (pred * true).sum(dim=dims)
+    denom = pred.sum(dim=dims) + true.sum(dim=dims)
+    dice = (2 * intersection) / (denom + eps)
+    dice[denom == 0] = float("nan")
+    return dice
     
 # [END]

@@ -92,7 +92,8 @@ class VesselPatchDataset(Dataset):
             'vessel_mask': vessel_mask,
             'tissue_mask': tissue_mask,
             'has_vessel':  bool(row['has_vessel']),
-            'sample_id':   str(row['sample_id'])
+            'sample_id':   str(row['sample_id']),
+            'patch_name':  str(row['patch_name'])
         }
     
     def __len__(self) -> int:

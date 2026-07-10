@@ -2,7 +2,7 @@ checkpoint_path: /cluster/home/t144807uhn/chip-stroma-analysis/outputs/checkpoin
 val_fold: 0
 
 batch_size: 32
-n_workers: 4s
+n_workers: 4
 
 model:
   encoder_name   : resnet34

@@ -68,8 +68,8 @@ def main():
     )
     dataloader = DataLoader(
         dataset     = dataset,
-        batch_size  = config.evaluate.batch_size,
-        num_workers = config.evaluate.n_workers,
+        batch_size  = int(config.evaluate.batch_size),
+        num_workers = int(config.evaluate.n_workers),
         shuffle     = False,
         pin_memory  = True
     )

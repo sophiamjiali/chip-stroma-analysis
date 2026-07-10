@@ -96,9 +96,9 @@ def main():
             
             # Extract patch data from the dataset
             sample = dataset[idx]
-            image       = sample["patch"].unsqueeze(0)
-            vessel_mask = sample["vessel_mask"].squeeze(0).long()
-            tissue_mask = sample["tissue_mask"].long()
+            image       = sample["patch"].unsqueeze(0).to(device)
+            vessel_mask = sample["vessel_mask"].long().to(device)
+            tissue_mask = sample["tissue_mask"].long().to(device)
 
             logits = model(image).squeeze()
             pred = (torch.sigmoid(logits) > 0.5).long() * tissue_mask

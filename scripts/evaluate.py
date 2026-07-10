@@ -39,7 +39,7 @@ def main():
     # Load the model from the specified checkpoint
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = VesselSegModule.load_from_checkpoint(
-        checkpoint_path = config.validation.checkpoint_path,
+        checkpoint_path = config.evaluate.checkpoint_path,
         map_location    = device
     )
     model.to(device)
@@ -48,7 +48,7 @@ def main():
 
     # Load the validation fold as a dataset
     manifest = load_patch_manifest(path = config.paths.metadata.patch_manifest)
-    manifest = (manifest[manifest['fold'] == int(config.validation.val_fold)]
+    manifest = (manifest[manifest['fold'] == int(config.evaluate.val_fold)]
                 .reset_index(drop = True))
     
     dataset = VesselPatchDataset(
@@ -60,8 +60,8 @@ def main():
     )
     dataloader = DataLoader(
         dataset     = dataset,
-        batch_size  = config.validation.batch_size,
-        num_workers = config.validation.n_workers,
+        batch_size  = config.evaluate.batch_size,
+        num_workers = config.evaluate.n_workers,
         shuffle     = False,
         pin_memory  = True
     )

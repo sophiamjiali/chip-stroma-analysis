@@ -117,9 +117,9 @@ def main():
             # Generate an overlay of the prediction upon the ground-truth
             fig, axes = plt.subplots(1, 3, figsize=(12, 4))
             axes[0].imshow(raw); axes[0].set_title("Raw H-DAB"); axes[0].axis("off")
-            axes[1].imshow(raw); axes[1].imshow(target.squeeze(0).cpu().numpy(), cmap="Reds", alpha=0.4)
+            axes[1].imshow(raw); axes[1].imshow(target.squeeze(0).cpu().numpy(), cmap="Reds", alpha=0.6)
             axes[1].set_title("Ground truth"); axes[1].axis("off")
-            axes[2].imshow(raw); axes[2].imshow(pred.squeeze(0).cpu().numpy(), cmap="Blues", alpha=0.4)
+            axes[2].imshow(raw); axes[2].imshow(pred.squeeze(0).cpu().numpy(), cmap="Blues", alpha=0.6)
             axes[2].set_title(f"Prediction (Dice={row['dice']:.2f})"); axes[2].axis("off")
 
             # Label the panel with its stratification category (e.g. true positive vs. false positive)

@@ -142,13 +142,21 @@ def main():
     per_sample_metrics = (patch_signal.groupby('sample_id')
                           [['dice', 'precision', 'recall']].mean())
     
-    logger.info(f"N patches (fold 0): {len(per_patch_results)} | "
-                f"N positive-signal patches: {len(patch_signal)}")
-    logger.info(f"N samples: {per_sample_metrics.shape[0]}")
-    logger.info("\nPer-sample mean metrics:\n", per_sample_metrics)
-    logger.info(f"\nMean Dice (sample-level): "
-                f"{per_sample_metrics['dice'].mean():.4f}"
-                f" ± {per_sample_metrics['dice'].std():.4f}")
+    logger.info(
+        "N patches (fold 0): %d | N positive-signal patches: %d",
+        len(per_patch_results),
+        len(patch_signal),
+    )
+
+    logger.info("N samples: %d", per_sample_metrics.shape[0])
+
+    logger.info("Per-sample mean metrics:\n%s", per_sample_metrics)
+
+    logger.info(
+        "Mean Dice (sample-level): %.4f ± %.4f",
+        per_sample_metrics["dice"].mean(),
+        per_sample_metrics["dice"].std(),
+    )
     
     # Save all results
     dst_dir = config.paths.results.evaluation / Path(args.version)

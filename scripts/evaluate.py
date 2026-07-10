@@ -39,10 +39,10 @@ def main():
     # Load the model from the specified checkpoint
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = build_model(
-        encoder_name    = config.model.encoder_name,
-        encoder_weights = config.model.encoder_weights,
-        in_channels     = config.model.in_channels,
-        out_classes     = config.model.out_classes
+        encoder_name    = config.evaluate.model.encoder_name,
+        encoder_weights = config.evaluate.model.encoder_weights,
+        in_channels     = config.evaluate.model.in_channels,
+        out_classes     = config.evaluate.model.out_classes
     )
 
     model = VesselSegModule.load_from_checkpoint(

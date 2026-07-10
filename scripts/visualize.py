@@ -78,12 +78,17 @@ def main():
     worst_fp      = metrics[metrics["has_signal"]].nsmallest(6, "precision")
     true_negative = metrics[~metrics["has_signal"]].sample(6, random_state = 0)
 
+    top_positive  = top_positive.assign(category = "true_positives")
+    worst_fp      = worst_fp.assign(category = "false_positives")
+    true_negative = true_negative.assign(category = "true_negatives")
+
     selected = (pd.concat([top_positive, worst_fp, true_negative])
-                .reset_index(drop = True))
+                .reset_index(drop=True))
     
     # Build overlays for all selected patches
     dst_dir = config.paths.results.overlays.vessels_dir
-    dst_dir.mkdir(parents = True, exist_ok = True)
+    for category in ['true_positives', 'false_positives', 'true_negatives']:
+        (dst_dir / category).mkdir(parents = True, exist_ok = True)
 
     with torch.no_grad():
         for _, row in selected.iterrows():
@@ -116,14 +121,14 @@ def main():
             axes[2].imshow(raw); axes[2].imshow(pred.squeeze(0).cpu().numpy(), cmap="Blues", alpha=0.4)
             axes[2].set_title(f"Prediction (Dice={row['dice']:.2f})"); axes[2].axis("off")
 
-            fig.suptitle(f"Sample {row['sample_id']}")
+            # Label the panel with its stratification category (e.g. true positive vs. false positive)
+            fig.suptitle(f"Sample {row['sample_id']} — {row['category'].replace('_', ' ').title()}")
             fig.tight_layout()
 
-
-            fig.savefig(dst_dir / f"{row['sample_id']}_{idx}.png", dpi=300)
+            # Save into the corresponding category subfolder
+            fig.savefig(dst_dir / row['category'] / f"{row['sample_id']}_{idx}.png", dpi=300)
             plt.close(fig)
-
-            logger.info("- | - Saved an overlay")
+            logger.info(f"- | - Saved a {row['category']} overlay")
 
     log_footer()
     return

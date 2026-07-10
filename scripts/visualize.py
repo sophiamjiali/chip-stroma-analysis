@@ -96,25 +96,24 @@ def main():
             
             # Extract patch data from the dataset
             sample = dataset[idx]
-            image_cpu   = sample['patch']
-            image_gpu   = image_cpu.unsqueeze(0).to(device)
+            image       = sample['patch'].unsqueeze(0).to(device)
             vessel_mask = sample["vessel_mask"].long().to(device)
             tissue_mask = sample["tissue_mask"].long().to(device)
 
-            logits = model(image_gpu).squeeze()
+            logits = model(image).squeeze()
             pred = (torch.sigmoid(logits) > 0.5).long() * tissue_mask
             target = vessel_mask * tissue_mask
 
             # Undo normalization upon the patch for display
-            raw = image_cpu.squeeze(0).permute(1, 2, 0).numpy()
+            raw = image.cpu().squeeze(0).permute(1, 2, 0).numpy()
             raw = (raw - raw.min()) / (raw.max() - raw.min() + 1e-8)
 
             # Generate an overlay of the prediction upon the ground-truth
             fig, axes = plt.subplots(1, 3, figsize=(12, 4))
             axes[0].imshow(raw); axes[0].set_title("Raw H-DAB"); axes[0].axis("off")
-            axes[1].imshow(raw); axes[1].imshow(target.numpy(), cmap="Reds", alpha=0.4)
+            axes[1].imshow(raw); axes[1].imshow(target.cpu().numpy(), cmap="Reds", alpha=0.4)
             axes[1].set_title("Ground truth"); axes[1].axis("off")
-            axes[2].imshow(raw); axes[2].imshow(pred.numpy(), cmap="Blues", alpha=0.4)
+            axes[2].imshow(raw); axes[2].imshow(pred.cpu().numpy(), cmap="Blues", alpha=0.4)
             axes[2].set_title(f"Prediction (Dice={row['dice']:.2f})"); axes[2].axis("off")
 
             fig.suptitle(f"Sample {row['sample_id']}")

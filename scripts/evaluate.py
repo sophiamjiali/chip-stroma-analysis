@@ -15,7 +15,7 @@ from pathlib import Path
 from datetime import datetime
 from torch.utils.data import DataLoader
 
-from chip_stroma.models.model import VesselSegModule
+from chip_stroma.models.model import VesselSegModule, build_model
 from chip_stroma.data.dataset import VesselPatchDataset
 from chip_stroma.data.transforms import get_val_transforms
 from chip_stroma.utils.config import load_configs
@@ -38,9 +38,17 @@ def main():
 
     # Load the model from the specified checkpoint
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = build_model(
+        encoder_name    = config.model.encoder_name,
+        encoder_weights = config.model.encoder_weights,
+        in_channels     = config.model.in_channels,
+        out_classes     = config.model.out_classes
+    )
+
     model = VesselSegModule.load_from_checkpoint(
         checkpoint_path = config.evaluate.checkpoint_path,
-        map_location    = device
+        map_location    = device,
+        model           = model
     )
     model.to(device)
     model.eval()

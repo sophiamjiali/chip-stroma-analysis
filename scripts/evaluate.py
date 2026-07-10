@@ -66,7 +66,7 @@ def main():
         manifest        = manifest,
         patch_dir       = config.paths.processed_data.patch_dir,
         vessel_mask_dir = config.paths.processed_data.vessel_mask_dir,
-        tissue_mask_dir = config.paths.processed_data.vessel_mask_dir,
+        tissue_mask_dir = config.paths.processed_data.tissue_mask_dir,
         transform       = get_val_transforms()
     )
     dataloader = DataLoader(

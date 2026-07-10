@@ -140,7 +140,7 @@ def main():
                 f" ± {per_sample_metrics['dice'].std():.4f}")
     
     # Save all results
-    dst_dir = config.paths.results.evaluation / args.version
+    dst_dir = config.paths.results.evaluation / Path(args.version)
     dst_dir.mkdir(parents = True, exist_ok = True)
 
     per_patch_results.to_csv(dst_dir / "patch_metrics.csv", index = False)
@@ -156,7 +156,7 @@ def main():
 def parse_args():
     parser = ap.ArgumentParser(description = "Train a single run of the model.")
     parser.add_argument("--config_dir", type = str, default = "configs/")
-    parser.add_argument("--version", type = int)
+    parser.add_argument("--version", type = str)
     
     return parser.parse_args()
 

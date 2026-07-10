@@ -351,7 +351,7 @@ class VesselSegModule(pl.LightningModule):
         if isinstance(self.trainer.logger, WandbLogger):
             self.trainer.logger.experiment.log({
                 'val/dice_per_patient': wandb.Table(
-                    columns = ['patient_id', 'mean_dice', 'n_patches'],
+                    columns = ['sample_id', 'mean_dice', 'n_patches'],
                     data = [[pid, m, len(self._val_sample_dice[pid])] for 
                             pid, m in per_patient_dice.items()]
             )})

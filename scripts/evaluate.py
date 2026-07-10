@@ -139,7 +139,7 @@ def main():
     per_patch_results = pd.DataFrame(per_patch_results)
     patch_signal = per_patch_results[per_patch_results['has_signal']]
 
-    per_sample_metrics = (patch_signal.groupby('patient_id')
+    per_sample_metrics = (patch_signal.groupby('sample_id')
                           [['dice', 'precision', 'recall']].mean())
     
     logger.info(f"N patches (fold 0): {len(per_patch_results)} | "

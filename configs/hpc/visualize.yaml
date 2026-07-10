@@ -1,0 +1,11 @@
+checkpoint_path: /cluster/home/t144807uhn/chip-stroma-analysis/outputs/checkpoints/single_run.ckpt
+val_fold: 0
+
+batch_size: 32
+n_workers: 4
+
+model:
+  encoder_name   : resnet34
+  encoder_weights: imagenet
+  in_channels    : 3
+  out_classes    : 1

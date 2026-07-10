@@ -38,14 +38,14 @@ def main():
     # Load the model from the specified checkpoint
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = build_model(
-        encoder_name    = config.evaluate.model.encoder_name,
-        encoder_weights = config.evaluate.model.encoder_weights,
-        in_channels     = config.evaluate.model.in_channels,
-        out_classes     = config.evaluate.model.out_classes
+        encoder_name    = config.visualize.model.encoder_name,
+        encoder_weights = config.visualize.model.encoder_weights,
+        in_channels     = config.visualize.model.in_channels,
+        out_classes     = config.visualize.model.out_classes
     )
 
     model = VesselSegModule.load_from_checkpoint(
-        checkpoint_path = config.evaluate.checkpoint_path,
+        checkpoint_path = config.visualize.checkpoint_path,
         map_location    = device,
         model           = model
     )
@@ -58,7 +58,7 @@ def main():
         train_manifest_path = config.paths.metadata.train_manifest,
         patch_manifest_path = config.paths.metadata.patch_manifest
     )
-    manifest = (manifest[manifest['fold'] == int(config.evaluate.val_fold)]
+    manifest = (manifest[manifest['fold'] == int(config.visualize.val_fold)]
                 .reset_index(drop = True))
     
     dataset = VesselPatchDataset(

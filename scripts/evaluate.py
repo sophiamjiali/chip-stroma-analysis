@@ -20,7 +20,7 @@ from chip_stroma.data.dataset import VesselPatchDataset
 from chip_stroma.data.transforms import get_val_transforms
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
-from chip_stroma.utils.io import load_patch_manifest
+from chip_stroma.utils.io import initialize_train_manifest
 from chip_stroma.models.loss import dice_score
 
 logger = setup_logger(__name__)
@@ -55,7 +55,10 @@ def main():
     model.freeze()
 
     # Load the validation fold as a dataset
-    manifest = load_patch_manifest(path = config.paths.metadata.patch_manifest)
+    manifest = initialize_train_manifest(
+        train_manifest_path = config.paths.metadata.train_manifest,
+        patch_manifest_path = config.paths.metadata.patch_manifest
+    )
     manifest = (manifest[manifest['fold'] == int(config.evaluate.val_fold)]
                 .reset_index(drop = True))
     

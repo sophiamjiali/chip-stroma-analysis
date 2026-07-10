@@ -31,7 +31,7 @@ echo "=========================================="
 
 CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs/hpc
 
-srun python -u scripts/evaluate.py \
+srun python -u scripts/visualize.py \
     --config_dir $CONFIG_DIR \
     --version v0
 

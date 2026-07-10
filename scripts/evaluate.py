@@ -37,10 +37,12 @@ def main():
     )
 
     # Load the model from the specified checkpoint
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = VesselSegModule.load_from_checkpoint(
         checkpoint_path = config.validation.checkpoint_path,
-        map_location    = args.device
+        map_location    = device
     )
+    model.to(device)
     model.eval()
     model.freeze()
 
@@ -61,7 +63,7 @@ def main():
         batch_size  = config.validation.batch_size,
         num_workers = config.validation.n_workers,
         shuffle     = False,
-        pin_memory  = False
+        pin_memory  = True
     )
 
     # Compute per-patch metrics for the full validation cohort
@@ -71,9 +73,9 @@ def main():
             logger.info("Processing a batch...")
             
             # Fetch all information returned from the patch dataset
-            images       = batch['patch']
-            vessel_masks = batch["vessel_mask"].squeeze(1).long()
-            tissue_masks = batch["tissue_mask"].long()
+            images       = batch['patch'].to(device)
+            vessel_masks = batch["vessel_mask"].squeeze(1).long().to(device)
+            tissue_masks = batch["tissue_mask"].long().to(device)
             sample_ids   = batch["sample_id"]
             patch_names  = batch['patch_name']
 
@@ -106,15 +108,20 @@ def main():
             recall    = torch.where(has_signal, recall, 
                                     torch.tensor(float('nan')))
             
+            # Move entire batch to CPU/numpy once
+            dice_np       = dice_batch.detach().cpu().numpy()
+            precision_np  = precision.detach().cpu().numpy()
+            recall_np     = recall.detach().cpu().numpy()
+            has_signal_np = has_signal.detach().cpu().numpy()
+
             for i in range(len(patch_names)):
                 per_patch_results.append({
-                    'sample_id': sample_ids[i],
+                    'sample_id' : sample_ids[i],
                     'patch_name': patch_names[i],
-                    'dice': dice_batch[i].item(),
-                    'precision': precision[i].item(),
-                    'recall': recall[i].item(),
-                    'has_signal': has_signal[i].item()
-
+                    'dice'      : dice_np[i],
+                    'precision' : precision_np[i],
+                    'recall'    : recall_np[i],
+                    'has_signal': has_signal_np[i],
                 })
 
     # Aggregate patch-level results to sample-level; exclude no-signal patches
@@ -149,7 +156,6 @@ def main():
 def parse_args():
     parser = ap.ArgumentParser(description = "Train a single run of the model.")
     parser.add_argument("--config_dir", type = str, default = "configs/")
-    parser.add_argument("--device", type = str)
     parser.add_argument("--version", type = int)
     
     return parser.parse_args()

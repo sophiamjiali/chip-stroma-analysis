@@ -94,10 +94,11 @@ def main():
         for _, row in selected.iterrows():
 
             # Select the index of the patch
-            idx = (manifest.index[manifest['patch_name'] == 
-                                  row.get('patch_name', None)])
-            idx = (idx[0] if len(idx) else 
-                   metrics.index[metrics['sample_id'] == row['sample_id']][0])
+            match = manifest.index[
+                (manifest['sample_id'] == row['sample_id']) &
+                (manifest['patch_name'] == row['patch_name'])
+            ]
+            idx = match[0]
             
             # Extract patch data from the dataset
             sample = dataset[idx]

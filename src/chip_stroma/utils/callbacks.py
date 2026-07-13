@@ -23,7 +23,8 @@ logger = setup_logger(__name__)
 
 
 def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
-                        early_stopping_patience: int = 20,
+                        early_stopping_metric:    str = "val/loss",
+                        early_stopping_patience:  int = 20,
                         early_stopping_min_delta: float = 1e-5):
     """
     Configures and returns all comebacks needed for model training. Note that 
@@ -49,7 +50,7 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
 
     logger.info("Successfully configured the EarlyStopping callback")
     early_stop_callback = EarlyStopping(
-        monitor                  = "val/dice",
+        monitor                  = str(early_stopping_metric),
         mode                     = "max",
         patience                 = early_stopping_patience,
         min_delta                = early_stopping_min_delta,

@@ -21,7 +21,6 @@ from chip_stroma.data.transforms import get_val_transforms
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import initialize_train_manifest
-from chip_stroma.models.loss import dice_score
 
 logger = setup_logger(__name__)
 

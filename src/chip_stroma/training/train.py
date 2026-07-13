@@ -106,8 +106,9 @@ def train(manifest: pd.DataFrame,
     # Initialize all callbacks and loggers needed for training
     callbacks = configure_callbacks(
         trial                    = trial,
-        early_stopping_patience  = params.trainer.early_stopping_patience,
-        early_stopping_min_delta = params.trainer.early_stopping_min_delta,
+        early_stopping_metric    = params.early_stopping.metric,
+        early_stopping_patience  = params.early_stopping.patience,
+        early_stopping_min_delta = params.early_stopping.min_delta,
     )
 
     ml_loggers = configure_loggers(

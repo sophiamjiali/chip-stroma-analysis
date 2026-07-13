@@ -43,8 +43,11 @@ module:
  
 trainer:
   max_epochs              : 50       # Keep 50 for testing, 100 for final sweep
-  early_stopping_patience : 10       # Isensee et al. (2021) Nat Methods
-  early_stopping_min_delta: 0.00001
   gradient_clip_val       : [0.1, 10.0]   # Log-uniform; standard clipping range
+
+early_stopping:
+  metric: val/loss
+  patience : 10        # Isensee et al. (2021) Nat Methods
+  min_delta: 0.00001
 
 # [END]

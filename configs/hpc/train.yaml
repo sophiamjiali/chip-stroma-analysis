@@ -34,8 +34,11 @@ module:
  
 trainer:
   max_epochs              : 70
-  early_stopping_patience : 10        # Isensee et al. (2021) Nat Methods
-  early_stopping_min_delta: 0.0001
   gradient_clip_val       : 1.0
+
+early_stopping:
+  metric: val/loss
+  patience : 10        # Isensee et al. (2021) Nat Methods
+  min_delta: 0.0001
 
 # [END]

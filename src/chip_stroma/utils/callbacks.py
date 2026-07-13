@@ -51,7 +51,7 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
     logger.info("Successfully configured the EarlyStopping callback")
     early_stop_callback = EarlyStopping(
         monitor                  = str(early_stopping_metric),
-        mode                     = "max",
+        mode                     = "min",
         patience                 = early_stopping_patience,
         min_delta                = early_stopping_min_delta,
         strict                   = False,

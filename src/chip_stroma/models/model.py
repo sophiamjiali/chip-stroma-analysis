@@ -30,10 +30,13 @@ from collections import defaultdict
 from pytorch_lightning.loggers import WandbLogger
 
 from chip_stroma.utils.loggers import setup_logger
+from chip_stroma.utils.model_utils import compute_dist_map
 from chip_stroma.models.loss import (
     FocalTverskyLoss, 
     MaskedDiceLoss, 
-    SurfaceDiceMetric
+    SurfaceDiceMetric,
+    per_sample_dice,
+    boundary_loss
 )
 
 logger = setup_logger(__name__)
@@ -101,34 +104,26 @@ def build_model(encoder_name:     str = "resnet34",
 # =====| Lightning Module |=====================================================
 
 class VesselSegModule(pl.LightningModule):
-    """
-    Args:
-        model:        SMP U-Net (activation=None, returns raw logits).
-        lr:           Peak AdamW learning rate.
-        weight_decay: AdamW weight decay.
-        T_max:        Cosine annealing period — set equal to max_epochs.
-        ftl_alpha:    FTL FP weight. Tune: lower = tolerate more FP.
-        ftl_beta:     FTL FN weight. Tune: higher = penalise missed vessels more.
-        ftl_gamma:    FTL focal exponent. Tune: lower = harder focus on positives.
-        ftl_weight:   FTL contribution to composite loss; Dice = 1 - ftl_weight.
-        smooth:       Laplace smoothing shared by FTL and Dice loss.
-    """
 
     def __init__(self,
-                 model:         nn.Module,
-                 lr:            float = 1e-4,
-                 weight_decay:  float = 1e-2,
-                 T_max:         int   = 60,
-                 ftl_alpha:     float = 0.3,
-                 ftl_beta:      float = 0.7,
-                 ftl_gamma:     float = 0.75,
-                 ftl_weight:    float = 0.5,
-                 smooth:        float = 1.0,
-                 nsd_tolerance: float = 2.0):
+                 model           : nn.Module,
+                 lr              : float = 1e-4,
+                 weight_decay    : float = 1e-2,
+                 T_max           : int   = 60,
+                 ftl_alpha       : float = 0.3,
+                 ftl_beta        : float = 0.7,
+                 ftl_gamma       : float = 0.75,
+                 ftl_weight      : float = 0.5,
+                 smooth          : float = 1.0,
+                 nsd_tolerance   : float = 2.0,
+                 bl_weight_target: float = 0.1,
+                 bl_ramp_epochs  : int = 10)   : 
         
         super().__init__()
         self.save_hyperparameters(ignore = ['model'])
         self.model = model
+
+        # ~~~ Loss ~~~
 
         # Initialize Focal Tversky Loss function
         self.ftl = FocalTverskyLoss(
@@ -140,9 +135,12 @@ class VesselSegModule(pl.LightningModule):
 
         # Initialize masked Dice Loss function
         self.dice_loss = MaskedDiceLoss(smooth = smooth)
+        self.val_sample_dice = defaultdict(list)
 
-        # Dice Score is initialized per sample
-        self._val_sample_dice = defaultdict(list)
+        # Initialize boundary loss weight as ramping
+        self.bl_weight = 0.0
+
+        # ~~~ Training Metrics ~~~
 
         # Initialize Mean IoU as one-hot input, converted in validation step
         self.val_iou = MeanIoU(
@@ -152,11 +150,12 @@ class VesselSegModule(pl.LightningModule):
             input_format       = "index"
         )
 
+        # Initialize NSD as SurfaceDiceMetric
         self.val_nsd = SurfaceDiceMetric(
             class_thresholds   = [nsd_tolerance],
             include_background = False
         )
-        self._val_sample_nsd = defaultdict(list)
+        self.val_sample_nsd = defaultdict(list)
 
         # Precision and recall for positive vessels
         self.val_precision = BinaryPrecision()
@@ -191,14 +190,23 @@ class VesselSegModule(pl.LightningModule):
         logits    = self(images)              # (B, 1, H, W)  raw logits
         logits_sq = logits.squeeze(1)         # (B, H, W)
 
+        # Loss includes Focal Tversky, Dice Loss, and boundary loss terms
+        f_w = float(self.hparams['flt_weight'])
         loss = (
-            float(self.hparams['ftl_weight']) * 
-            self.ftl(logits_sq, vessel_mask, tissue_mask)
-            + (1 - float(self.hparams['ftl_weight'])) * 
-            self.dice_loss(logits_sq, vessel_mask, tissue_mask)
+            f_w * self.ftl(logits_sq, vessel_mask, tissue_mask) +
+            (1 - f_w) * self.dice_loss(logits_sq, vessel_mask, tissue_mask)
         )
 
+        # Compute distance map masked by tissue content for boundary loss
+        if self.hparams['bl_weight'] > 0:
+            probs = torch.sigmoid(logits_sq) * tissue_mask
+            dist_map = compute_dist_map(vessel_mask) * tissue_mask
+
+            b_w = float(self.hparams['bl_weight'])
+            loss = loss + b_w * boundary_loss(probs, dist_map)
+
         return loss, logits_sq, vessel_mask
+
     
 
     def training_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
@@ -224,6 +232,22 @@ class VesselSegModule(pl.LightningModule):
                  prog_bar = False, sync_dist = False)
 
         return loss
+    
+
+    def on_train_epoch_start(self) -> None:
+        """
+        Linearly ramp boundary-loss weight from 0 to target over ramp_epochs.
+        """
+
+        ramp_epochs = int(self.hparams['bl_ramp_epochs'])
+        target      = float(self.hparams['bl_weight_target'])
+
+        # Ramp the boundary loss weight up to the target over the ramp epochs
+        self.bl_weight = target * min(self.current_epoch / ramp_epochs, 1.0)
+        self.log('train/bl_weight', self.bl_weight, on_step = False, 
+                 on_epoch = True)
+        
+        return
     
 
     def on_train_epoch_end(self) -> None:
@@ -265,8 +289,8 @@ class VesselSegModule(pl.LightningModule):
         # Compute NSD per sample, nan-filled for no-signal samples
         nsd_per_sample = torch.full(
             (preds.shape[0],), float('nan'),
-            device = preds.device, 
-            dtype = torch.float32
+            device = preds.device,
+            dtype  = torch.float32
         )
         
         # Only update the global metric if there was signal in the sample
@@ -278,7 +302,7 @@ class VesselSegModule(pl.LightningModule):
                                           .to(preds.device))
 
         # Compute per-sample dice; already has NaN-guards internally
-        per_sample_dice = self._per_sample_dice(
+        per_sample_dice_metric = per_sample_dice(
             preds              = preds_m,
             target             = vessel_mask_m,
             num_classes        = 2,
@@ -303,8 +327,8 @@ class VesselSegModule(pl.LightningModule):
 
         # Per-patient accumulation using nan-safe values
         for i, pid in enumerate(sample_ids):
-            self._val_sample_nsd[pid].append(nsd_per_sample[i].item())
-            self._val_sample_dice[pid].append(per_sample_dice[i].item())
+            self.val_sample_nsd[pid].append(nsd_per_sample[i].item())
+            self.val_sample_nsd[pid].append(per_sample_dice_metric[i].item())
 
         self.log('val/loss', loss, on_step = False, on_epoch = True,
                  prog_bar = False, sync_dist = False, 
@@ -319,8 +343,8 @@ class VesselSegModule(pl.LightningModule):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category = RuntimeWarning)
 
-            dice_means = [np.nanmean(v) for v in self._val_sample_dice.values()]
-            nsd_means  = [np.nanmean(v) for v in self._val_sample_nsd.values()]
+            dice_means = [np.nanmean(v) for v in self.val_sample_dice.values()]
+            nsd_means  = [np.nanmean(v) for v in self.val_sample_nsd.values()]
 
             val_dice     = torch.tensor(np.nanmean(dice_means))
             val_dice_std = torch.tensor(np.nanstd(dice_means))
@@ -346,19 +370,19 @@ class VesselSegModule(pl.LightningModule):
 
         # Compute per-patient Dice table for post-hoc inter-patient variance
         per_patient_dice = {pid: np.nanmean(v) for pid, v in 
-                            self._val_sample_dice.items()}
+                            self.val_sample_dice.items()}
         
         if isinstance(self.trainer.logger, WandbLogger):
             self.trainer.logger.experiment.log({
                 'val/dice_per_patient': wandb.Table(
                     columns = ['sample_id', 'mean_dice', 'n_patches'],
-                    data = [[pid, m, len(self._val_sample_dice[pid])] for 
+                    data = [[pid, m, len(self.val_sample_dice[pid])] for 
                             pid, m in per_patient_dice.items()]
             )})
         
         # Clear all validation metrics for the next iteration
-        self._val_sample_dice.clear()
-        self._val_sample_nsd.clear()
+        self.val_sample_dice.clear()
+        self.val_sample_nsd.clear()
         self.val_iou.reset()
         self.val_precision.reset()
         self.val_recall.reset()
@@ -425,35 +449,6 @@ class VesselSegModule(pl.LightningModule):
         ]
     
 
-    # =====| Helpers |==========================================================
     
-    def _per_sample_dice(self, 
-                         preds, 
-                         target, 
-                         num_classes        = 2, 
-                         include_background = False, 
-                         eps                = 1e-6):
-        """
-        Per-sample foreground Dice score; excludes samples with no 
-        positive pixels in either prediction or target.
-        """
-
-        preds_oh  = F.one_hot(preds, num_classes).permute(0, 3, 1, 2).bool()
-        target_oh = F.one_hot(target, num_classes).permute(0, 3, 1, 2).bool()
-
-        if not include_background:
-            preds_oh, target_oh = preds_oh[:, 1:], target_oh[:, 1:]
-
-        dims = tuple(range(2, preds_oh.ndim))
-
-        intersection = (preds_oh & target_oh).sum(dim = dims + (1,)).float()
-        union = (preds_oh.sum(dim = dims + (1,)).float() 
-                 + target_oh.sum(dim = dims + (1,)).float())
-        
-        # Exclude true-negative samples from aggregation
-        dice = (2 * intersection + eps) / (union + eps)
-        dice[union == 0] = float('nan')
-
-        return dice
 
 # [END]

@@ -149,6 +149,25 @@ def suggest_focal_loss(params: Box, trial: Trial) -> Box:
                 "for Focal Tversky Loss")
     return params
 
+def suggest_boundary_loss(params: Box, trial: Trial) -> Box:
+    """Provides in-place suggestions for Boundary Loss parameters."""
+    
+    params.module.bl_weight_target = (
+        trial.suggest_float("bl_weight_target", *params.module.bl_weight_target)
+        if isinstance(params.module.bl_weight_target, (list, tuple))
+        else params.module.bl_weight_target
+    )
+
+    params.module.bl_ramp_epochs = (
+        trial.suggest_int("bl_ramp_epochs", *params.module.bl_ramp_epochs)
+        if isinstance(params.module.bl_ramp_epochs, (list, tuple))
+        else params.module.bl_ramp_epochs
+    )
+
+    logger.info("Successfully suggested weight target and ramping epochs "
+                "values for Boundary Loss")
+    return params
+
 
 def suggest_sampler(params: Box, trial: Trial) -> Box:
     """Provides in-place suggestions for the sampler."""
@@ -167,8 +186,9 @@ def suggest_sampler(params: Box, trial: Trial) -> Box:
 def suggest_trainer(params: Box, trial: Trial) -> Box:
     """Provides in-place suggestions for the Trainer."""
 
+    # Suggest linear-uniform for gradient clip value
     params.trainer.gradient_clip_val = (
-        trial.suggest_float("gradient_clip_val", *params.trainer.gradient_clip_val, log = True)
+        trial.suggest_float("gradient_clip_val", *params.trainer.gradient_clip_val)
         if isinstance(params.trainer.gradient_clip_val, (list, tuple))
         else params.trainer.gradient_clip_val
     )

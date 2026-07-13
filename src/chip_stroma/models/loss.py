@@ -20,11 +20,17 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+import torch.nn.functional as F
+
 from surface_distance import (
     compute_surface_distances, 
     compute_surface_dice_at_tolerance
 )
 
+
+
+
+# =====| Tversky Loss |=========================================================
 
 class FocalTverskyLoss(nn.Module):
     """
@@ -76,7 +82,19 @@ class FocalTverskyLoss(nn.Module):
         )
 
         return (1 - tversky_index) ** self.gamma
-    
+
+
+# =====| Boundary Loss |========================================================
+
+def boundary_loss(pred_probs: torch.Tensor, 
+                  dist_map:   torch.Tensor) -> torch.Tensor:
+    """
+    Kervadec et al. 2019 boundary loss: penalizes pred mass weighted by 
+    distance from GT boundary.
+    """
+    return (pred_probs * dist_map).mean()
+
+# =====| Dice Loss |============================================================
 
 class MaskedDiceLoss(nn.Module):
     """
@@ -107,7 +125,9 @@ class MaskedDiceLoss(nn.Module):
     
 
 class SurfaceDiceMetric:
-    """Stateful NSD accumulator, API-compatible with MONAI's CumulativeIterationMetric."""
+    """
+    Stateful NSD accumulator, API-compatible with MONAI's CumulativeIterationMetric.
+    """
     def __init__(self, class_thresholds, include_background=False, spacing_mm=(1.0, 1.0)):
         self.class_thresholds = class_thresholds
         self.include_background = include_background
@@ -145,6 +165,35 @@ def dice_score(pred, true, eps=1e-8):
     denom = pred.sum(dim=dims) + true.sum(dim=dims)
     dice = (2 * intersection) / (denom + eps)
     dice[denom == 0] = float("nan")
+    return dice
+
+
+def per_sample_dice(preds, 
+                    target, 
+                    num_classes        = 2, 
+                    include_background = False, 
+                    eps                = 1e-6) -> torch.Tensor:
+    """
+    Per-sample foreground Dice score; excludes samples with no 
+    positive pixels in either prediction or target.
+    """
+
+    preds_oh  = F.one_hot(preds, num_classes).permute(0, 3, 1, 2).bool()
+    target_oh = F.one_hot(target, num_classes).permute(0, 3, 1, 2).bool()
+
+    if not include_background:
+        preds_oh, target_oh = preds_oh[:, 1:], target_oh[:, 1:]
+
+    dims = tuple(range(2, preds_oh.ndim))
+
+    intersection = (preds_oh & target_oh).sum(dim = dims + (1,)).float()
+    union = (preds_oh.sum(dim = dims + (1,)).float() 
+                + target_oh.sum(dim = dims + (1,)).float())
+    
+    # Exclude true-negative samples from aggregation
+    dice = (2 * intersection + eps) / (union + eps)
+    dice[union == 0] = float('nan')
+
     return dice
     
 # [END]

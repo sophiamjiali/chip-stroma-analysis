@@ -34,17 +34,22 @@ model:
   out_classes    : 1
  
 module:
-  lr          : [0.00001, 0.01]   # Log-uniform; standard AdamW in medical imag.
-  weight_decay: 0.001             # Log-uniform; L2 range for small datasets
-  ftl_alpha   : [0.1, 0.4]        # Derives ftl_beta = 1 - ftl_alpha
-  ftl_gamma   : 0.75              # < 1 less focus, > 1 harder mining
-  ftl_weight  : 0.5               # Composite balance; symmetric around 0.5
-  smooth      : 1.0
+  lr              : [0.00001, 0.01]  # Log-uniform; standard AdamW in medical
+  weight_decay    : 0.001            # Log-uniform; L2 range for small datasets
+  ftl_alpha       : 0.3              # Derives ftl_beta = 1 - ftl_alpha
+  ftl_gamma       : 0.75             # < 1 less focus, > 1 harder mining
+  ftl_weight      : [0.3, 0.7]       # Composite balance; symmetric around 0.5
+  bl_weight_target: 0.1              # Independent of ftl_weight
+  bl_ramp_epochs  : 10
+  smooth          : 1.0
  
 trainer:
-  max_epochs              : 60       # Keep 50 for testing, 100 for final sweep
-  early_stopping_patience : 15       # Isensee et al. (2021) Nat Methods
-  early_stopping_min_delta: 0.0001
-  gradient_clip_val       : [0.5, 2.0]   # Log-uniform; standard clipping range
+  max_epochs              : 60          # Keep 50 for testing, 100 for final
+  gradient_clip_val       : [0.5, 2.0]  # Linear-uniform
+
+early_stopping:
+  metric: val/loss
+  patience : 15        # Isensee et al. (2021) Nat Methods
+  min_delta: 0.00001
 
 # [END]

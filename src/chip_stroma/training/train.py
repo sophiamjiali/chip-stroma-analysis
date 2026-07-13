@@ -108,7 +108,7 @@ def train(manifest: pd.DataFrame,
         trial                    = trial,
         early_stopping_metric    = params.early_stopping.metric,
         early_stopping_patience  = params.early_stopping.patience,
-        early_stopping_min_delta = params.early_stopping.min_delta,
+        early_stopping_min_delta = params.early_stopping.min_delta
     )
 
     ml_loggers = configure_loggers(

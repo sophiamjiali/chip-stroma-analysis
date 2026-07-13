@@ -198,12 +198,10 @@ class VesselSegModule(pl.LightningModule):
         )
 
         # Compute distance map masked by tissue content for boundary loss
-        if self.hparams['bl_weight'] > 0:
+        if self.bl_weight > 0:
             probs = torch.sigmoid(logits_sq) * tissue_mask
             dist_map = compute_dist_map(vessel_mask) * tissue_mask
-
-            b_w = float(self.hparams['bl_weight'])
-            loss = loss + b_w * boundary_loss(probs, dist_map)
+            loss = loss + self.bl_weight * boundary_loss(probs, dist_map)
 
         return loss, logits_sq, vessel_mask
 

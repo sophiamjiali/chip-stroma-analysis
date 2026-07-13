@@ -123,6 +123,12 @@ def make_checkpoint_callback(checkpoint_dir: Path):
                             trial: optuna.trial.FrozenTrial) -> None:
         """Optuna callback — fires after each trial completes."""
 
+        # Skip pruned or failed trials
+        if trial.state != optuna.trial.TrialState.COMPLETE: return
+
+        try: best_trial = study.best_trial
+        except ValueError: return
+
         trial_ckpt = checkpoint_dir / f"trial_{trial.number}.ckpt"
 
         # If the best trial was found, delete all other checkpoint(s)

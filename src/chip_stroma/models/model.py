@@ -321,7 +321,7 @@ class VesselSegModule(pl.LightningModule):
         # Track positive-patch count for imbalance sanity-checking
         self.log('val/n_pos_in_batch', has_signal.sum(), on_step = False,
                  on_epoch = True, reduce_fx = 'sum', prog_bar = False,
-                 batch_size = preds.shape[0])g
+                 batch_size = preds.shape[0])
 
         # Per-patient accumulation using nan-safe values
         for i, pid in enumerate(sample_ids):

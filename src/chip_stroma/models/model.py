@@ -191,7 +191,7 @@ class VesselSegModule(pl.LightningModule):
         logits_sq = logits.squeeze(1)         # (B, H, W)
 
         # Loss includes Focal Tversky, Dice Loss, and boundary loss terms
-        f_w = float(self.hparams['flt_weight'])
+        f_w = float(self.hparams['ftl_weight'])
         loss = (
             f_w * self.ftl(logits_sq, vessel_mask, tissue_mask) +
             (1 - f_w) * self.dice_loss(logits_sq, vessel_mask, tissue_mask)

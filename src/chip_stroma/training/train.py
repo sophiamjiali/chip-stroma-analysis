@@ -154,7 +154,8 @@ def train(manifest: pd.DataFrame,
                      else "single_run.ckpt")
         ckpt_path = paths.outputs.checkpoints / Path(project) / ckpt_name
         ckpt_path.parent.mkdir(parents = True, exist_ok = True)
-        
+
+        # SaveBestAfterTrial callback will maintain only one checkpoint
         trainer.save_checkpoint(ckpt_path)
 
         return trainer.callback_metrics

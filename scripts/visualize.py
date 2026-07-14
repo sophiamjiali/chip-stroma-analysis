@@ -73,20 +73,33 @@ def main():
                           Path(args.version) / Path("patch_metrics.csv"))
 
     # Stratified selection: best positives, worst false-positive tiles, etc.
-    top_positive  = metrics[metrics["has_signal"]].nlargest(6, "dice")
-    worst_fp      = metrics[metrics["has_signal"]].nsmallest(6, "precision")
-    true_negative = metrics[~metrics["has_signal"]].sample(6, random_state = 0)
+    positive = metrics[metrics['has_signal']]
+    negative = metrics[~metrics['has_signal']]
 
-    top_positive  = top_positive.assign(category = "true_positives")
-    worst_fp      = worst_fp.assign(category = "false_positives")
-    true_negative = true_negative.assign(category = "true_negatives")
+    true_positive      = positive.nlargest(args.n_plots, "dice")
+    false_negative     = positive.nsmallest(args.n_plots, "recall")
+    false_positive     = negative.nlargest(args.n_plots, "dice")
+    true_negative      = negative.nsmallest(args.n_plots, "dice")
+    over_segmentation  = positive.nsmallest(args.n_plots, "precision")
+    under_segmentation = positive.nsmallest(args.n_plots, "recall")
 
-    selected = (pd.concat([top_positive, worst_fp, true_negative])
-                .reset_index(drop=True))
+    true_positive      = true_positive.assign(category = "true_positive")
+    false_negative     = false_negative.assign(category = "false_negative")
+    false_positive     = false_positive.assign(category = "false_positive")
+    true_negative      = true_negative.assign(category = "true_negative")
+    over_segmentation  = over_segmentation.assign(category = "over_seg")
+    under_segmentation = under_segmentation.assign(category = "under_seg")
+
+    selected = (
+        pd.concat([true_positive, false_negative, false_positive, 
+                   true_negative, over_segmentation, under_segmentation])
+                   .reset_index(drop = True)
+    )
     
     # Build overlays for all selected patches
     dst_dir = config.paths.results.overlays.vessels_dir
-    for category in ['true_positives', 'false_positives', 'true_negatives']:
+    for category in ['true_positive', 'false_negative', 'false_positive', 
+                     'true_negative', 'over_seg', 'under_seg']:
         (dst_dir / category).mkdir(parents = True, exist_ok = True)
 
     with torch.no_grad():
@@ -121,7 +134,7 @@ def main():
             axes[2].imshow(raw); axes[2].imshow(pred.squeeze(0).cpu().numpy(), cmap="Blues", alpha=0.6)
             axes[2].set_title(f"Prediction (Dice={row['dice']:.2f})"); axes[2].axis("off")
 
-            # Label the panel with its stratification category (e.g. true positive vs. false positive)
+            # Label the panel with its stratification category
             fig.suptitle(f"Sample {row['sample_id']} — {row['category'].replace('_', ' ').title()}")
             fig.tight_layout()
 
@@ -139,6 +152,7 @@ def parse_args():
     parser = ap.ArgumentParser(description = "Train a single run of the model.")
     parser.add_argument("--config_dir", type = str, default = "configs/")
     parser.add_argument("--version", type = str)
+    parser.add_argument("--n_plots", type = int, default = 6)
     
     return parser.parse_args()
 

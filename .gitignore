@@ -3,6 +3,8 @@
 .env
 /outputs/
 /results/
+studies/
+checkpoints/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

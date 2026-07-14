@@ -15,6 +15,7 @@ import lightning.pytorch as pl
 import pandas as pd
 
 from box import Box
+from pathlib import Path
 
 from chip_stroma.utils.loggers import setup_logger, configure_loggers
 from chip_stroma.utils.callbacks import configure_callbacks
@@ -151,7 +152,10 @@ def train(manifest: pd.DataFrame,
         # Save the checkpoint; both for train and sweep protocols
         ckpt_name = (f"trial_{trial.number}.ckpt" if trial is not None 
                      else "single_run.ckpt")
-        trainer.save_checkpoint(paths.outputs.checkpoints / ckpt_name)
+        ckpt_path = paths.outputs.checkpoints / Path(project) / ckpt_name
+        ckpt_path.parent.mkdir(parents = True, exist_ok = True)
+        
+        trainer.save_checkpoint(ckpt_path)
 
         return trainer.callback_metrics
     

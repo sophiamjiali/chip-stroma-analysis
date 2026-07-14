@@ -74,7 +74,7 @@ def main():
 
     logger.info("Successfuly initialized the Optuna study for sweeping")
     study_name = config.sweep.study.group
-    storage = f"sqlite:///{config.paths.outputs.studies}/{study_name}.db"
+    storage = f"sqlite:///{config.paths.studies}/{study_name}.db"
 
     study = optuna.create_study(
         study_name     = study_name,
@@ -105,7 +105,7 @@ def main():
 
     # Initialize checkpointing callback for best trial
     checkpoint_callback = make_checkpoint_callback(
-        checkpoint_dir = config.paths.outputs.checkpoints
+        checkpoint_dir = config.paths.checkpoints
     )
 
     study.optimize(

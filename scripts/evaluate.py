@@ -142,14 +142,9 @@ def main():
     per_sample_metrics = (patch_signal.groupby('sample_id')
                           [['dice', 'precision', 'recall']].mean())
     
-    logger.info(
-        "N patches (fold 0): %d | N positive-signal patches: %d",
-        len(per_patch_results),
-        len(patch_signal),
-    )
-
+    logger.info("N patches (fold 0): %d | N positive-signal patches: %d",
+                len(per_patch_results), len(patch_signal))
     logger.info("N samples: %d", per_sample_metrics.shape[0])
-
     logger.info("Per-sample mean metrics:\n%s", per_sample_metrics)
 
     logger.info(
@@ -159,7 +154,7 @@ def main():
     )
     
     # Save all results
-    dst_dir = config.paths.results.evaluation / Path(args.version)
+    dst_dir = config.paths.evaluation / Path(args.version)
     dst_dir.mkdir(parents = True, exist_ok = True)
 
     per_patch_results.to_csv(dst_dir / "patch_metrics.csv", index = False)

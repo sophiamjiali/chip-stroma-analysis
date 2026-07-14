@@ -18,18 +18,15 @@ metadata:
   name_mapping    : /cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/metadata/name_mapping.json
   patch_manifest  : /cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/metadata/patch_manifest.csv
   patch_statistics: /cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/metadata/patch_statistics.csv
-  train_manifest  : /cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/metadata/train_manifest.csv    # Only include = True
+  train_manifest  : /cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/metadata/train_manifest.csv
 
 # Training and sweep output directories
-outputs:
-  checkpoints: outputs/checkpoints
-  training: outputs/training
-  sweeps  : outputs/sweeps
-  studies: /cluster/home/t144807uhn/chip-stroma-analysis/studies
+checkpoints: /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints
+studies: /cluster/home/t144807uhn/chip-stroma-analysis/studies
+evaluation: /cluster/home/t144807uhn/chip-stroma-analysis/evaluation
 
 # Key results from the full pipeline
 results:
-  evaluation: results/evaluation
   masks:
     fibroblasts_dir: results/masks/fibroblasts
     vessels_dir    : results/masks/vessels

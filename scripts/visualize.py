@@ -69,8 +69,8 @@ def main():
     )
 
     # Load per-patch metrics to select top-k candidates
-    metrics = pd.read_csv(config.paths.results.evaluation / 
-                          Path(args.version) / Path("patch_metrics.csv"))
+    dst_dir = config.paths.evaluation / Path(args.version)
+    metrics = pd.read_csv(dst_dir / Path("patch_metrics.csv"))
 
     # Stratified selection: best positives, worst false-positive tiles, etc.
     positive = metrics[metrics['has_signal']]
@@ -97,7 +97,6 @@ def main():
     )
     
     # Build overlays for all selected patches
-    dst_dir = config.paths.results.overlays.vessels_dir
     for category in ['true_positive', 'false_negative', 'false_positive', 
                      'true_negative', 'over_seg', 'under_seg']:
         (dst_dir / category).mkdir(parents = True, exist_ok = True)
@@ -157,7 +156,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def log_header(config_path):
+def log_header(config_path):g
     logger.info("=" * 60)
     logger.info("Starting Pipeline Execution")
     logger.info("- Pipeline Stage: Model Evaluation")

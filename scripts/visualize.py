@@ -156,7 +156,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def log_header(config_path):g
+def log_header(config_path):
     logger.info("=" * 60)
     logger.info("Starting Pipeline Execution")
     logger.info("- Pipeline Stage: Model Evaluation")

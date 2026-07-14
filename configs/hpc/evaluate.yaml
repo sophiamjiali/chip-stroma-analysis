@@ -1,4 +1,3 @@
-checkpoint_path: /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints/v2/best_trial.ckpt
 val_fold: 0
 
 batch_size: 32

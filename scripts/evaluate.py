@@ -45,8 +45,9 @@ def main():
         out_classes     = config.evaluate.model.out_classes
     )
 
+    ckpt_path = config.paths.checkpoints / args.version / "best_trial.ckpt"
     model = VesselSegModule.load_from_checkpoint(
-        checkpoint_path = config.evaluate.checkpoint_path,
+        checkpoint_path = ckpt_path,
         map_location    = device,
         model           = model
     )

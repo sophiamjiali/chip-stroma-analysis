@@ -33,7 +33,7 @@ CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs/hpc
 
 srun python -u scripts/evaluate.py \
     --config_dir $CONFIG_DIR \
-    --version v0
+    --version $2
 
 echo "=========================================="
 echo "End: $(date)"

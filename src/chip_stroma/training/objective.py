@@ -22,6 +22,7 @@ import pandas as pd
 from box import Box
 from optuna import Trial
 from datetime import datetime
+from copy import deepcopy
 
 from chip_stroma.training.train import train
 from chip_stroma.utils.loggers import setup_logger
@@ -64,10 +65,11 @@ def objective(trial: Trial,
     logger.info("-" * 50)
 
     # Suggest hyperparameters from the provided sweep configuration ranges
-    params = suggest_optimizer(params = params, trial = trial)
-    params = suggest_focal_loss(params = params, trial = trial)
-    params = suggest_sampler(params = params, trial = trial)
-    params = suggest_trainer(params = params, trial = trial)
+    trial_params = deepcopy(params)
+    trial_params = suggest_optimizer(params  = trial_params, trial = trial)
+    trial_params = suggest_focal_loss(params = trial_params, trial = trial)
+    trial_params = suggest_sampler(params    = trial_params, trial = trial)
+    trial_params = suggest_trainer(params    = trial_params, trial = trial)
 
     logger.info("=" * 50)
 
@@ -77,7 +79,7 @@ def objective(trial: Trial,
         project  = project,
         group    = group,
         paths    = paths,
-        params   = params,
+        params   = trial_params,
         seed     = seed,
         trial    = trial
     )

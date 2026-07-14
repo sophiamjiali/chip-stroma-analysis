@@ -7,6 +7,7 @@
 # ==============================================================================
 
 import torch
+import warnings
 
 import numpy as np
 
@@ -31,6 +32,16 @@ def compute_dist_map(mask: torch.Tensor,
     dist_maps = np.stack([_edt(1 - m) - _edt(m) for m in mask_np])
     dist_maps = np.clip(dist_maps, -max_dist, max_dist)
     return torch.from_numpy(dist_maps).to(mask.device).float()
+
+
+# Macro reduction: nanmean within patient, then across patients
+def macro(sample_dict):
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', category = RuntimeWarning)
+        per_sample = [np.nanmean(v) for v in sample_dict.values()]
+        means      = torch.tensor(np.nanmean(per_sample))
+        std        = torch.tensor(np.nanstd(per_sample))
+        return means, std
 
 
 # [END]

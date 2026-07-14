@@ -30,17 +30,16 @@ from collections import defaultdict
 from pytorch_lightning.loggers import WandbLogger
 
 from chip_stroma.utils.loggers import setup_logger
-from chip_stroma.utils.model_utils import compute_dist_map
+from chip_stroma.utils.model_utils import compute_dist_map, macro
 from chip_stroma.models.loss import (
     FocalTverskyLoss, 
     MaskedDiceLoss, 
-    SurfaceDiceMetric,
     per_sample_dice,
-    boundary_loss
+    boundary_loss,
+    per_sample_surface_dice
 )
 
 logger = setup_logger(__name__)
-last_log_time   = time.time()
 last_epoch_time = time.time()
 start_time      = time.time()
 
@@ -58,37 +57,7 @@ def build_model(encoder_name:     str = "resnet34",
                 decoder_channels: tuple[int, ...] = (256, 128, 64, 32, 16),
                 in_channels:      int = 3,
                 out_classes:      int = 1) -> nn.Module:
-    """
-    Factory function for smp U-Net vessel segmentation model.
-
-    ResNet34 encoder selected for optimal capacity/overfitting tradeoff
-    at n=24 samples (Raghu et al., NeurIPS, 2019; Talo et al.,
-    Comput Biol Med, 2019). ImageNet pretraining improves convergence
-    on small medical imaging datasets (Chen et al., CVPR, 2021).
-
-    Factory pattern follows established research pipeline conventions
-    for config-driven model instantiation (Goyal et al., FAIR, 2022;
-    Bouthillier et al., NeurIPS, 2021).
-
-    Parameters
-    ----------
-    encoder_name : str
-        smp encoder backbone. Default: 'resnet34'.
-    encoder_weights : str
-        Pretrained weights source. Default: 'imagenet'.
-    decoder_channels : tuple[int, ...]
-        Feature channels per decoder block, high to low resolution.
-        Length must equal encoder depth. Default: (256, 128, 64, 32, 16).
-    in_channels : int
-        Input image channels. Default: 3 (RGB).
-    out_classes : int
-        Output segmentation classes. Default: 1 (binary vessel mask).
-
-    Returns
-    -------
-    nn.Module
-        Initialized smp U-Net with pretrained encoder.
-    """
+    """Factory function for smp U-Net vessel segmentation model."""
 
     # Return the pretrained ImageNet encoder; loads pre-downloaded, offline
     return smp.Unet(
@@ -97,7 +66,7 @@ def build_model(encoder_name:     str = "resnet34",
         decoder_channels = decoder_channels,
         in_channels      = in_channels,
         classes          = out_classes,
-        activation       = None,
+        activation       = None
     )
 
 
@@ -123,44 +92,28 @@ class VesselSegModule(pl.LightningModule):
         self.save_hyperparameters(ignore = ['model'])
         self.model = model
 
-        # ~~~ Loss ~~~
-
-        # Initialize Focal Tversky Loss function
-        self.ftl = FocalTverskyLoss(
-            alpha  = ftl_alpha,
-            beta   = ftl_beta,
-            gamma  = ftl_gamma,
-            smooth = smooth
-        )
-
-        # Initialize masked Dice Loss function
-        self.dice_loss = MaskedDiceLoss(smooth = smooth)
-        self.val_sample_dice = defaultdict(list)
-
-        # Initialize boundary loss weight as ramping
+        # Loss: FTL + Dice, with a linearly-ramped boundary term
+        self.ftl = FocalTverskyLoss(ftl_alpha, ftl_beta, ftl_gamma, smooth)
+        self.dice_loss = MaskedDiceLoss(smooth)
         self.bl_weight = 0.0
 
-        # ~~~ Training Metrics ~~~
+        # Per-Sample Macro Accumulators; primary metrics
+        self.val_sample_dice      = defaultdict(list)
+        self.val_sample_nsd       = defaultdict(list)
+        self.val_sample_iou       = defaultdict(list)
+        self.val_sample_precision = defaultdict(list)
+        self.val_sample_recall    = defaultdict(list)
 
-        # Initialize Mean IoU as one-hot input, converted in validation step
-        self.val_iou = MeanIoU(
+        # Global/epoch micro-accumulators; diagnostic metrics
+        self.val_precision_micro = BinaryPrecision()
+        self.val_recall_micro    = BinaryRecall()
+        self.val_iou_micro       = MeanIoU(
             num_classes        = 2,
             include_background = False,
             per_class          = False,
             input_format       = "index"
         )
-
-        # Initialize NSD as SurfaceDiceMetric
-        self.val_nsd = SurfaceDiceMetric(
-            class_thresholds   = [nsd_tolerance],
-            include_background = False
-        )
-        self.val_sample_nsd = defaultdict(list)
-
-        # Precision and recall for positive vessels
-        self.val_precision = BinaryPrecision()
-        self.val_recall    = BinaryRecall()
-
+        
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
@@ -176,7 +129,7 @@ class VesselSegModule(pl.LightningModule):
         logger.info("-" * 50)
 
 
-    # =====| Training Step |====================================================
+    # =====| Loss Step |========================================================
     
     def _shared_step(self, batch: dict) -> tuple[torch.Tensor, ...]:
         """
@@ -187,54 +140,30 @@ class VesselSegModule(pl.LightningModule):
         vessel_mask  = batch["vessel_mask"].squeeze(1).long()   # (B, H, W)
         tissue_mask  = batch["tissue_mask"]                     # (B, H, W) 
 
-        logits    = self(images)              # (B, 1, H, W)  raw logits
-        logits_sq = logits.squeeze(1)         # (B, H, W)
+        logits    = self(images)
+        logits_sq = logits.squeeze(1)
 
-        # Loss includes Focal Tversky, Dice Loss, and boundary loss terms
+        # Loss is FTL + Dice composite weighted by ftl_weight
         f_w = float(self.hparams['ftl_weight'])
         loss = (
             f_w * self.ftl(logits_sq, vessel_mask, tissue_mask) +
             (1 - f_w) * self.dice_loss(logits_sq, vessel_mask, tissue_mask)
         )
 
-        # Compute distance map masked by tissue content for boundary loss
+        # Boundary loss aded once its ramp weight is greater than zero
         if self.bl_weight > 0:
-            probs = torch.sigmoid(logits_sq) * tissue_mask
+            probs    = torch.sigmoid(logits_sq) * tissue_mask
             dist_map = compute_dist_map(vessel_mask) * tissue_mask
-            loss = loss + self.bl_weight * boundary_loss(probs, dist_map)
+            loss     = loss + self.bl_weight * boundary_loss(probs, dist_map)
 
         return loss, logits_sq, vessel_mask
 
-    
-
-    def training_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
-        global last_log_time
-        loss, _, _ = self._shared_step(batch)
-
-        # Log every X steps
-        if LOG_TRAIN_STEP:
-            if batch_idx % LOG_TRAIN_STEP_INTERVAL == 0:
-                logger.info(f"Epoch {self.current_epoch} | Step {batch_idx} | "
-                            f"train/loss: {loss:.4f}")
-            
-        # Detect if the model training is stalling; only if logging is enabled
-        if LOG_TIME:
-            if batch_idx % 50 == 0:
-                now = time.time()
-                logger.info(f"Alive check | Epoch {self.current_epoch} | "
-                            f"Step {batch_idx} | "
-                            f"Time since last log: {now - last_log_time:.1f}s")
-                last_log_time = now
-
-        self.log('train/loss', loss, on_step = True, on_epoch = True,
-                 prog_bar = False, sync_dist = False)
-
-        return loss
-    
+    # =====| Training Step |====================================================
 
     def on_train_epoch_start(self) -> None:
         """
-        Linearly ramp boundary-loss weight from 0 to target over ramp_epochs.
+        Linearly ramp boundary-loss weight from zero to target over 
+        bl_ramp_epochs, then hold constant.
         """
 
         ramp_epochs = int(self.hparams['bl_ramp_epochs'])
@@ -242,14 +171,32 @@ class VesselSegModule(pl.LightningModule):
 
         # Ramp the boundary loss weight up to the target over the ramp epochs
         self.bl_weight = target * min(self.current_epoch / ramp_epochs, 1.0)
-        self.log('train/bl_weight', self.bl_weight, on_step = False, 
-                 on_epoch = True)
-        
+        self.log('train/bl_weight', self.bl_weight, 
+                 on_step = False, on_epoch = True)
         return
+
+
+    def training_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
+        """Log training loss and log X steps if toggled."""
+
+        global last_log_time
+        loss, _, vessel_mask = self._shared_step(batch)
+
+        self.log('train/loss', loss, on_step = True, on_epoch = True,
+                 prog_bar = False, batch_size = vessel_mask.shape[0])
+
+        # Log every X steps
+        if LOG_TRAIN_STEP:
+            if batch_idx % LOG_TRAIN_STEP_INTERVAL == 0:
+                logger.info(f"Epoch {self.current_epoch} | Step {batch_idx} | "
+                            f"train/loss: {loss:.4f}")
+
+        return loss
     
 
     def on_train_epoch_end(self) -> None:
         """Add an indicator when the epoch ends without messy progress bar."""
+
         global last_epoch_time
         global start_time
         now = time.time()
@@ -278,85 +225,66 @@ class VesselSegModule(pl.LightningModule):
         preds_m       = preds * tissue_mask
         vessel_mask_m = vessel_mask * tissue_mask
 
-        preds_oh  = F.one_hot(preds_m, num_classes = 2).permute(0, 3, 1, 2)
-        target_oh = F.one_hot(vessel_mask_m, num_classes=2).permute(0, 3, 1, 2)
-
         # Guard against empty-union samples (no positive pixels in preds/target)
         has_signal = vessel_mask_m.sum(dim = (1, 2)) > 0
+        if not has_signal.any():
+            self.log('val/loss', loss, on_step = False, on_epoch = True,
+                     batch_size = preds.shape[0])
+            self.log('val/n_pos_in_batch', 0, on_step = False, on_epoch = True,
+                     reduce_fx = 'sum', batch_size = preds.shape[0])
+            return
 
-        # Compute NSD per sample, nan-filled for no-signal samples
-        nsd_per_sample = torch.full(
-            (preds.shape[0],), float('nan'),
-            device = preds.device,
-            dtype  = torch.float32
-        )
+        # Extract signal and one-hot versions for metric computation
+        preds_s, target_s = preds_m[has_signal], vessel_mask_m[has_signal]
+        preds_oh  = F.one_hot(preds_s,  num_classes = 2).permute(0, 3, 1, 2)
+        target_oh = F.one_hot(target_s, num_classes = 2).permute(0, 3, 1, 2)
+
+        # Compute per-sample scores, one pass over teh signal subset
+        tolerance   = float(self.hparams['nsd_tolerance'])
+        sample_nsd  = per_sample_surface_dice(preds_oh, target_oh, tolerance)
+        sample_dice = per_sample_dice(preds_s, target_s, num_classes = 2, 
+                                      include_background = False)
         
-        # Only update the global metric if there was signal in the sample
-        if has_signal.any(): 
-            nsd_out = self.val_nsd(preds_oh[has_signal], target_oh[has_signal])
-            vals    = (nsd_out if isinstance(nsd_out, torch.Tensor) 
-                       else torch.stack(list(nsd_out)))
-            nsd_per_sample[has_signal] = (vals.squeeze(-1).float()
-                                          .to(preds.device))
+        # Compute precision, recall, and IoU manually
+        dims        = (1, 2)
+        tp          = (preds_s & target_s.bool()).sum(dim=dims).float()
+        fp          = (preds_s.bool() & ~target_s.bool()).sum(dim=dims).float()
+        fn          = (~preds_s.bool() & target_s.bool()).sum(dim=dims).float()
+        iou_s       = tp / (tp + fp + fn + 1e-8)
+        precision_s = tp / (tp + fp + 1e-8)
+        recall_s    = tp / (tp + fn + 1e-8)
 
-        # Compute per-sample dice; already has NaN-guards internally
-        per_sample_dice_metric = per_sample_dice(
-            preds              = preds_m,
-            target             = vessel_mask_m,
-            num_classes        = 2,
-            include_background = False
-        )
+        # Assign per-patient macros as the primary training metrics
+        signal_ids = [s for s, k in zip(sample_ids, has_signal.tolist()) if k]
+        for i, pid in enumerate(signal_ids):
+            self.val_sample_dice[pid].append(sample_dice[i].item())
+            self.val_sample_nsd[pid].append(sample_nsd[i].item())
+            self.val_sample_iou[pid].append(iou_s[i].item())
+            self.val_sample_precision[pid].append(precision_s[i].item())
+            self.val_sample_recall[pid].append(recall_s[i].item())
 
-        # Aggregate IoU guarded against NaN
-        if (vessel_mask.sum() > 0) or (preds.sum() > 0):
-            self.val_iou.update(preds_m[has_signal], vessel_mask_m[has_signal])
+        # Update global/epoch micro accumulation metrics for diagnostics
+        self.val_iou_micro.update(preds_s, target_s)
+        self.val_precision_micro.update(preds_s, target_s)
+        self.val_recall_micro.update(preds_s, target_s)
 
-        # Compute precision and recall, guarded against NaN
-        if has_signal.any():
-            self.val_precision.update(preds_m[has_signal], 
-                                      vessel_mask_m[has_signal])
-            self.val_recall.update(preds_m[has_signal], 
-                                   vessel_mask_m[has_signal])
-
-        # Track positive-patch count for imbalance sanity-checking
         self.log('val/n_pos_in_batch', has_signal.sum(), on_step = False,
-                 on_epoch = True, reduce_fx = 'sum', prog_bar = False,
+                 on_epoch = True, reduce_fx = 'sum', 
                  batch_size = preds.shape[0])
-
-        # Per-patient accumulation using nan-safe values
-        for i, pid in enumerate(sample_ids):
-            self.val_sample_nsd[pid].append(nsd_per_sample[i].item())
-            self.val_sample_dice[pid].append(per_sample_dice_metric[i].item())
-
         self.log('val/loss', loss, on_step = False, on_epoch = True,
-                 prog_bar = False, sync_dist = False, 
                  batch_size = preds.shape[0])
         
         return
 
 
     def on_validation_epoch_end(self) -> None:
-        
-        # Block against NaN warnings; valid outcome, not error
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', category = RuntimeWarning)
 
-            dice_means = [np.nanmean(v) for v in self.val_sample_dice.values()]
-            nsd_means  = [np.nanmean(v) for v in self.val_sample_nsd.values()]
-
-            val_dice     = torch.tensor(np.nanmean(dice_means))
-            val_dice_std = torch.tensor(np.nanstd(dice_means))
-
-            val_nsd     = torch.tensor(np.nanmean(nsd_means))
-            val_nsd_std = torch.tensor(np.nanstd(nsd_means))
-        
-        # Compute metrics with a signal guard
-        val_iou       = (self.val_iou.compute() if self.val_iou.update_count >0 
-                         else torch.tensor(float('nan')))
-        val_precision = (self.val_precision.compute() if self.val_precision.
-                         update_count > 0 else torch.tensor(float('nan')))
-        val_recall    = (self.val_recall.compute() if self.val_recall.
-                         update_count > 0 else torch.tensor(float('nan')))
+        # Macro reduction; nanmean within samples, then across samples
+        val_dice     , val_dice_std = macro(self.val_sample_dice)
+        val_nsd      , val_nsd_std  = macro(self.val_sample_nsd)
+        val_iou      , _            = macro(self.val_sample_iou)
+        val_precision, _            = macro(self.val_sample_precision)
+        val_recall   , _            = macro(self.val_sample_recall)
 
         self.log('val/dice',      val_dice,      prog_bar = False)
         self.log('val/dice_std',  val_dice_std,  prog_bar = False)
@@ -366,7 +294,15 @@ class VesselSegModule(pl.LightningModule):
         self.log('val/precision', val_precision, prog_bar = False)
         self.log('val/recall',    val_recall,    prog_bar = False)
 
-        # Compute per-patient Dice table for post-hoc inter-patient variance
+        # Micro-diagnostics; logged separately, never used for selection
+        self.log('val/iou_micro',       self.val_iou_micro.compute(), 
+                                        prog_bar = False)
+        self.log('val/precision_micro', self.val_precision_micro.compute(), 
+                                        prog_bar = False)
+        self.log('val/recall_micro',    self.val_recall_micro.compute(),    
+                                        prog_bar = False)
+        
+        # Per-patient Dice table for post-hoc inter-patient variance inspection
         per_patient_dice = {pid: np.nanmean(v) for pid, v in 
                             self.val_sample_dice.items()}
         
@@ -374,23 +310,25 @@ class VesselSegModule(pl.LightningModule):
             self.trainer.logger.experiment.log({
                 'val/dice_per_patient': wandb.Table(
                     columns = ['sample_id', 'mean_dice', 'n_patches'],
-                    data = [[pid, m, len(self.val_sample_dice[pid])] for 
-                            pid, m in per_patient_dice.items()]
-            )})
-        
-        # Clear all validation metrics for the next iteration
-        self.val_sample_dice.clear()
-        self.val_sample_nsd.clear()
-        self.val_iou.reset()
-        self.val_precision.reset()
-        self.val_recall.reset()
+                    data    = [[pid, m, len(self.val_sample_dice[pid])]
+                                for pid, m in per_patient_dice.items()]
+                )})
+            
+        # Clear all per-epoch state
+        for d in (self.val_sample_dice, self.val_sample_nsd, 
+                  self.val_sample_iou, self.val_sample_precision, 
+                  self.val_sample_recall):
+            d.clear()
+
+        self.val_iou_micro.reset()
+        self.val_precision_micro.reset()
+        self.val_recall_micro.reset()
 
         metrics = self.trainer.callback_metrics
         logger.info(
             f"-- | Epoch {self.current_epoch} Validation | "
             f"val/loss: {metrics.get('val/loss', 'N/A'):.4f} | "
             f"val/dice: {metrics.get('val/dice', 'N/A'):.4f} | "
-            f"val/dice_std: {metrics.get('val/dice_std', 'N/A'):.4f} | "
             f"val/iou: {metrics.get('val/iou', 'N/A'):.4f} | "
             f"val/precision: {metrics.get('val/precision', 'N/A'):.4f} | "
             f"val/recall: {metrics.get('val/recall', 'N/A'):.4f}"
@@ -429,24 +367,21 @@ class VesselSegModule(pl.LightningModule):
             }
         }
     
+
     def get_groups(self, 
-                         module: nn.Module, 
-                         lr: float, 
-                         weight_decay: float) -> list[dict]:
+                   module: nn.Module, 
+                   lr: float, 
+                   weight_decay: float) -> list[dict]:
+        """Splits params into weight-decay / no-decay groups (biases, norms)."""
+
         decay, no_decay = [], []
         for n, p in module.named_parameters():
             if not p.requires_grad:
                 continue
-            if p.ndim <= 1 or n.endswith(".bias"):
-                no_decay.append(p)
-            else:
-                decay.append(p)
+            (no_decay if p.ndim <= 1 or n.endswith(".bias") else decay).append(p)
         return [
             {"params": decay, "lr": lr, "weight_decay": weight_decay},
             {"params": no_decay, "lr": lr, "weight_decay": 0.0},
         ]
-    
-
-    
 
 # [END]

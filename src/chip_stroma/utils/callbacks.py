@@ -23,7 +23,8 @@ logger = setup_logger(__name__)
 
 
 def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
-                        early_stopping_metric:    str = "val/loss",
+                        early_stopping_metric:    str = "val/dice",
+                        early_stopping_mode:      str = "max",
                         early_stopping_patience:  int = 20,
                         early_stopping_min_delta: float = 1e-5):
     """
@@ -51,7 +52,7 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
     logger.info("Successfully configured the EarlyStopping callback")
     early_stop_callback = EarlyStopping(
         monitor                  = str(early_stopping_metric),
-        mode                     = "min",
+        mode                     = str(early_stopping_mode),
         patience                 = early_stopping_patience,
         min_delta                = early_stopping_min_delta,
         strict                   = False,
@@ -59,9 +60,6 @@ def configure_callbacks(trial: Optional[optuna.trial.Trial] = None,
         check_finite             = False,
         verbose                  = True
     )
-
-    # Safe-guard against false initialization typing
-    early_stop_callback.best_score = torch.tensor(float('-inf'))
 
     callbacks = [
         early_stop_callback,

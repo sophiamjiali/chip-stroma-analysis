@@ -107,6 +107,7 @@ def train(manifest: pd.DataFrame,
     callbacks = configure_callbacks(
         trial                    = trial,
         early_stopping_metric    = params.early_stopping.metric,
+        early_stopping_mode      = params.early_stopping.mode,
         early_stopping_patience  = params.early_stopping.patience,
         early_stopping_min_delta = params.early_stopping.min_delta
     )

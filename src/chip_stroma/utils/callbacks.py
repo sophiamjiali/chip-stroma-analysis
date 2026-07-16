@@ -114,7 +114,7 @@ class GradientNormCallback(pl.Callback):
 # =====| Checkpointing |========================================================
 
 def make_checkpoint_callback(checkpoint_dir: Path,
-                             project: str):
+                             group: str):
     """Wrapper for study-level callback. Keeps only one checkpoint 
     corresponding to the best (current) trial of the sweep."""
 
@@ -128,7 +128,7 @@ def make_checkpoint_callback(checkpoint_dir: Path,
         try: best_trial = study.best_trial
         except ValueError: return
 
-        trial_ckpt = checkpoint_dir / Path(project)/f"trial_{trial.number}.ckpt"
+        trial_ckpt = checkpoint_dir / Path(group) / f"trial_{trial.number}.ckpt"
 
         # If the best trial was found, delete all other checkpoint(s)
         if best_trial.number == trial.number:

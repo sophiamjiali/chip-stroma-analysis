@@ -30,7 +30,7 @@ from chip_stroma.utils.loggers import setup_logger
 logger = setup_logger(__name__)
 
 
-def objective(trial: Trial,
+def objective(trial:    Trial,
               manifest: pd.DataFrame,
               project:  str,
               group:    str,

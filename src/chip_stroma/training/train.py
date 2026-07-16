@@ -152,7 +152,7 @@ def train(manifest: pd.DataFrame,
         # Save the checkpoint; both for train and sweep protocols
         ckpt_name = (f"trial_{trial.number}.ckpt" if trial is not None 
                      else "single_run.ckpt")
-        ckpt_path = paths.checkpoints / Path(project) / ckpt_name
+        ckpt_path = paths.checkpoints / Path(group) / ckpt_name
         ckpt_path.parent.mkdir(parents = True, exist_ok = True)
 
         # SaveBestAfterTrial callback will maintain only one checkpoint

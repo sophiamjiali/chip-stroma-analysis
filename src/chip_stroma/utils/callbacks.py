@@ -113,12 +113,13 @@ class GradientNormCallback(pl.Callback):
 
 # =====| Checkpointing |========================================================
 
-def make_checkpoint_callback(checkpoint_dir: Path):
+def make_checkpoint_callback(checkpoint_dir: Path,
+                             project: str):
     """Wrapper for study-level callback. Keeps only one checkpoint 
     corresponding to the best (current) trial of the sweep."""
 
     def save_best_after_trial(study: optuna.Study, 
-                            trial: optuna.trial.FrozenTrial) -> None:
+                              trial: optuna.trial.FrozenTrial) -> None:
         """Optuna callback — fires after each trial completes."""
 
         # Skip pruned or failed trials
@@ -127,10 +128,10 @@ def make_checkpoint_callback(checkpoint_dir: Path):
         try: best_trial = study.best_trial
         except ValueError: return
 
-        trial_ckpt = checkpoint_dir / f"trial_{trial.number}.ckpt"
+        trial_ckpt = checkpoint_dir / Path(project)/f"trial_{trial.number}.ckpt"
 
         # If the best trial was found, delete all other checkpoint(s)
-        if study.best_trial.number == trial.number:
+        if best_trial.number == trial.number:
             best_ckpt = checkpoint_dir / f"best_trial.ckpt"
             shutil.copy(trial_ckpt, best_ckpt)
 

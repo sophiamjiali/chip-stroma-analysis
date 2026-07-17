@@ -132,10 +132,11 @@ def make_checkpoint_callback(checkpoint_dir: Path,
 
         # If the best trial was found, delete all other checkpoint(s)
         if best_trial.number == trial.number:
-            best_ckpt = checkpoint_dir / f"best_trial.ckpt"
+            best_ckpt = checkpoint_dir / Path(group) / "best_trial.ckpt"
+            json_path = checkpoint_dir / Path(group) / "best_trial.json"
             shutil.copy(trial_ckpt, best_ckpt)
 
-            with open(checkpoint_dir / "best_trial.json", "w") as f:
+            with open(json_path, "w") as f:
                 json.dump({
                     "trial_number": trial.number, 
                     "params"      : trial.params, 

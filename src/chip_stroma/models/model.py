@@ -230,8 +230,6 @@ class VesselSegModule(pl.LightningModule):
         if not has_signal.any():
             self.log('val/loss', loss, on_step = False, on_epoch = True,
                      batch_size = preds.shape[0])
-            self.log('val/n_pos_in_batch', 0, on_step = False, on_epoch = True,
-                     reduce_fx = 'sum', batch_size = preds.shape[0])
             return
 
         # Extract signal and one-hot versions for metric computation
@@ -268,9 +266,6 @@ class VesselSegModule(pl.LightningModule):
         self.val_precision_micro.update(preds_s, target_s)
         self.val_recall_micro.update(preds_s, target_s)
 
-        self.log('val/n_pos_in_batch', has_signal.sum(), on_step = False,
-                 on_epoch = True, reduce_fx = 'sum', 
-                 batch_size = preds.shape[0])
         self.log('val/loss', loss, on_step = False, on_epoch = True,
                  batch_size = preds.shape[0])
         

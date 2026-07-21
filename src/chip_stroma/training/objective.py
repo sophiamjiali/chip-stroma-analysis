@@ -66,10 +66,11 @@ def objective(trial:    Trial,
 
     # Suggest hyperparameters from the provided sweep configuration ranges
     trial_params = deepcopy(params)
-    trial_params = suggest_optimizer(params  = trial_params, trial = trial)
-    trial_params = suggest_focal_loss(params = trial_params, trial = trial)
-    trial_params = suggest_sampler(params    = trial_params, trial = trial)
-    trial_params = suggest_trainer(params    = trial_params, trial = trial)
+    trial_params = suggest_optimizer(params     = trial_params, trial = trial)
+    trial_params = suggest_focal_loss(params    = trial_params, trial = trial)
+    trial_params = suggest_boundary_loss(params = trial_params, trial = trial)
+    trial_params = suggest_sampler(params       = trial_params, trial = trial)
+    trial_params = suggest_trainer(params       = trial_params, trial = trial)
 
     logger.info("=" * 50)
 
@@ -150,6 +151,7 @@ def suggest_focal_loss(params: Box, trial: Trial) -> Box:
     logger.info("Successfully suggested alpha, beta, gamma, and weight values "
                 "for Focal Tversky Loss")
     return params
+
 
 def suggest_boundary_loss(params: Box, trial: Trial) -> Box:
     """Provides in-place suggestions for Boundary Loss parameters."""

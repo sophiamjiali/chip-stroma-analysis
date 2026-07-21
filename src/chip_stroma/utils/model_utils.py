@@ -8,13 +8,30 @@
 
 import torch
 import warnings
+import optuna
 
 import numpy as np
 
 from scipy.ndimage import distance_transform_edt
 from typing import cast
+from optuna.trial import TrialState
 
-# =====| Helpers |==========================================================
+# =====| Multi-Seed Confirmation |==============================================
+
+def get_top_k_trials(storage: str, version: str, k: int):
+    """Rank completed trials by the provided metric, descending."""
+
+    # Extract all completed studies from the SQL database
+    study = optuna.load_study(study_name = version, storage = storage)
+    completed = [t for t in study.trials if t.state == TrialState.COMPLETE]
+
+    ranked = sorted(
+        completed, 
+        key     = lambda t: t.value if t.value is not None else float("-inf"), reverse = True)
+    
+    return ranked[:k]
+
+# =====| Helpers |==============================================================
 
 def _edt(binary_img: np.ndarray) -> np.ndarray:
     """Wrapper to force correct static type through ambiguous scipy overload."""

@@ -31,12 +31,12 @@ logger = setup_logger(__name__)
 
 def main():
     args = parse_args()
-    log_header(config_path = Path(args.config_dir) / "cross_validation.yaml")
+    log_header(config_path = Path(args.config_dir) / "02_cross_validation.yaml")
 
     # 1. Load workflow and path configurations
     config = load_configs(
-        pipeline = Path(args.config_dir) / "cross_validation.yaml",
-        paths    = Path(args.config_dir) / "paths.yaml"
+        pipeline = Path(args.config_dir) / "02_cross_validation.yaml",
+        paths    = Path(args.config_dir) / "00_paths.yaml"
     )  
 
     # Load the patch manifest and CHIP labels

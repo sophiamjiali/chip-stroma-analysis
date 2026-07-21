@@ -37,12 +37,12 @@ logger = setup_logger(__name__)
 
 def main():
     args = parse_args()
-    log_header(config_path = Path(args.config_dir) / "train.yaml")
+    log_header(config_path = Path(args.config_dir) / "03_train.yaml")
 
     # 1. Load workflow and path configurations
     config = load_configs(
-        pipeline = Path(args.config_dir) / "train.yaml",
-        paths    = Path(args.config_dir) / "paths.yaml"
+        pipeline = Path(args.config_dir) / "03_train.yaml",
+        paths    = Path(args.config_dir) / "00_paths.yaml"
     )
 
     # 2. Verify that the training manifest was created, else create it

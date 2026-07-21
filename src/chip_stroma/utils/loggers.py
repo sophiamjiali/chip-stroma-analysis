@@ -40,7 +40,9 @@ def setup_logger(name: str | None = None) -> logging.Logger:
 
 def configure_loggers(project: str,
                       group: str,
-                      trial = None) -> WandbLogger:
+                      trial = None,
+                      trial_params = None,
+                      name = None) -> WandbLogger:
     
     logger = setup_logger(__name__)
     
@@ -69,11 +71,15 @@ def configure_loggers(project: str,
     else:
         logger.info("Single run detected, initializing a standalone run logger")
         logger.info("Initialized a logger for train iteration as 'single_run'")
+
+        config = trial_params if trial_params is not None else {}
+        name   = name if name is not None else "single_run"
+
         run = wandb.init(
             project = project,
             group   = group,
-            name    = "single_run",
-            config  = {}
+            name    = name,
+            config  = config
         )
 
     wandb_logger = WandbLogger(

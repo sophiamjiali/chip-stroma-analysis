@@ -28,12 +28,12 @@ logger = setup_logger(__name__)
 
 def main():
     args = parse_args()
-    log_header(config_path = Path(args.config_dir) / "evaluate.yaml")
+    log_header(config_path = Path(args.config_dir) / "07_evaluate.yaml")
 
     # Load workflow and path configurations
     config = load_configs(
-        pipeline = Path(args.config_dir) / "evaluate.yaml",
-        paths    = Path(args.config_dir) / "paths.yaml"
+        pipeline = Path(args.config_dir) / "07_evaluate.yaml",
+        paths    = Path(args.config_dir) / "00_paths.yaml"
     )
 
     # Load the model from the specified checkpoint

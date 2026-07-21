@@ -32,7 +32,7 @@ def load_configs(pipeline: Path,
     logger.info("-" * 50)
 
     # If a sweep, override the configuration name with just 'sweep'
-    name = config_name if config_name else pipeline.stem
+    name = config_name if config_name else pipeline.stem.split('_', 1)[1]
 
     config = {
         name: load_config(pipeline),

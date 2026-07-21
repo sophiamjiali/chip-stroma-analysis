@@ -1,0 +1,26 @@
+# ==============================================================================
+# Script:           05_multiseed.yaml
+# Purpose:          Multi-seed confirmation post-sweep configurations
+# Author:           Sophia Mengjia Li
+# Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
+# Date:             07/21/2026
+# ==============================================================================
+
+
+project: chip-stroma
+n_seeds: 3
+top_k: 3
+
+callbacks:
+  early_stopping:
+    metric   : val/loss
+    mode     : min
+    patience : 25        # Isensee et al. (2021) Nat Methods
+    min_delta: 0.001
+
+  epoch_tracker:
+    metric : val/dice
+    mode: max
+
+  pruner: 
+    metric: val/dice

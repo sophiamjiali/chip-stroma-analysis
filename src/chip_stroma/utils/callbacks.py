@@ -67,10 +67,10 @@ def configure_callbacks(params: Box,
     )
 
     callbacks = [
+        tracker,
         early_stop_callback,
         lr_monitor,
-        grad_norm_callback,
-        tracker
+        grad_norm_callback
     ]
 
     # Add the pruning callback if the instance is a sweep

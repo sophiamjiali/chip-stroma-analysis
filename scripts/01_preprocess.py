@@ -40,12 +40,12 @@ logger = setup_logger(__name__)
 
 def main():
     args = parse_args()
-    log_header(config_path = Path(args.config_dir) / "preprocess.yaml")
+    log_header(config_path = Path(args.config_dir) / "01_preprocess.yaml")
 
     # 1. Load workflow and path configurations
     config = load_configs(
-        pipeline = Path(args.config_dir) / "preprocess.yaml",
-        paths    = Path(args.config_dir) / "paths.yaml"
+        pipeline = Path(args.config_dir) / "01_preprocess.yaml",
+        paths    = Path(args.config_dir) / "00_paths.yaml"
     )
 
     # 2. Sanitize sample folder names

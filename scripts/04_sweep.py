@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script:           sweep.yaml
+# Script:           04_sweep.py
 # Purpose:          WandB sweep agent entrypoint
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
@@ -39,7 +39,7 @@ def main():
     # 1. Load workflow and path configurations; sweeps are nested in a folder
     config = load_configs(
         pipeline    = pipeline_path,
-        paths       = Path(args.config_dir) / "paths.yaml",
+        paths       = Path(args.config_dir) / "00_paths.yaml",
         config_name = "sweep",
         frozen      = False
     )

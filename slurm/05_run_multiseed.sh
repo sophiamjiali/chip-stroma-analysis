@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --output=/cluster/home/t144807uhn/logs/chip-stroma-analysis/sweep/%x/%x_%j.out
-#SBATCH --error=/cluster/home/t144807uhn/logs/chip-stroma-analysis/sweep/%x/%x_%j.err
+#SBATCH --output=/cluster/home/t144807uhn/logs/chip-stroma-analysis/multiseed/%x/%x_%j.out
+#SBATCH --error=/cluster/home/t144807uhn/logs/chip-stroma-analysis/multiseed/%x/%x_%j.err
 #SBATCH --account=kumargroup_gpu
 #SBATCH -p gpu
 #SBATCH --gres=gpu:1
-#SBATCH --time=48:30:00
+#SBATCH --time=24:30:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=20G
@@ -12,8 +12,7 @@
 #SBATCH --mail-user=sophiamjia.li@mail.utoronto.ca
 
 # Make the project-specific logs directory
-mkdir -p /cluster/home/t144807uhn/logs/chip-stroma-analysis/sweep/$1
-mkdir -p /cluster/home/t144807uhn/chip-stroma-analysis/studies
+mkdir -p /cluster/home/t144807uhn/logs/chip-stroma-analysis/multiseed/$1
 
 # Activate the virtual environment
 export LD_LIBRARY_PATH=/cluster/home/t111631uhn/miniconda3/lib:$LD_LIBRARY_PATH
@@ -33,7 +32,7 @@ echo "=========================================="
 # Configure WandB tracking for offline only (compute nodes have no internet)
 export WANDB_PROJECT="chip-stroma"
 export WANDB_MODE=offline
-export WANDB_DIR="/cluster/home/t144807uhn/logs/chip-stroma-analysis/wandb/sweep/$1"
+export WANDB_DIR="/cluster/home/t144807uhn/logs/chip-stroma-analysis/wandb/multiseed/$1"
 mkdir -p "$WANDB_DIR"
 
 # Mask Albumentions from checking for updates (no internet)
@@ -51,7 +50,7 @@ export TORCH_HOME="$HOME/.cache/torch"
 
 CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs
 
-srun python scripts/sweep.py \
+srun python scripts/05_multiseed.py \
     --config_dir $CONFIG_DIR \
     --version $1
 

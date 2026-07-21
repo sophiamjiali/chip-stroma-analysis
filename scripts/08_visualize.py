@@ -26,12 +26,12 @@ logger = setup_logger(__name__)
 
 def main():
     args = parse_args()
-    log_header(config_path = Path(args.config_dir) / "visualize.yaml")
+    log_header(config_path = Path(args.config_dir) / "08_visualize.yaml")
 
     # Load workflow and path configurations
     config = load_configs(
-        pipeline = Path(args.config_dir) / "visualize.yaml",
-        paths    = Path(args.config_dir) / "paths.yaml"
+        pipeline = Path(args.config_dir) / "08_visualize.yaml",
+        paths    = Path(args.config_dir) / "00_paths.yaml"
     )
 
     # Load the model from the specified checkpoint

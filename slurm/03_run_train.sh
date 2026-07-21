@@ -51,7 +51,7 @@ export TORCH_HOME="$HOME/.cache/torch"
 
 CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs
 
-srun python scripts/train.py \
+srun python scripts/03_train.py \
     --config_dir $CONFIG_DIR
 
 echo "=========================================="

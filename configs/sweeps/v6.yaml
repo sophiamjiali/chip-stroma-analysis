@@ -47,10 +47,20 @@ trainer:
   max_epochs       : 60          # Keep 50 for testing, 100 for final
   gradient_clip_val: [1.5, 2.0]  # Linear-uniform
 
-early_stopping:
-  metric   : val/loss
-  mode     : min
-  patience : 24        # Isensee et al. (2021) Nat Methods
-  min_delta: 0.001
+callbacks:
+  early_stopping:
+    metric   : val/loss
+    mode     : min
+    patience : 25        # Isensee et al. (2021) Nat Methods
+    min_delta: 0.001
+
+  epoch_tracker:
+    metric : val/dice
+    mode: max
+
+  pruner: 
+    metric: val/dice
+
+
 
 # [END]

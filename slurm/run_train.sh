@@ -49,7 +49,7 @@ export PYTORCH_ENABLE_MPS_FALLBACK=0
 # Point to the pre-downloaded Resnet34 imagenet weights
 export TORCH_HOME="$HOME/.cache/torch"
 
-CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs/hpc
+CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs
 
 srun python scripts/train.py \
     --config_dir $CONFIG_DIR

@@ -29,7 +29,7 @@ echo "GPU:        $CUDA_VISIBLE_DEVICES"
 echo "Start:      $(date)"
 echo "=========================================="
 
-CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs/hpc
+CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs
 
 srun python -u scripts/visualize.py \
     --config_dir $CONFIG_DIR \

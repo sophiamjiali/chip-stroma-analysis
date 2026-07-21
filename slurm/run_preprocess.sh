@@ -33,7 +33,7 @@ echo "Start:      $(date)"
 echo "=========================================="
 
 srun python scripts/preprocess.py \
-    --config_dir configs/hpc
+    --config_dir configs
 
 echo "=========================================="
 echo "End: $(date)"

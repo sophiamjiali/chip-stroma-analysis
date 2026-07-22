@@ -1,18 +1,17 @@
 # ==============================================================================
-# Script:           07_evaluate.yaml
+# Script:           07_inference.yaml
 # Purpose:          Evaluation and statistics generation configurations
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
 # Date:             07/22/2026
 # ==============================================================================
 
-val_fold: 0
-
-batch_size: 32
-n_workers: 4
+n_folds: 0    # If running on only validation fold, just put the one number
 
 model:
   encoder_name   : resnet34
   encoder_weights: imagenet
   in_channels    : 3
   out_classes    : 1
+  batch_size: 32
+  n_workers: 4

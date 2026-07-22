@@ -1,0 +1,10 @@
+# ==============================================================================
+# Script:           07_evaluate.yaml
+# Purpose:          Evaluation and statistics generation configurations
+# Author:           Sophia Mengjia Li
+# Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
+# Date:             07/22/2026
+# ==============================================================================
+
+val_fold: 0
+

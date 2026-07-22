@@ -21,8 +21,12 @@ metadata:
   train_manifest  : /cluster/projects/kumargroup/sophia/chip-stroma-analysis/data/metadata/train_manifest.csv
 
 # Training and sweep output directories
-checkpoints: /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints
+checkpoints: 
+  train  : /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints/train
+  sweep  : /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints/sweep
+  full_cv: /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints/full_cv
 studies    : /cluster/home/t144807uhn/chip-stroma-analysis/studies
 results    : /cluster/home/t144807uhn/chip-stroma-analysis/results
+figures    : /cluster/home/t144807uhn/chip-stroma-analysis/figures
 
 # [END]

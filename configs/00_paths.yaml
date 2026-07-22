@@ -22,16 +22,7 @@ metadata:
 
 # Training and sweep output directories
 checkpoints: /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints
-studies: /cluster/home/t144807uhn/chip-stroma-analysis/studies
-evaluation: /cluster/home/t144807uhn/chip-stroma-analysis/evaluation
-
-# Key results from the full pipeline
-results:
-  masks:
-    fibroblasts_dir: results/masks/fibroblasts
-    vessels_dir    : results/masks/vessels
-  overlays:
-    fibroblasts_dir: results/overlays/fibroblasts
-    vessels_dir    : results/overlays/vessels
+studies    : /cluster/home/t144807uhn/chip-stroma-analysis/studies
+results    : /cluster/home/t144807uhn/chip-stroma-analysis/results
 
 # [END]

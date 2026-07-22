@@ -4,28 +4,14 @@
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
 # Date:             06/04/2026
-#
-# Notes:            Output directory layout (all under paths.output.training):
-#
-#                   outputs/training/
-#                   └── fold_0/                        # one directory per fold
-#                       ├── config.yaml                # merged config snapshot
-#                       │   ├── checkpoints/
-#                       │   ├── best-epoch_*.ckpt      # best checkpoint
-#                       │   └── last.ckpt              # latest epoch
-#                       └── wandb/                     # W&B offline run dir.
-#                             └── run-<id>/             # auto-created by wandb
-#                                    
-#                   Sync W&B after HPC Job completes:
-#                       wandb sync --sync-all
 # ==============================================================================
 
 import argparse as ap
 
 from pathlib import Path
-from datetime import datetime
 
 from chip_stroma.utils.config import load_configs
+from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import initialize_train_manifest
 from chip_stroma.training.train import train
@@ -37,7 +23,10 @@ logger = setup_logger(__name__)
 
 def main():
     args = parse_args()
-    log_header(config_path = Path(args.config_dir) / "03_train.yaml")
+    log_header(
+        pipeline_stage = "Training",
+        config_path    = Path(args.config_dir) / "03_train.yaml"
+    )
 
     # 1. Load workflow and path configurations
     config = load_configs(
@@ -62,7 +51,14 @@ def main():
         trial    = None
     )
 
-    log_footer(cfg = config.paths, metrics = metrics)
+    logger.info("=" * 50)
+    logger.info("Final Training Metrics:")
+    logger.info(f"- Validation Loss: {metrics.get('val/loss')}")
+    logger.info(f"- Validation Dice Score: {metrics.get('val/dice')}")
+    logger.info(f"- Validation IoU Score: {metrics.get('val/iou')}")
+    logger.info("=" * 50)
+
+    log_footer()
 
     return
 
@@ -73,26 +69,6 @@ def parse_args():
     parser.add_argument("--config_dir", type = str, default = "configs/")
     
     return parser.parse_args()
-
-
-def log_header(config_path):
-    logger.info("=" * 60)
-    logger.info("Starting Pipeline Execution")
-    logger.info("- Pipeline Stage: train UNet Training - Single Run")
-    logger.info(f"- Configurations: {config_path}")
-    logger.info(f"- Working Directory: {Path.cwd()}")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
-
-def log_footer(cfg, metrics):
-    logger.info("=" * 60)
-    logger.info("Successfully Completed Pipeline Execution")
-    logger.info(f"- Train Manifest: {cfg.metadata.train_manifest}")
-    logger.info(f"- Validation Loss: {metrics.get('val/loss')}")
-    logger.info(f"- Validation Dice Score: {metrics.get('val/dice')}")
-    logger.info(f"- Validation IoU Score: {metrics.get('val/iou')}")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
 
 if __name__ == "__main__":
     main()

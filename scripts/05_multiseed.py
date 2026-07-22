@@ -10,12 +10,12 @@ import argparse as ap
 import pandas as pd
 
 from pathlib import Path
-from datetime import datetime
 from copy import deepcopy
 from box import Box
 
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
+from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.io import initialize_train_manifest
 from chip_stroma.training.train import run_seed
 from chip_stroma.utils.model_utils import get_top_k_trials
@@ -26,8 +26,11 @@ logger = setup_logger(__name__)
 
 def main():
     args = parse_args()
-    log_header(config_path = Path(args.config_dir) / "05_multiseed.yaml",
-               version     = args.version)
+    log_header(
+        pipeline_stage = "Multi-Seed Confirmation",
+        config_path    = Path(args.config_dir) / "05_multiseed.yaml",
+        version        = args.version
+    )
 
     # 1. Load workflow and path configurations
     config = load_configs(
@@ -89,23 +92,6 @@ def parse_args():
     
     return parser.parse_args()
 
-
-def log_header(config_path: Path, version: str):
-    logger.info("=" * 60)
-    logger.info("Starting Pipeline Execution")
-    logger.info("- Pipeline Stage: Multi-seed Confirmation")
-    logger.info(f"- Version: {version}")
-    logger.info(f"- Configurations: {config_path}")
-    logger.info(f"- Working Directory: {Path.cwd()}")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
-
-
-def log_footer():
-    logger.info("=" * 60)
-    logger.info("Successfully Completed Pipeline Execution")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
 
 if __name__ == "__main__":
     main()

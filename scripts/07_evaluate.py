@@ -12,12 +12,13 @@ import pandas as pd
 import argparse as ap
 
 from pathlib import Path
-from datetime import datetime
+
 from torch.utils.data import DataLoader
 
 from chip_stroma.models.model import VesselSegModule, build_model
 from chip_stroma.data.dataset import VesselPatchDataset
 from chip_stroma.data.transforms import get_val_transforms
+from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import initialize_train_manifest
@@ -28,13 +29,25 @@ logger = setup_logger(__name__)
 
 def main():
     args = parse_args()
-    log_header(config_path = Path(args.config_dir) / "07_evaluate.yaml")
+    log_header(
+        pipeline_stage = "Evaluation",
+        config_path    = Path(args.config_dir) / "07_evaluate.yaml",
+        version        = args.version
+    )
 
     # Load workflow and path configurations
     config = load_configs(
         pipeline = Path(args.config_dir) / "07_evaluate.yaml",
         paths    = Path(args.config_dir) / "00_paths.yaml"
     )
+
+    # Initialize version results directory
+    dst_dir = Path(config.paths.)
+
+
+
+
+
 
     # Load the model from the specified checkpoint
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -169,27 +182,12 @@ def main():
 # =====| Helpers |==============================================================
 
 def parse_args():
-    parser = ap.ArgumentParser(description = "Train a single run of the model.")
+    parser = ap.ArgumentParser(description = "Model evaluation.")
     parser.add_argument("--config_dir", type = str, default = "configs/")
     parser.add_argument("--version", type = str)
     
     return parser.parse_args()
 
-
-def log_header(config_path):
-    logger.info("=" * 60)
-    logger.info("Starting Pipeline Execution")
-    logger.info("- Pipeline Stage: Model Evaluation")
-    logger.info(f"- Configurations: {config_path}")
-    logger.info(f"- Working Directory: {Path.cwd()}")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
-
-def log_footer():
-    logger.info("=" * 60)
-    logger.info("Successfully Completed Pipeline Execution")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
 
 if __name__ == "__main__":
     main()

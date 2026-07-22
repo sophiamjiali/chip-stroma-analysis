@@ -11,16 +11,15 @@ import optuna
 
 import argparse as ap
 
-from box import Box
 from pathlib import Path
-from datetime import datetime
 from functools import partial
 from optuna.pruners import MedianPruner
 from optuna.samplers import TPESampler
-from optuna.trial import FrozenTrial, TrialState
+from optuna.trial import TrialState
 
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
+from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.io import initialize_train_manifest
 from chip_stroma.training.objective import objective
 from chip_stroma.utils.callbacks import make_checkpoint_callback
@@ -33,8 +32,11 @@ logger = setup_logger(__name__)
 def main():
     args = parse_args()
     pipeline_path = Path(args.config_dir) / "sweeps" / f"{args.version}.yaml"
-    log_header(config_path = pipeline_path,
-               version     = args.version)
+    log_header(
+        pipeline_stage = "Sweep",
+        config_path    = pipeline_path,
+        version        = args.version
+    )
     
     # 1. Load workflow and path configurations; sweeps are nested in a folder
     config = load_configs(
@@ -136,8 +138,11 @@ def main():
     logger.info(f"- Pruned Trials: {trials_pruned}")
     logger.info(f"- Failed Trails: {trials_failed}")
     logger.info("=" * 50)
+    logger.info(f"- Best Trial: {study.best_trial.number}")
+    logger.info(f"- Best Validation Dice Score: {study.best_trial.value:.4f}")
+    logger.info("=" * 50)
 
-    log_footer(config.paths, trial = study.best_trial)
+    log_footer()
 
     return
 
@@ -150,26 +155,6 @@ def parse_args():
     parser.add_argument("--version", type = str, default = "v1")
     
     return parser.parse_args()
-
-
-def log_header(config_path: Path, version: str):
-    logger.info("=" * 60)
-    logger.info("Starting Pipeline Execution")
-    logger.info("- Pipeline Stage: Segmentation UNet Training - Sweep")
-    logger.info(f"- Version: {version}")
-    logger.info(f"- Configurations: {config_path}")
-    logger.info(f"- Working Directory: {Path.cwd()}")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
-
-
-def log_footer(cfg: Box, trial: FrozenTrial):
-    logger.info("=" * 60)
-    logger.info("Successfully Completed Pipeline Execution")
-    logger.info(f"- Best Trial: {trial.number}")
-    logger.info(f"- Best Validation Dice Score: {trial.value:.4f}")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
 
 if __name__ == "__main__":
     main()

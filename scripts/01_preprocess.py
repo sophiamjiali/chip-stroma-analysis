@@ -9,9 +9,9 @@
 import argparse as ap
 
 from pathlib import Path
-from datetime import datetime
 
 from chip_stroma.utils.config import load_configs
+from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import (
     sanitize_names, 
@@ -40,7 +40,10 @@ logger = setup_logger(__name__)
 
 def main():
     args = parse_args()
-    log_header(config_path = Path(args.config_dir) / "01_preprocess.yaml")
+    log_header(
+        pipeline_stage = "Preprocessing",
+        config_path = Path(args.config_dir) / "01_preprocess.yaml"
+    )
 
     # 1. Load workflow and path configurations
     config = load_configs(
@@ -132,7 +135,7 @@ def main():
     save_patch_manifest(manifest, path = config.paths.metadata.patch_manifest)
     save_patch_stats(statistics, path = config.paths.metadata.patch_statistics)
 
-    log_footer(cfg = config.paths)
+    log_footer()
 
     return
 
@@ -144,28 +147,6 @@ def parse_args():
     parser.add_argument("--config_dir", type = str, default = "configs/")
     
     return parser.parse_args()
-
-
-def log_header(config_path):
-    logger.info("=" * 60)
-    logger.info("Starting Pipeline Execution")
-    logger.info("- Pipeline Stage: Preprocessing")
-    logger.info(f"- Configurations: {config_path}")
-    logger.info(f"- Working Directory: {Path.cwd()}")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
-
-
-def log_footer(cfg):
-    logger.info("=" * 60)
-    logger.info("Successfully Completed Pipeline Execution")
-    logger.info(f"- Patch Directory: {cfg.processed_data.patch_dir}")
-    logger.info(f"- Tissue Mask Directory: {cfg.processed_data.tissue_mask_dir}")
-    logger.info(f"- Vessel Mask Directory: {cfg.processed_data.vessel_mask_dir}")
-    logger.info(f"- Name Mapping: {cfg.metadata.name_mapping}")
-    logger.info(f"- Patch Manifest: {cfg.metadata.patch_manifest}")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
 
 if __name__ == "__main__":
     main()

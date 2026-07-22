@@ -9,7 +9,6 @@
 import argparse as ap
 
 from pathlib import Path
-from datetime import datetime
 
 from chip_stroma.training.cross_validation import (
     assign_folds,
@@ -17,6 +16,7 @@ from chip_stroma.training.cross_validation import (
     merge_fold_assignments
 )
 from chip_stroma.utils.config import load_configs
+from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import (
     load_chip_labels,
@@ -31,7 +31,10 @@ logger = setup_logger(__name__)
 
 def main():
     args = parse_args()
-    log_header(config_path = Path(args.config_dir) / "02_cross_validation.yaml")
+    log_header(
+        pipeline_stage = "Fold Assignment",
+        config_path    = Path(args.config_dir) / "02_cross_validation.yaml"
+    )
 
     # 1. Load workflow and path configurations
     config = load_configs(
@@ -64,7 +67,7 @@ def main():
 
     save_patch_manifest(manifest, path = config.paths.metadata.patch_manifest)
 
-    log_footer(cfg = config.paths)
+    log_footer()
 
     return
 
@@ -76,23 +79,6 @@ def parse_args():
     
     return parser.parse_args()
 
-
-def log_header(config_path):
-    logger.info("=" * 60)
-    logger.info("Starting Pipeline Execution")
-    logger.info("- Pipeline Stage: Fold Assignment")
-    logger.info(f"- Configurations: {config_path}")
-    logger.info(f"- Working Directory: {Path.cwd()}")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
-
-
-def log_footer(cfg):
-    logger.info("=" * 60)
-    logger.info("Successfully Completed Pipeline Execution")
-    logger.info(f"- Patch Manifest: {cfg.metadata.patch_manifest}")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
 
 if __name__ == "__main__":
     main()

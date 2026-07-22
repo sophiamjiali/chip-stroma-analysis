@@ -11,7 +11,6 @@
 #                   report foreground (vessel) content only
 # ==============================================================================
 
-import warnings
 import time
 import wandb
 import torch

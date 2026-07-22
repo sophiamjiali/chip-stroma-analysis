@@ -107,7 +107,7 @@ def main():
 
     # Initialize checkpointing callback for best trial
     checkpoint_callback = make_checkpoint_callback(
-        checkpoint_dir = config.paths.checkpoints,
+        checkpoint_dir = config.paths.checkpoints.sweep,
         group          = study_name
     )
 

@@ -24,6 +24,8 @@ from chip_stroma.utils.io import initialize_train_manifest
 
 logger = setup_logger(__name__)
 
+# =====| Workflow Entry Point |=================================================
+
 def main():
     args = parse_args()
     log_header(config_path = Path(args.config_dir) / "08_visualize.yaml")

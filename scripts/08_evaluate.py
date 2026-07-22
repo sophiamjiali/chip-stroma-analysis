@@ -27,6 +27,8 @@ from chip_stroma.models.loss import dice_score
 logger = setup_logger(__name__)
 
 
+# =====| Workflow Entry Point |=================================================
+
 def main():
     args = parse_args()
     log_header(
@@ -42,7 +44,8 @@ def main():
     )
 
     # Initialize version results directory
-    dst_dir = Path(config.paths.)
+    dst_dir = Path(config.paths.results) / args.version
+    dst_dir.mkdir(parents = True, exist_ok = True)
 
 
 

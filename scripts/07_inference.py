@@ -42,10 +42,8 @@ def main():
         paths    = Path(args.config_dir) / "00_paths.yaml"
     )
 
-    # Initialize version results directory
-    dst_dir = Path(config.paths.results) / args.version / "inference"
-
-    # Initialize the checkpoint paths, containing the full CV models
+    # Initialize version results directory and checkpoints (full CV models)
+    dst_dir  = Path(config.paths.results) / args.version / "inference"
     ckpt_dir = Path(config.paths.checkpoints.full_cv) / args.version
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -79,7 +77,7 @@ def main():
         )
         model.to(device).eval().freeze()
         
-        # Initialize teh fold's held-out validation split
+        # Initialize the fold's held-out validation split
         fold_manifest =manifest[manifest['fold'] == fold].reset_index(drop=True)
     
         dataset = VesselPatchDataset(

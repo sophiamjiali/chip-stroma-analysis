@@ -22,6 +22,7 @@ from chip_stroma.utils.model_utils import get_top_k_trials
 
 logger = setup_logger(__name__)
 
+
 # =====| Workflow Entry Point |=================================================
 
 def main():
@@ -52,12 +53,12 @@ def main():
         k       = config.multiseed.top_k
     )
 
+    group = f"{args.version}_multiseed"
+
     # Train each top trial the set amount of seeds
     results = []
     for trial in top_trials:
         trial_params = Box(deepcopy(trial.params), frozen = True)
-
-        group = f"{args.version}_multiseed"
 
         for seed in range(config.multiseed.n_seeds):
             results.append(run_seed(
@@ -66,7 +67,8 @@ def main():
                 group           = group,
                 paths           = config.paths,
                 trial_params    = trial_params,
-                callback_params = config.callbacks,
+                callback_params = config.multiseed.callbacks,
+                fold            = trial_params['fold'],
                 seed            = seed,
                 trial_num       = trial.number
             ))
@@ -76,7 +78,7 @@ def main():
     summary = (results.groupby('trial_num')['best_val_dice']
                .agg(['mean', 'std', 'count']))
 
-    summary_path = (config.paths.evaluation / args.version / 
+    summary_path = (config.paths.results / args.version / 
                     "multiseed_summary.csv")
     summary_path.parent.mkdir(parents = True, exist_ok = True)
     summary.to_csv(summary_path)

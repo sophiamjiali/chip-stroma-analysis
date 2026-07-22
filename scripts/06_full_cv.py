@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script:           05_multiseed.py
+# Script:           06_full_cv.py
 # Purpose:          Multi-seed configuration of top-K trials on validation fold
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT

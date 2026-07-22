@@ -1,0 +1,26 @@
+# ==============================================================================
+# Script:           06_full_cv.yaml
+# Purpose:          Trains a model per fold for full performance estimates
+# Author:           Sophia Mengjia Li
+# Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
+# Date:             07/22/2026
+# ==============================================================================
+
+
+project: chip-stroma
+n_folds: 5 
+top_k: 3 # Should be same as multiseed configurations
+
+callbacks:
+  early_stopping:
+    metric   : val/loss
+    mode     : min
+    patience : 25        # Isensee et al. (2021) Nat Methods
+    min_delta: 0.001
+
+  epoch_tracker:
+    metric : val/dice
+    mode: max
+
+  pruner: 
+    metric: val/dice

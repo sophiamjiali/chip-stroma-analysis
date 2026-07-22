@@ -149,7 +149,7 @@ def train(manifest: pd.DataFrame,
         # Save the checkpoint; both for train and sweep protocols
         ckpt_name = (f"trial_{trial.number}.ckpt" if trial is not None 
                      else "single_run.ckpt")
-        ckpt_path = paths.checkpoints / Path(group) / ckpt_name
+        ckpt_path = paths.checkpoints.train / Path(group) / ckpt_name
         ckpt_path.parent.mkdir(parents = True, exist_ok = True)
 
         # SaveBestAfterTrial callback will maintain only one checkpoint
@@ -166,14 +166,16 @@ def train(manifest: pd.DataFrame,
         gc.collect()
     
 
-def run_seed(manifest: pd.DataFrame, 
-             project: str, 
-             group: str, 
-             paths: Box, 
-             trial_params: Box, 
+def run_seed(manifest       : pd.DataFrame, 
+             project        : str,
+             group          : str,
+             paths          : Box,
+             trial_params   : Box,
              callback_params: Box,
-             seed: int,
-             trial_num: int):
+             fold           : int,
+             seed           : int,
+             trial_num      : int,
+             ckpt_path      : Path | None = None): 
     """Train once with fixed parameters and the given seed."""
 
     logger.info("=" * 50)
@@ -193,7 +195,7 @@ def run_seed(manifest: pd.DataFrame,
         patch_dir       = paths.processed_data.patch_dir,
         vessel_mask_dir = paths.processed_data.vessel_mask_dir,
         tissue_mask_dir = paths.processed_data.tissue_mask_dir,
-        fold            = trial_params['fold'],
+        fold            = fold,
         batch_size      = trial_params['batch_size'],
         num_workers     = trial_params['num_workers'],
         pos_prob        = trial_params['pos_prob'],
@@ -260,6 +262,9 @@ def run_seed(manifest: pd.DataFrame,
 
     logger.info("Successfully completed model training")
     logger.info("=" * 50)
+
+    # Save the checkpoint if a path was provided
+    if ckpt_path: trainer.save_checkpoint(ckpt_path)
 
     wandb.finish()
     del lit_module, model, datamodule, trainer

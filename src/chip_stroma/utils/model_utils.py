@@ -11,10 +11,13 @@ import warnings
 import optuna
 
 import numpy as np
+import pandas as pd
 
 from scipy.ndimage import distance_transform_edt
 from typing import cast
 from optuna.trial import TrialState
+from box import Box
+from copy import deepcopy
 
 # =====| Multi-Seed Confirmation |==============================================
 
@@ -30,6 +33,31 @@ def get_top_k_trials(storage: str, version: str, k: int):
         key     = lambda t: t.value if t.value is not None else float("-inf"), reverse = True)
     
     return ranked[:k]
+
+
+def select_final_config(config: Box, version: str):
+    """
+    Pick the trial_num with the best mean val/dice from multi-seed 
+    confirmation, then re-fetch its exact hyperparameters from the Optuna study.
+    """
+
+    # Load the multi-seed confirmation summary CSV file
+    summary_path = (config.paths.evaluation / version / 
+                    "multiseed_summary.csv")
+    summary = pd.read_csv(summary_path, index_col = "trial_num")
+    best_trial_num = int(summary['mean'].idxmax())
+
+    # Extract hyperparameters from the associated database
+    storage = f"sqlite:///{config.paths.studies}/{version}.db"
+    top_trials = get_top_k_trials(
+        storage = storage, 
+        version = version, 
+        k = config.full_cv.top_k
+    )
+
+    finalized_trial = next(t for t in top_trials if t.number == best_trial_num)
+    return Box(deepcopy(finalized_trial.params), frozen = True), best_trial_num
+
 
 # =====| Helpers |==============================================================
 

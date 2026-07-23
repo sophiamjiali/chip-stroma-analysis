@@ -5,8 +5,8 @@
 /results/
 studies/
 checkpoints/
-.vscode/
-.DS_Store
+/.vscode/
+/.DS_Store
 
 
 # Byte-compiled / optimized / DLL files

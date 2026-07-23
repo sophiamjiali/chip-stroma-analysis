@@ -8,6 +8,7 @@
 
 import pandas as pd
 import argparse as ap
+import numpy as np
 
 from pathlib import Path
 
@@ -15,6 +16,16 @@ from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import load_all_fold_patch_metrics
+
+from chip_stroma.evaluate.segmentation_stats import (
+    per_fold_metrics,
+    optuna_importance,
+    threshold_sweep,
+    select_overlay_cases,
+    top_k_trials_table,
+    multiseed_summary_table,
+    final_cv_summary_table
+)
 
 logger = setup_logger(__name__)
 
@@ -56,24 +67,19 @@ def main():
                       for f in range(n_folds)])
     gt    = pd.concat([pd.read_pickle(inference_dir / f"fold_{f}"/"val_gt.pkl") 
                       for f in range(n_folds)])
+
+    thr        = config.evaluate.thresholds
+    thresholds = np.linspace(thr[0], thr[1], thr[2])
     
-    thresholds = threshold_sweep(probs, gt)
+    thresholds = threshold_sweep(probs, gt, thresholds)
     thresholds.to_csv(evaluate_dir / "threshold_sweep.csv", index = False)
 
     # 3. Extract Optuna diagnostics from the sweep stage
-    database = config.paths.studies / f"{args.version}.db"
-    importance = optuna_importance(str(database))
+    db_path    = f"sqlite:///{config.paths.studies}/{args.version}.db"
+    importance = optuna_importance(db_path)
     importance.to_csv(evaluate_dir / "optuna_importance.csv", index = False)
 
-    # 4. Boundary loss ablation
-    bl_ablation = boundary_loss_ablation_curves(
-        run_with_bl    = config.evaluate.bl_ablation_run_with,
-        run_without_bl = config.evaluate.bl_ablation_run_without,
-        ramp_epochs    = config.evaluate.bl_ramp_epochs,
-    )
-    bl_ablation.to_csv(evaluate_dir / "boundary_loss_ablation.csv", index=False)
-
-    # 5. Overlay case selection by best/median/worst Dice
+    # 4. Overlay case selection by best/median/worst Dice
     per_patient = (
         predictions[predictions['has_signal']]
         .groupby(['fold', 'sample_id'])[['dice', 'precision', 'recall']]
@@ -87,16 +93,16 @@ def main():
     )
     overlay_cases.to_csv(evaluate_dir / "overlay_cases.csv", index = False)
 
-    # 6. Compute summary tables
-    top_k = top_k_trials_table(str(database), k = config.evaluate.top_k_trials)
+    # 5. Compute summary tables
+    top_k = top_k_trials_table(db_path, k = config.evaluate.top_k_trials)
     top_k.to_csv(evaluate_dir / "top_k_trials.csv", index = False)
 
     multiseed = pd.read_csv(dst_dir / "multiseed_summary.csv")
-    multiseed = multiseed_summary_table(multiseed)
+    multiseed = multiseed_summary_table(trial_results = multiseed)
     multiseed.to_csv(evaluate_dir / "multiseed_summary.csv", index = False)
 
     final_cv = pd.read_csv(dst_dir / "full_cv_summary.csv")
-    final_cv = final_cv_summary_table(final_cv)
+    final_cv = final_cv_summary_table(trial_results = final_cv)
     final_cv.to_csv(evaluate_dir / "final_cv_summary.csv", index = False)
 
     log_footer()

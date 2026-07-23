@@ -60,7 +60,7 @@ def main():
     for trial in top_trials:
         trial_params = Box(deepcopy(trial.params), frozen = True)
 
-        for seed in range(config.multiseed.n_seeds):
+        for seed in range(int(config.multiseed.n_seeds)):
             results.append(run_seed(
                 manifest        = manifest,
                 project         = config.multiseed.project,

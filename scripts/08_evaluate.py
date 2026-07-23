@@ -34,7 +34,7 @@ def main():
         pipeline = Path(args.config_dir) / "07_evaluate.yaml",
         paths    = Path(args.config_dir) / "00_paths.yaml"
     )
-    n_folds = config.evaluate.n_folds
+    n_folds = int(config.evaluate.n_folds)
 
     # Initialize version results directory
     dst_dir = Path(config.paths.results) / args.version

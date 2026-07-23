@@ -28,6 +28,8 @@ from chip_stroma.models.inference import infer_fold
 logger = setup_logger(__name__)
 
 
+# =====| Workflow Entry Point |=================================================
+
 def main():
     args = parse_args()
     log_header(

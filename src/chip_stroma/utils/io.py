@@ -201,6 +201,17 @@ def initialize_train_manifest(train_manifest_path: Path,
     logger.info("=" * 50)
     return manifest
 
+
+def load_all_fold_patch_metrics(src_dir: Path, 
+                                n_folds: int) -> pd.DataFrame:
+    """
+    Concatenates all patch_metric.csv across all folds from inference step.
+    """
+
+    metrics = [pd.read_csv(src_dir / f"fold_{f}" / "patch_metrics.csv") 
+               for f in range(n_folds)]
+    return pd.concat(metrics, ignore_index = True)
+
 # =====| Report Updates |=======================================================
 
 def update_vessel_report(manifest: pd.DataFrame, 

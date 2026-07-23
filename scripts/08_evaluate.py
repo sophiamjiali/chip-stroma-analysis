@@ -6,23 +6,15 @@
 # Date:             06/03/2026
 # ==============================================================================
 
-import torch
-
 import pandas as pd
 import argparse as ap
 
 from pathlib import Path
 
-from torch.utils.data import DataLoader
-
-from chip_stroma.models.model import VesselSegModule, build_model
-from chip_stroma.data.dataset import VesselPatchDataset
-from chip_stroma.data.transforms import get_val_transforms
 from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
-from chip_stroma.utils.io import initialize_train_manifest
-from chip_stroma.models.loss import dice_score
+from chip_stroma.utils.io import load_all_fold_patch_metrics
 
 logger = setup_logger(__name__)
 
@@ -42,140 +34,70 @@ def main():
         pipeline = Path(args.config_dir) / "07_evaluate.yaml",
         paths    = Path(args.config_dir) / "00_paths.yaml"
     )
+    n_folds = config.evaluate.n_folds
 
     # Initialize version results directory
     dst_dir = Path(config.paths.results) / args.version
-    dst_dir.mkdir(parents = True, exist_ok = True)
+    inference_dir = dst_dir / "inference"
+    evaluate_dir  = dst_dir / "evaluate"
+    evaluate_dir.mkdir(parents = True, exist_ok = True)
 
-
-
-
-
-
-    # Load the model from the specified checkpoint
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = build_model(
-        encoder_name    = config.evaluate.model.encoder_name,
-        encoder_weights = config.evaluate.model.encoder_weights,
-        in_channels     = config.evaluate.model.in_channels,
-        out_classes     = config.evaluate.model.out_classes
+    # 1. Compute per-patient segmentation metrics, per fold
+    predictions = load_all_fold_patch_metrics(
+        src_dir = inference_dir,
+        n_folds = n_folds
     )
 
-    ckpt_path = config.paths.checkpoints / args.version / "best_trial.ckpt"
-    model = VesselSegModule.load_from_checkpoint(
-        checkpoint_path = ckpt_path,
-        map_location    = device,
-        model           = model
-    )
-    model.to(device)
-    model.eval()
-    model.freeze()
+    fold_metrics = per_fold_metrics(predictions)
+    fold_metrics.to_csv(evaluate_dir / "per_fold_metrics.csv", index = False)
 
-    # Load the validation fold as a dataset
-    manifest = initialize_train_manifest(
-        train_manifest_path = config.paths.metadata.train_manifest,
-        patch_manifest_path = config.paths.metadata.patch_manifest
-    )
-    manifest = (manifest[manifest['fold'] == int(config.evaluate.val_fold)]
-                .reset_index(drop = True))
+    # 2. Compute a threshold sweep, pooled across folds
+    probs =pd.concat([pd.read_pickle(inference_dir/f"fold_{f}"/"val_probs.pkl") 
+                      for f in range(n_folds)])
+    gt    = pd.concat([pd.read_pickle(inference_dir / f"fold_{f}"/"val_gt.pkl") 
+                      for f in range(n_folds)])
     
-    dataset = VesselPatchDataset(
-        manifest        = manifest,
-        patch_dir       = config.paths.processed_data.patch_dir,
-        vessel_mask_dir = config.paths.processed_data.vessel_mask_dir,
-        tissue_mask_dir = config.paths.processed_data.tissue_mask_dir,
-        transform       = get_val_transforms()
+    thresholds = threshold_sweep(probs, gt)
+    thresholds.to_csv(evaluate_dir / "threshold_sweep.csv", index = False)
+
+    # 3. Extract Optuna diagnostics from the sweep stage
+    database = config.paths.studies / f"{args.version}.db"
+    importance = optuna_importance(str(database))
+    importance.to_csv(evaluate_dir / "optuna_importance.csv", index = False)
+
+    # 4. Boundary loss ablation
+    bl_ablation = boundary_loss_ablation_curves(
+        run_with_bl    = config.evaluate.bl_ablation_run_with,
+        run_without_bl = config.evaluate.bl_ablation_run_without,
+        ramp_epochs    = config.evaluate.bl_ramp_epochs,
     )
-    dataloader = DataLoader(
-        dataset     = dataset,
-        batch_size  = int(config.evaluate.batch_size),
-        num_workers = int(config.evaluate.n_workers),
-        shuffle     = False,
-        pin_memory  = True
+    bl_ablation.to_csv(evaluate_dir / "boundary_loss_ablation.csv", index=False)
+
+    # 5. Overlay case selection by best/median/worst Dice
+    per_patient = (
+        predictions[predictions['has_signal']]
+        .groupby(['fold', 'sample_id'])[['dice', 'precision', 'recall']]
+        .mean()
+        .reset_index()
     )
 
-    # Compute per-patch metrics for the full validation cohort
-    per_patch_results = []
-    with torch.no_grad():
-        for batch in dataloader:
-            logger.info("Processing a batch...")
-            
-            # Fetch all information returned from the patch dataset
-            images       = batch['patch'].to(device)
-            vessel_masks = batch["vessel_mask"].squeeze(1).long().to(device)
-            tissue_masks = batch["tissue_mask"].long().to(device)
-            sample_ids   = batch["sample_id"]
-            patch_names  = batch['patch_name']
-
-            logits_sq = model(images).squeeze(1)
-            preds = (torch.sigmoid(logits_sq) > 0.5).long()
-
-            # Restrict to tissue regions only
-            preds_m        = preds * tissue_masks
-            vessel_masks_m = vessel_masks * tissue_masks
-
-            # Exclude patches without positive vessel annotations
-            has_signal = vessel_masks_m.sum(dim = (1, 2)) > 0
-
-            # Compute per-sample Dice guarded against NaN
-            dice_batch = dice_score(preds_m.float(), vessel_masks_m.float())
-
-            # Compute precision/recall guarded against NaN
-            tp = (preds_m * vessel_masks_m).flatten(1).sum(dim = 1)
-            pred_pos = preds_m.flatten(1).sum(dim = 1)
-            true_pos = vessel_masks_m.flatten(1).sum(dim = 1)
-            
-            precision = torch.where(pred_pos > 0, tp / pred_pos, 
-                                    torch.tensor(float('nan')))
-            recall    = torch.where(true_pos > 0, tp / true_pos, 
-                                    torch.tensor(float('nan')))
-            
-            # Mask for patches with positive vessel annotations
-            precision = torch.where(has_signal, precision, 
-                                    torch.tensor(float('nan')))
-            recall    = torch.where(has_signal, recall, 
-                                    torch.tensor(float('nan')))
-            
-            # Move entire batch to CPU/numpy once
-            dice_np       = dice_batch.detach().cpu().numpy()
-            precision_np  = precision.detach().cpu().numpy()
-            recall_np     = recall.detach().cpu().numpy()
-            has_signal_np = has_signal.detach().cpu().numpy()
-
-            for i in range(len(patch_names)):
-                per_patch_results.append({
-                    'sample_id' : sample_ids[i],
-                    'patch_name': patch_names[i],
-                    'dice'      : dice_np[i],
-                    'precision' : precision_np[i],
-                    'recall'    : recall_np[i],
-                    'has_signal': has_signal_np[i],
-                })
-
-    # Aggregate patch-level results to sample-level; exclude no-signal patches
-    per_patch_results = pd.DataFrame(per_patch_results)
-    patch_signal = per_patch_results[per_patch_results['has_signal']]
-
-    per_sample_metrics = (patch_signal.groupby('sample_id')
-                          [['dice', 'precision', 'recall']].mean())
-    
-    logger.info("N patches (fold 0): %d | N positive-signal patches: %d",
-                len(per_patch_results), len(patch_signal))
-    logger.info("N samples: %d", per_sample_metrics.shape[0])
-    logger.info("Per-sample mean metrics:\n%s", per_sample_metrics)
-
-    logger.info(
-        "Mean Dice (sample-level): %.4f ± %.4f",
-        per_sample_metrics["dice"].mean(),
-        per_sample_metrics["dice"].std(),
+    overlay_cases = select_overlay_cases(
+        per_patient, 
+        n_per_category = config.evaluate_n_overlay_cases
     )
-    
-    # Save all results
-    dst_dir = config.paths.evaluation / Path(args.version)
-    dst_dir.mkdir(parents = True, exist_ok = True)
+    overlay_cases.to_csv(evaluate_dir / "overlay_cases.csv", index = False)
 
-    per_patch_results.to_csv(dst_dir / "patch_metrics.csv", index = False)
-    per_sample_metrics.to_csv(dst_dir / "sample_metrics.csv", index = False)
+    # 6. Compute summary tables
+    top_k = top_k_trials_table(str(database), k = config.evaluate.top_k_trials)
+    top_k.to_csv(evaluate_dir / "top_k_trials.csv", index = False)
+
+    multiseed = pd.read_csv(dst_dir / "multiseed_summary.csv")
+    multiseed = multiseed_summary_table(multiseed)
+    multiseed.to_csv(evaluate_dir / "multiseed_summary.csv", index = False)
+
+    final_cv = pd.read_csv(dst_dir / "full_cv_summary.csv")
+    final_cv = final_cv_summary_table(final_cv)
+    final_cv.to_csv(evaluate_dir / "final_cv_summary.csv", index = False)
 
     log_footer()
 

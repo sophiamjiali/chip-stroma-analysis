@@ -48,11 +48,4 @@ def plot_optuna_parallel_coords(study     : pd.DataFrame,
                                 save_path : str | None = None):
     return
 
-
-def plot_boundary_loss_ablation(with_bl_curve: pd.DataFrame, 
-                                without_bl_curve: pd.DataFrame, 
-                                ramp_epoch: pd.DataFrame, 
-                                save_path : str | None = None):
-    return
-
 # [END]

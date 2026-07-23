@@ -9,6 +9,7 @@
 import json
 
 import pandas as pd
+import numpy as np
 
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
@@ -325,5 +326,42 @@ def prune_tissue_masks(manifest: pd.DataFrame,
 
 def delete_mask(mask_path: Path) -> None:
     if mask_path.exists(): mask_path.unlink()
+
+
+# =====| General I/O |==========================================================
+
+def load_csv_inputs(path: str | Path) -> pd.DataFrame:
+    """Thin read_csv wrapper — single point of control for dtype/NA handling
+    across evaluation-stage CSV inputs (keeps sample_id/fold as strings so
+    the 'MACRO' sentinel row and mixed-type fold labels round-trip cleanly)."""
+    return pd.read_csv(path, dtype = {"sample_id": str, "fold": str})
+ 
+ 
+def load_overlay_arrays(src_dir  : str | Path,
+                        fold     : str | int,
+                        sample_id: str,
+                        ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Loads (image, gt_mask, pred_mask) for one representative patch of a
+    patient, for overlay QC panels. Patch-level arrays are pickled per fold
+    at inference time (val_patches.pkl); since a patient can span many
+    patches, the patch whose Dice is closest to the patient's mean Dice is
+    selected as representative (median-behavior patch, not cherry-picked
+    best/worst). Join keys follow (sample_id, patch_name), per the known
+    patch_name-collision-across-patients bug.
+    """
+    patches = pd.read_pickle(Path(src_dir) / f"fold_{fold}" / "val_patches.pkl")
+    patient_patches = patches[patches["sample_id"] == sample_id]
+ 
+    if patient_patches.empty:
+        raise ValueError(f"No patches found for sample_id={sample_id} in fold {fold}")
+ 
+    # Representative patch: closest to this patient's mean Dice
+    target_dice = patient_patches["dice"].mean()
+    idx = (patient_patches["dice"] - target_dice).abs().idxmin()
+    row = patient_patches.loc[idx]
+ 
+    return row["image"], row["gt_mask"], row["pred_mask"]
+
 
 # [END]

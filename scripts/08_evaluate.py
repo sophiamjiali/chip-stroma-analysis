@@ -36,13 +36,13 @@ def main():
     args = parse_args()
     log_header(
         pipeline_stage = "Evaluation",
-        config_path    = Path(args.config_dir) / "07_evaluate.yaml",
+        config_path    = Path(args.config_dir) / "08_evaluate.yaml",
         version        = args.version
     )
 
     # Load workflow and path configurations
     config = load_configs(
-        pipeline = Path(args.config_dir) / "07_evaluate.yaml",
+        pipeline = Path(args.config_dir) / "08_evaluate.yaml",
         paths    = Path(args.config_dir) / "00_paths.yaml"
     )
     n_folds = int(config.evaluate.n_folds)

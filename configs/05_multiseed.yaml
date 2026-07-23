@@ -9,7 +9,7 @@
 
 project: chip-stroma
 n_seeds: 3
-top_k: 3
+top_k: 2
 
 callbacks:
   early_stopping:

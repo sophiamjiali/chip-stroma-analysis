@@ -97,4 +97,23 @@ def resolve_paths(data, root) -> dict:
 def load_config(path: Path) -> dict:
     return yaml.safe_load(open(path))
 
+
+def resolve_params(trial_params: Box, 
+                   sweep_params: Box) -> Box:
+    """
+    Return a flat Box containing all leaf parameters from sweep_params,
+    overridden by values from trial_params where present.
+    """
+    merged = Box()
+
+    def flatten(node):
+        for key, value in node.items():
+            if isinstance(value, Box):
+                flatten(value)
+            else:
+                merged[key] = trial_params.get(key, value)
+
+    flatten(sweep_params)
+    return merged
+
 # [END]

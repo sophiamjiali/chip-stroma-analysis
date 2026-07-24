@@ -13,7 +13,7 @@ from pathlib import Path
 from copy import deepcopy
 from box import Box
 
-from chip_stroma.utils.config import load_configs
+from chip_stroma.utils.config import load_configs, load_config, resolve_params
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.io import initialize_train_manifest
@@ -58,9 +58,13 @@ def main():
     # Train each top trial the set amount of seeds
     results = []
     for trial in top_trials:
-        trial_params = Box(deepcopy(trial.params), frozen = True)
+        trial_params = Box(deepcopy(trial.params), frozen = False)
 
-        print(trial_params)
+        # Resolve trial parameters with constants from the original config.
+        sweep_path = Path(args.config_dir) / "sweeps" / f"{args.version}.yaml"
+        sweep_params = Box(load_config(sweep_path), frozen_box = True)
+
+        trial_params = resolve_params(trial_params, sweep_params)
 
         for seed in range(int(config.multiseed.n_seeds)):
             results.append(run_seed(

@@ -52,42 +52,40 @@ def main():
         version = args.version,
         k       = config.multiseed.top_k
     )
+    n_seeds = int(config.multiseed.n_seeds)
+
+    # Submit model training in a SLURM array
+    trial_idx = args.task_id // n_seeds
+    seed = args.task_id % n_seeds
+    trial = top_trials[trial_idx]
+
+    trial_params = Box(deepcopy(trial.params), frozen = False)
+
+    # Resolve trial parameters with constants from the original config.
+    sweep_path = Path(args.config_dir) / "sweeps" / f"{args.version}.yaml"
+    sweep_params = Box(load_config(sweep_path), frozen_box = True)
+
+    trial_params = resolve_params(trial_params, sweep_params)
 
     group = f"{args.version}_multiseed"
-
-    # Train each top trial the set amount of seeds
-    results = []
-    for trial in top_trials:
-        trial_params = Box(deepcopy(trial.params), frozen = False)
-
-        # Resolve trial parameters with constants from the original config.
-        sweep_path = Path(args.config_dir) / "sweeps" / f"{args.version}.yaml"
-        sweep_params = Box(load_config(sweep_path), frozen_box = True)
-
-        trial_params = resolve_params(trial_params, sweep_params)
-
-        for seed in range(int(config.multiseed.n_seeds)):
-            results.append(run_seed(
-                manifest        = manifest,
-                project         = config.multiseed.project,
-                group           = group,
-                paths           = config.paths,
-                trial_params    = trial_params,
-                callback_params = config.multiseed.callbacks,
-                fold            = trial_params['fold'],
-                seed            = seed,
-                trial_num       = trial.number
-            ))
+    result = run_seed(
+        manifest        = manifest,
+        project         = config.multiseed.project,
+        group           = group,
+        paths           = config.paths,
+        trial_params    = trial_params,
+        callback_params = config.multiseed.callbacks,
+        fold            = trial_params['fold'],
+        seed            = seed,
+        trial_num       = trial.number
+    )
 
     # Aggregate mean and standard deviation per trial
-    results = pd.DataFrame(results)
-    summary = (results.groupby('trial_num')['best_val_dice']
-               .agg(['mean', 'std', 'count']))
+    result  = pd.DataFrame(result)
+    out_dir = config.paths.results / args.version / "multiseed_tasks"
+    out_dir.mkdir(parents = True, exist_ok = True)
 
-    summary_path = (config.paths.results / args.version / 
-                    "multiseed_summary.csv")
-    summary_path.parent.mkdir(parents = True, exist_ok = True)
-    summary.to_csv(summary_path)
+    result.to_csv(out_dir / f"trial_{trial.number}_seed_{seed}.csv",index=False)
 
     log_footer()
 
@@ -96,7 +94,8 @@ def main():
 def parse_args():
     parser = ap.ArgumentParser(description = "Run multi-seed confirmation.")
     parser.add_argument("--config_dir", type = str, default = "configs/")
-    parser.add_argument("--version",    type = str)
+    parser.add_argument("--version",    type = str, default = "v0")
+    parser.add_argument("--task_id",    type = int, default = None)
     
     return parser.parse_args()
 

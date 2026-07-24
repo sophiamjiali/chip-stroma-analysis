@@ -4,7 +4,7 @@
 #SBATCH --account=kumargroup_gpu
 #SBATCH -p gpu
 #SBATCH --gres=gpu:1
-#SBATCH --time=49:00:00
+#SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=20G
@@ -22,7 +22,8 @@ source /cluster/home/t144807uhn/envs/chip-stroma-env-gpu/bin/activate
 cd /cluster/home/t144807uhn/chip-stroma-analysis
 
 echo "=========================================="
-echo "Mini Sweep Job ID:  $SLURM_JOB_ID"
+echo "Array Job ID:       $SLURM_JOB_ID"
+echo "Task ID:            $SLURM_ARRAY_TASK_ID"
 echo "Job Name:           $1"
 echo "Node:               $SLURMD_NODENAME"
 echo "GPU:                $CUDA_VISIBLE_DEVICES"
@@ -32,7 +33,7 @@ echo "=========================================="
 # Configure WandB tracking for offline only (compute nodes have no internet)
 export WANDB_PROJECT="chip-stroma"
 export WANDB_MODE=offline
-export WANDB_DIR="/cluster/home/t144807uhn/logs/chip-stroma-analysis/wandb/multiseed/$1"
+export WANDB_DIR="/cluster/home/t144807uhn/logs/chip-stroma-analysis/wandb/multiseed/$1/task_${SLURM_ARRAY_TASK_ID}"
 mkdir -p "$WANDB_DIR"
 
 # Mask Albumentions from checking for updates (no internet)

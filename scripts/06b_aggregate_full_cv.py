@@ -1,6 +1,6 @@
 # ==============================================================================
-# Script:           05b_aggregate_multiseed.py
-# Purpose:          Multi-seed configuration of top-K trials on validation fold
+# Script:           06b_aggregate_full_cv.py
+# Purpose:          Full cross-validation trial aggregation
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
 # Date:             07/24/2026
@@ -21,25 +21,25 @@ logger = setup_logger(__name__)
 def main():
     args = parse_args()
     config = load_configs(
-        pipeline = Path(args.config_dir) / "05_multiseed.yaml",
+        pipeline = Path(args.config_dir) / "06_full_cv.yaml",
         paths    = Path(args.config_dir) / "00_paths.yaml"
     )
 
-    logger.info("Beginning multiseed aggregation")
+    logger.info("Beginning full cross-validation aggregation")
 
     # Load all trial summary tables
-    task_dir = config.paths.results / args.version / "multiseed_tasks"
+    task_dir = config.paths.results / args.version / "full_cv_tasks"
     results  = pd.concat([pd.read_csv(f) for f in task_dir.glob("*.csv")], 
                          ignore_index = True)
 
     # Summarize into one aggregate
-    summary = (results.groupby('trial_num')['best_val_dice']
-                       .agg(['mean', 'std', 'count']))
-    summary_path = config.paths.results / args.version / "multiseed_summary.csv"
+    summary = (results[['val_dice', 'val_precision', 'val_recall']]
+               .agg(['mean', 'std']))
+    summary_path = config.paths.results / args.version / "full_cv_summary.csv"
     summary_path.parent.mkdir(parents = True, exist_ok = True)
     summary.to_csv(summary_path)
 
-    logger.info("Completed multiseed aggregation")
+    logger.info("Completed full cross-validation aggregation")
 
 def parse_args():
     parser = ap.ArgumentParser()

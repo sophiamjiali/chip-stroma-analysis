@@ -3,10 +3,10 @@
 TOP_K=2; N_SEEDS=3
 
 echo "=========================================="
-echo "Job Name:       05_run_multiseed.sh"
-echo "Top K:          $TOP_K"
-echo "Top K:          $N_SEEDS"
-echo "Start time:     $(date)"
+echo "Job Name:        05_run_multiseed.sh"
+echo "Top K:           $TOP_K"
+echo "Number of Seeds: $N_SEEDS"
+echo "Start time:      $(date)"
 echo "=========================================="
 
 cd /cluster/home/t144807uhn/chip-stroma-analysis/slurm

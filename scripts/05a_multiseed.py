@@ -6,19 +6,19 @@
 # Date:             07/21/2026
 # ==============================================================================
 
-import argparse as ap
 import pandas as pd
+import argparse as ap
 
+from box import Box
 from pathlib import Path
 from copy import deepcopy
-from box import Box
 
-from chip_stroma.utils.config import load_configs, load_config, resolve_params
-from chip_stroma.utils.loggers import setup_logger
-from chip_stroma.utils.header_footers import log_header, log_footer
-from chip_stroma.utils.io import initialize_train_manifest
 from chip_stroma.training.train import run_seed
+from chip_stroma.utils.loggers import setup_logger
+from chip_stroma.utils.io import initialize_train_manifest
 from chip_stroma.utils.model_utils import get_top_k_trials
+from chip_stroma.utils.header_footers import log_header, log_footer
+from chip_stroma.utils.config import load_configs, load_config, resolve_params
 
 logger = setup_logger(__name__)
 
@@ -91,7 +91,13 @@ def main():
 
     result.to_csv(out_dir / f"trial_{trial.number}_seed_{seed}.csv",index=False)
 
+    logger.info("=" * 50)
+    logger.info(f"Completed task: {args.task_id}")
+    logger.info("=" * 50)
+
     log_footer()
+    return
+
 
 # =====| Helpers |==============================================================
 

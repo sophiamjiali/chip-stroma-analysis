@@ -33,6 +33,10 @@ def main():
         version        = args.version
     )
 
+    logger.info("=" * 50)
+    logger.info(f"Beginning task: {args.task_id}")
+    logger.info("=" * 50)
+
     # 1. Load workflow and path configurations
     config = load_configs(
         pipeline = Path(args.config_dir) / "05_multiseed.yaml",

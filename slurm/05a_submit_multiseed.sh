@@ -53,7 +53,8 @@ CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs
 
 srun python scripts/05_multiseed.py \
     --config_dir $CONFIG_DIR \
-    --version $1
+    --version $1 \
+    --task_id $SLURM_ARRAY_TASK_ID
 
 echo "=========================================="
 echo "End time: $(date)"

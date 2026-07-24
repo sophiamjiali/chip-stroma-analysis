@@ -1,7 +1,19 @@
+# ==============================================================================
+# Script:           05b_aggregate_multiseed.py
+# Purpose:          Multi-seed configuration of top-K trials on validation fold
+# Author:           Sophia Mengjia Li
+# Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
+# Date:             07/24/2026
+# ==============================================================================
+
 import argparse as ap
 import pandas as pd
 from pathlib import Path
+
 from chip_stroma.utils.config import load_configs
+from chip_stroma.utils.loggers import setup_logger
+
+logger = setup_logger(__name__)
 
 def main():
     args = parse_args()
@@ -9,13 +21,21 @@ def main():
         pipeline = Path(args.config_dir) / "05_multiseed.yaml",
         paths    = Path(args.config_dir) / "00_paths.yaml"
     )
-    task_dir = config.paths.results / args.version / "multiseed_tasks"
-    results = pd.concat([pd.read_csv(f) for f in task_dir.glob("*.csv")], ignore_index=True)
 
+    logger.info("Beginning multiseed aggregation")
+
+    # Load all trial summary tables
+    task_dir = config.paths.results / args.version / "multiseed_tasks"
+    results  = pd.concat([pd.read_csv(f) for f in task_dir.glob("*.csv")], 
+                         ignore_index = True)
+
+    # Summarize into one aggregate
     summary = (results.groupby('trial_num')['best_val_dice']
                        .agg(['mean', 'std', 'count']))
     summary_path = config.paths.results / args.version / "multiseed_summary.csv"
     summary.to_csv(summary_path)
+
+    logger.info("Completed multiseed aggregation")
 
 def parse_args():
     parser = ap.ArgumentParser()

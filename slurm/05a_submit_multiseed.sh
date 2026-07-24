@@ -51,7 +51,7 @@ export TORCH_HOME="$HOME/.cache/torch"
 
 CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs
 
-srun python scripts/05_multiseed.py \
+srun python scripts/05a_multiseed.py \
     --config_dir $CONFIG_DIR \
     --version $1 \
     --task_id $SLURM_ARRAY_TASK_ID

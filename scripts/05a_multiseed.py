@@ -85,7 +85,7 @@ def main():
     )
 
     # Aggregate mean and standard deviation per trial
-    result  = pd.DataFrame(result)
+    result  = pd.DataFrame(result, index = [0])
     out_dir = config.paths.results / args.version / "multiseed_tasks"
     out_dir.mkdir(parents = True, exist_ok = True)
 

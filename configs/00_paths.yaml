@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script:           paths.yaml
+# Script:           00_paths.yaml
 # Purpose:          Input and output paths for the full pipeline
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
@@ -22,9 +22,9 @@ metadata:
 
 # Training and sweep output directories
 checkpoints: 
-  train  : /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints/train
-  sweep  : /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints/sweep
-  full_cv: /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints/full_cv
+  train    : /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints/train
+  sweep    : /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints/sweep
+  full_cv  : /cluster/home/t144807uhn/chip-stroma-analysis/checkpoints/full_cv
 studies    : /cluster/home/t144807uhn/chip-stroma-analysis/studies
 results    : /cluster/home/t144807uhn/chip-stroma-analysis/results
 figures    : /cluster/home/t144807uhn/chip-stroma-analysis/figures

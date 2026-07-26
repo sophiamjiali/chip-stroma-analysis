@@ -56,14 +56,14 @@ def main():
     trial_params = resolve_params(trial_params, sweep_params)
 
     ckpt_dir = Path(config.paths.checkpoints.full_cv) / args.version
-    group    = f"{args.version}_full_cv"
+    ckpt_dir.mkdir(parents = True, exist_ok = True)
 
     # Submit model training in a SLURM array
     fold   = args.task_id
     result = run_seed(
         manifest        = manifest,
         project         = config.full_cv.project,
-        group           = group,
+        group           = f"{args.version}_full_cv",
         paths           = config.paths,
         trial_params    = trial_params,
         callback_params = config.full_cv.callbacks,

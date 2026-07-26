@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script:           cross_validation.yaml
+# Script:           02_cross_validation.yaml
 # Purpose:          Patient-stratified K-Fold CV Parameters
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT

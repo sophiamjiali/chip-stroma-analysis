@@ -32,6 +32,8 @@ def main():
     results  = pd.concat([pd.read_csv(f) for f in task_dir.glob("*.csv")], 
                          ignore_index = True)
 
+    logger.info(f"Identified {len(results)} multi-seed summaries")
+
     # Summarize into one aggregate
     summary = (results.groupby('trial_num')['best_val_dice']
                        .agg(['mean', 'std', 'count']))

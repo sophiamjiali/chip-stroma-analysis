@@ -12,10 +12,17 @@ echo "=========================================="
 cd /cluster/home/t144807uhn/chip-stroma-analysis/slurm
 
 # Submit model trials in a SLURM array
-ARRAY_JOBID=$(sbatch --parsable --array=0-$((TOP_K*N_SEEDS-1)) --job-name=$1 05a_submit_multiseed.sh $1)
+ARRAY_JOBID=$(sbatch \
+    --parsable \
+    --array=0-$((TOP_K*N_SEEDS-1)) \
+    --job-name=$1 \
+    05a_submit_multiseed.sh $1)
 
 # Aggregate trial summaries after all complete
-sbatch --dependency=afterok:$ARRAY_JOBID --job-name=$1 05b_aggregate_multiseed.sh $1
+sbatch \
+    --dependency=afterok:$ARRAY_JOBID \
+    --job-name=$1 \
+    05b_aggregate_multiseed.sh $1
 
 echo "=========================================="
 echo "End time: $(date)"

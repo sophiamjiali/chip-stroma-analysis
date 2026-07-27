@@ -1,29 +1,28 @@
 # ==============================================================================
-# Script:           04_sweep.py
+# Script:           04b_sweep.py
 # Purpose:          WandB sweep agent entrypoint
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
 # Date:             06/03/2026
 # ==============================================================================
 
-import os
 import torch
-import optuna
 
 import argparse as ap
 
 from pathlib import Path
 from functools import partial
-from optuna.pruners import MedianPruner
-from optuna.samplers import TPESampler
 from optuna.trial import TrialState
 
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.io import initialize_train_manifest
-from chip_stroma.training.objective import objective
 from chip_stroma.utils.callbacks import make_checkpoint_callback
+
+from chip_stroma.training.objective import objective
+from chip_stroma.training.create_study import initialize_study
+
 
 logger = setup_logger(__name__)
 
@@ -39,8 +38,9 @@ def main():
         version        = args.version
     )
 
-    # Extract the task ID from the SLURM array task
-    task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
+    logger.info("=" * 50)
+    logger.info(f"Beginning task: {args.task_id}")
+    logger.info("=" * 50)
     
     # 1. Load workflow and path configurations; sweeps are nested in a folder
     config = load_configs(
@@ -64,34 +64,14 @@ def main():
     logger.info(f"- Warmup Steps: {config.sweep.experiment.n_warmup_steps}")
     logger.info("-" * 50)
 
-    # 3. Initialize the sampler and pruner for the trial
-    logger.info("Successfully initialized the TPESampler")
-    sampler = TPESampler(
-        seed             = config.sweep.data.seed + task_id,
-        multivariate     = True,
-        n_startup_trials = config.sweep.experiment.n_startup_trials
-    )
-    
-    logger.info("Successfully initialized the MedianPruner")
-    pruner = MedianPruner(
+    # Load the pre-initialized Optuna study (SQL .db file)
+    study = initialize_study(
+        version          = args.version,
+        seed             = config.sweep.data.seed,
         n_startup_trials = config.sweep.experiment.n_startup_trials,
-        n_warmup_steps   = config.sweep.experiment.n_warmup_steps
+        n_warmup_steps   = config.sweep.experiment.n_warmup_steps,
+        studies_dir      = config.paths.studies
     )
-
-    logger.info("Successfuly initialized the Optuna study for sweeping")
-    study_name = config.sweep.study.group
-    storage = f"sqlite:///{config.paths.studies}/{study_name}.db"
-
-    study = optuna.create_study(
-        study_name     = study_name,
-        storage        = storage,
-        direction      = "maximize",
-        sampler        = sampler,
-        pruner         = pruner,
-        load_if_exists = True
-    )
-
-    logger.info("=" * 50)
 
     # If a valid timeout was provided, overwrite n_trials
     if config.sweep.experiment.timeout != -1:
@@ -112,7 +92,7 @@ def main():
     # Initialize checkpointing callback for best trial
     checkpoint_callback = make_checkpoint_callback(
         checkpoint_dir = config.paths.checkpoints.sweep,
-        group          = study_name
+        group          = args.version
     )
 
     study.optimize(
@@ -157,6 +137,7 @@ def parse_args():
     parser = ap.ArgumentParser(description = "Begin a hyperparameter sweep.")
     parser.add_argument("--config_dir", type = str, default = "configs/sweeps/")
     parser.add_argument("--version",    type = str, default = "v1")
+    parser.add_argument("--task_id",    type = int, default = None)
     
     return parser.parse_args()
 

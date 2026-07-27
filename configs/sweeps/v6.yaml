@@ -61,6 +61,4 @@ callbacks:
   pruner: 
     metric: val/dice
 
-
-
 # [END]

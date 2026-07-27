@@ -8,13 +8,13 @@
 
 study:
   project: chip-stroma  # Main project container
-  group  : v0         # Sweep name (grouping)
+  group  : ablation_test         # Sweep name (grouping)
 
 data: 
   fold       : 0    # Which StratifiedGroupKFold fold to train on
   batch_size : 32
   num_workers: 4
-  seed       : 42
+  seed       : 2
   pos_prob   : 0.5  # PositiveWeightedSampler positive-patch probability
 
 model:
@@ -24,21 +24,29 @@ model:
   out_classes    : 1
  
 module:
-  lr          : 0.0001329291894316216
-  weight_decay: 0.001
-  ftl_alpha   : 0.3852142919229749
-  ftl_beta    : 0.6147857080770252
-  ftl_gamma   : 0.75  # FTL focal exponent
-  ftl_weight  : 0.5   # composite: ftl_weight*FTL + (1-ftl_weight)*Dice
-  smooth      : 1.0
+  lr              : 0.00001493656855461762
+  weight_decay    : 0.001            # Log-uniform; L2 range for small datasets
+  ftl_alpha       : 0.38661761457749355
+  ftl_gamma       : 0.75             # < 1 less focus, > 1 harder mining
+  ftl_weight      : 0.32022300234864176
+  bl_weight_target: 0.0              # Independent of ftl_weight
+  bl_ramp_epochs  : 0
+  smooth          : 1.0
  
 trainer:
-  max_epochs              : 70
-  gradient_clip_val       : 1.0
+  max_epochs              : 60
+  gradient_clip_val       : 1.984954926080997
 
-early_stopping:
-  metric: val/loss
-  patience : 10        # Isensee et al. (2021) Nat Methods
-  min_delta: 0.0001
+callbacks:
+  early_stopping:
+    metric   : val/loss
+    mode     : min
+    patience : 25        # Isensee et al. (2021) Nat Methods
+    min_delta: 0.001
 
+  epoch_tracker:
+    metric : val/dice
+    mode: max
+
+  pruner: 
 # [END]

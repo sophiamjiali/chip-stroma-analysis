@@ -6,6 +6,7 @@
 # Date:             06/03/2026
 # ==============================================================================
 
+import os
 import torch
 import optuna
 
@@ -37,6 +38,9 @@ def main():
         config_path    = pipeline_path,
         version        = args.version
     )
+
+    # Extract the task ID from the SLURM array task
+    task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
     
     # 1. Load workflow and path configurations; sweeps are nested in a folder
     config = load_configs(
@@ -63,7 +67,7 @@ def main():
     # 3. Initialize the sampler and pruner for the trial
     logger.info("Successfully initialized the TPESampler")
     sampler = TPESampler(
-        seed             = config.sweep.data.seed,
+        seed             = config.sweep.data.seed + task_id,
         multivariate     = True,
         n_startup_trials = config.sweep.experiment.n_startup_trials
     )
@@ -152,7 +156,7 @@ def main():
 def parse_args():
     parser = ap.ArgumentParser(description = "Begin a hyperparameter sweep.")
     parser.add_argument("--config_dir", type = str, default = "configs/sweeps/")
-    parser.add_argument("--version", type = str, default = "v1")
+    parser.add_argument("--version",    type = str, default = "v1")
     
     return parser.parse_args()
 

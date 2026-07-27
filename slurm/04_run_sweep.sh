@@ -4,7 +4,8 @@
 #SBATCH --account=kumargroup_gpu
 #SBATCH -p gpu
 #SBATCH --gres=gpu:1
-#SBATCH --time=48:30:00
+#SBATCH --array=0-5
+#SBATCH --time=24:30:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=20G
@@ -23,7 +24,7 @@ source /cluster/home/t144807uhn/envs/chip-stroma-env-gpu/bin/activate
 cd /cluster/home/t144807uhn/chip-stroma-analysis
 
 echo "=========================================="
-echo "Mini Sweep Job ID:  $SLURM_JOB_ID"
+echo "Sweep Job ID:       $SLURM_JOB_ID"
 echo "Job Name:           $1"
 echo "Node:               $SLURMD_NODENAME"
 echo "GPU:                $CUDA_VISIBLE_DEVICES"

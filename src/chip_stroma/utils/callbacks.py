@@ -10,6 +10,7 @@ import shutil
 import optuna
 import json
 import wandb
+import filelock
 
 import lightning.pytorch as pl
 
@@ -155,6 +156,10 @@ def make_checkpoint_callback(checkpoint_dir: Path,
     """Wrapper for study-level callback. Keeps only one checkpoint 
     corresponding to the best (current) trial of the sweep."""
 
+    # Add a file lock to avoid concurrent edits
+    lock_path = checkpoint_dir / Path(group) / ".best_trial.lock"
+    lock_path.parent.mkdir(parents = True, exist_ok = True)
+
     def save_best_after_trial(study: optuna.Study, 
                               trial: optuna.trial.FrozenTrial) -> None:
         """Optuna callback — fires after each trial completes."""
@@ -162,27 +167,29 @@ def make_checkpoint_callback(checkpoint_dir: Path,
         # Skip pruned or failed trials
         if trial.state != optuna.trial.TrialState.COMPLETE: return
 
-        try: best_trial = study.best_trial
-        except ValueError: return
-
         trial_ckpt = checkpoint_dir / Path(group) / f"trial_{trial.number}.ckpt"
 
-        # If the best trial was found, delete all other checkpoint(s)
-        if best_trial.number == trial.number:
-            best_ckpt = checkpoint_dir / Path(group) / "best_trial.ckpt"
-            json_path = checkpoint_dir / Path(group) / "best_trial.json"
-            shutil.copy(trial_ckpt, best_ckpt)
+        # Serialize best-trial comparison + file writes across array workers
+        with filelock.FileLock(str(lock_path), timeout = 60):
+            try: best_trial = study.best_trial
+            except ValueError: return
 
-            with open(json_path, "w") as f:
-                json.dump({
-                    "trial_number": trial.number, 
-                    "params"      : trial.params, 
-                    "val_dice"    : trial.value,
-                    "encoder_name": "resnet34"
-                }, f)
+            # If the best trial was found, delete all other checkpoint(s)
+            if best_trial.number == trial.number:
+                best_ckpt = checkpoint_dir / Path(group) / "best_trial.ckpt"
+                json_path = checkpoint_dir / Path(group) / "best_trial.json"
+                shutil.copy(trial_ckpt, best_ckpt)
 
-        # Delete this trials checkpoint; turned into best-so-far if so
-        trial_ckpt.unlink(missing_ok = True)
+                with open(json_path, "w") as f:
+                    json.dump({
+                        "trial_number": trial.number, 
+                        "params"      : trial.params, 
+                        "val_dice"    : trial.value,
+                        "encoder_name": "resnet34"
+                    }, f)
+
+            # Delete this trials checkpoint; turned into best-so-far if so
+            trial_ckpt.unlink(missing_ok = True)
                 
     return save_best_after_trial
 

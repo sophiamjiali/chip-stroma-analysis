@@ -35,7 +35,8 @@ from chip_stroma.models.loss import (
     MaskedDiceLoss, 
     per_sample_dice,
     boundary_loss,
-    per_sample_surface_dice
+    per_sample_surface_dice,
+    best_dice_threshold
 )
 
 logger = setup_logger(__name__)
@@ -112,6 +113,11 @@ class VesselSegModule(pl.LightningModule):
             per_class          = False,
             input_format       = "index"
         )
+
+        # Accumulators for validation step; dice-optimal threshold
+        self.val_probs    = []
+        self.val_targets  = []
+        self.val_fg_probs = []
         
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -144,18 +150,20 @@ class VesselSegModule(pl.LightningModule):
 
         # Loss is FTL + Dice composite weighted by ftl_weight
         f_w = float(self.hparams['ftl_weight'])
-        loss = (
-            f_w * self.ftl(logits_sq, vessel_mask, tissue_mask) +
-            (1 - f_w) * self.dice_loss(logits_sq, vessel_mask, tissue_mask)
-        )
+        ftl_loss = self.ftl(logits_sq, vessel_mask, tissue_mask)
+        dice_loss = self.dice_loss(logits_sq, vessel_mask, tissue_mask)
+        loss = f_w * ftl_loss + (1 - f_w) * dice_loss
 
         # Boundary loss aded once its ramp weight is greater than zero
+        bl_loss = torch.tensor(0.0, device = logits_sq.device)
         if self.bl_weight > 0:
             probs    = torch.sigmoid(logits_sq) * tissue_mask
             dist_map = compute_dist_map(vessel_mask) * tissue_mask
-            loss     = loss + self.bl_weight * boundary_loss(probs, dist_map)
+            fg_mask  = vessel_mask * tissue_mask
+            bl_loss  = boundary_loss(probs, dist_map, fg_mask)
+            loss     = loss + self.bl_weight * bl_loss
 
-        return loss, logits_sq, vessel_mask
+        return loss, logits_sq, vessel_mask, ftl_loss, bl_loss
 
     # =====| Training Step |====================================================
 
@@ -179,10 +187,14 @@ class VesselSegModule(pl.LightningModule):
         """Log training loss and log X steps if toggled."""
 
         global last_log_time
-        loss, _, vessel_mask = self._shared_step(batch)
+        loss, _, vessel_mask, ftl_loss, bl_loss = self._shared_step(batch)
 
         self.log('train/loss', loss, on_step = True, on_epoch = True,
                  prog_bar = False, batch_size = vessel_mask.shape[0])
+        self.log('train/ftl_loss', ftl_loss, on_step = False, on_epoch = True,
+                 batch_size = vessel_mask.shape[0])
+        self.log('train/bl_loss', bl_loss, on_step = False, on_epoch = True,
+                 batch_size = vessel_mask.shape[0])
 
         # Log every X steps
         if LOG_TRAIN_STEP:
@@ -213,10 +225,11 @@ class VesselSegModule(pl.LightningModule):
     # =====| Validation Step |==================================================
     
     def validation_step(self, batch: dict, batch_idx: int) -> None:
-        loss, logits_sq, vessel_mask = self._shared_step(batch)
+        loss, logits_sq, vessel_mask, _, _ = self._shared_step(batch)
 
         # Hard predictions for metric computation
-        preds       = (torch.sigmoid(logits_sq) > 0.5).long()
+        probs       = torch.sigmoid(logits_sq)
+        preds       = (probs > 0.5).long()
         sample_ids  = batch['sample_id']
         tissue_mask = batch['tissue_mask'].long()
 
@@ -224,12 +237,21 @@ class VesselSegModule(pl.LightningModule):
         preds_m       = preds * tissue_mask
         vessel_mask_m = vessel_mask * tissue_mask
 
+        # Capture fore-ground probabilitiy
+        foreground_bool = vessel_mask_m.bool()
+        if foreground_bool.any(): 
+            self.val_fg_probs.append(probs[foreground_bool].detach().cpu())
+
         # Guard against empty-union samples (no positive pixels in preds/target)
         has_signal = vessel_mask_m.sum(dim = (1, 2)) > 0
         if not has_signal.any():
             self.log('val/loss', loss, on_step = False, on_epoch = True,
                      batch_size = preds.shape[0])
             return
+
+        # Accumulate raw probabilities/targets for threshold sweep
+        self.val_probs.append(probs[has_signal].detach().cpu())
+        self.val_targets.append(vessel_mask_m[has_signal].detach().cpu())
 
         # Extract signal and one-hot versions for metric computation
         preds_s, target_s = preds_m[has_signal], vessel_mask_m[has_signal]
@@ -273,6 +295,19 @@ class VesselSegModule(pl.LightningModule):
 
     def on_validation_epoch_end(self) -> None:
 
+        # Mean foreground probability (collapse early-warning signal)
+        if self.val_fg_probs:
+            mean_fg_prob = torch.cat(self.val_fg_probs).mean()
+            self.log('val/mean_fg_prob', mean_fg_prob, prog_bar = False)
+
+        # Dice-optimal threshold sweep
+        if self.val_probs:
+            all_probs = torch.cat(self.val_probs)
+            all_targets = torch.cat(self.val_targets)
+            best_thresh, best_dice = best_dice_threshold(all_probs, all_targets)
+            self.log('val/best_threshold', best_thresh, prog_bar = False)
+            self.log('val/best_dice_at_threshold', best_dice, prog_bar = False)
+
         # Macro reduction; nanmean within samples, then across samples
         val_dice     , val_dice_std = macro(self.val_sample_dice)
         val_nsd      , val_nsd_std  = macro(self.val_sample_nsd)
@@ -313,6 +348,10 @@ class VesselSegModule(pl.LightningModule):
                   self.val_sample_iou, self.val_sample_precision, 
                   self.val_sample_recall):
             d.clear()
+
+        self.val_probs.clear()
+        self.val_fg_probs.clear()
+        self.val_targets.clear()
 
         self.val_iou_micro.reset()
         self.val_precision_micro.reset()

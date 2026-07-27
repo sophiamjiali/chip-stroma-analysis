@@ -84,12 +84,16 @@ class FocalTverskyLoss(nn.Module):
 # =====| Boundary Loss |========================================================
 
 def boundary_loss(pred_probs: torch.Tensor, 
-                  dist_map:   torch.Tensor) -> torch.Tensor:
+                  dist_map  : torch.Tensor,
+                  fg_mask   : torch.Tensor,
+                  eps       : float = 1e-6) -> torch.Tensor:
     """
     Kervadec et al. 2019 boundary loss: penalizes pred mass weighted by 
-    distance from GT boundary.
+    distance from GT boundary. Normalized by foreground pixel count to 
+    prevent background pixel volume from dominating the gradient signal.
     """
-    return (pred_probs * dist_map).mean()
+    per_pixel = pred_probs * dist_map
+    return per_pixel.sum() / (fg_mask.sum() + eps)
 
 # =====| Dice Loss |============================================================
 
@@ -122,6 +126,7 @@ class MaskedDiceLoss(nn.Module):
 
 def dice_score(pred, true, eps=1e-8):
     """Per-sample Dice; smooth in denominator only."""
+    
     dims = tuple(range(1, pred.ndim))
     intersection = (pred * true).sum(dim=dims)
     denom = pred.sum(dim=dims) + true.sum(dim=dims)
@@ -170,5 +175,24 @@ def per_sample_surface_dice(y_pred, y, tolerance, spacing_mm = (1.0, 1.0)):
         )
         out.append(compute_surface_dice_at_tolerance(sd, tolerance))
     return torch.tensor(out)
+
+
+def best_dice_threshold(probs     : torch.Tensor, 
+                        targets   : torch.Tensor,
+                        thresholds: torch.Tensor = torch.linspace(0.1, 0.9, 17)
+                        ) -> tuple[float, float]:
+    """
+    Sweep thresholds, return (best_threshold, best_dice) over full accumulated 
+    val set.
+    """
+
+    best_t, best_d = 0.5, -1.0
+    for t in thresholds:
+        pred  = (probs > t).float()
+        inter = (pred * targets).sum()
+        dice  = (2 * inter / (pred.sum() + targets.sum() + 1e-6)).item()
+        if dice > best_d:
+            best_t, best_d = t.item(), dice
+    return best_t, best_d
     
 # [END]

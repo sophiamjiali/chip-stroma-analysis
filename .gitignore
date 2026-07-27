@@ -3,7 +3,6 @@
 .env
 /outputs/
 /results/
-studies/
 checkpoints/
 /.vscode/
 /.DS_Store

@@ -25,8 +25,8 @@ def initialize_study(version: str,
     """Initializes or loads an Optuna study."""
 
     # First detect if the database was already initialized
-    storage = f"sqlite:///{studies_dir}/{version}.db"
-    if Path(storage).exists(): 
+    storage_path = Path(f"{studies_dir}/{version}.db")
+    if storage_path.exists(): 
         logger.info("Detected Optuna study database, loading existing study")
     else:
         logger.info("Optuna study database not found, initializing new study")
@@ -48,7 +48,7 @@ def initialize_study(version: str,
 
     study = optuna.create_study(
         study_name     = version,
-        storage        = storage,
+        storage        = f"sqlite:///{storage_path}",
         direction      = "maximize",
         sampler        = sampler,
         pruner         = pruner,

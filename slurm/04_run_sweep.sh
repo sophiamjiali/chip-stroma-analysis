@@ -18,7 +18,7 @@ sbatch \
     --dependency=afterok:$jid1 \
     --array=0-17%6 \
     --job-name=$1 \
-    05a_submit_multiseed.sh $1
+    04b_submit_sweep.sh $1
 
 echo "=========================================="
 echo "End time: $(date)"

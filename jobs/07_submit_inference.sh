@@ -26,7 +26,6 @@ SLURM_PATH=$PROJECT_ROOT/slurm/$SLURM_SCRIPT
 mkdir -p $LOG_DIR
 
 echo "=========================================="
-echo "Job ID:        $SLURM_JOB_ID"
 echo "Pipeline Step: Inference"
 echo "Slurm Script:  $SLURM_SCRIPT"
 echo "Version:       $VERSION"

@@ -17,6 +17,7 @@ source /cluster/home/t144807uhn/envs/chip-stroma-env-gpu/bin/activate
 cd /cluster/home/t144807uhn/chip-stroma-analysis
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo "Job ID:        $SLURM_JOB_ID"
 echo "Node:       $SLURMD_NODENAME"
 echo "GPU:        $CUDA_VISIBLE_DEVICES"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"

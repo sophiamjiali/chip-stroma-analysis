@@ -1,0 +1,22 @@
+# ==============================================================================
+# Script:           pipeline.yaml
+# Purpose:          General pipeline configurations
+# Author:           Sophia Mengjia Li
+# Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
+# Date:             07/28/2026
+# ==============================================================================
+
+steps:
+  setup_env      : 00
+  preprocess     : 01
+  fold_assignment: 02
+  train          : 03
+  sweep          : 04
+  multiseed      : 05
+  full_cv        : 06
+  inference      : 07
+  evaluate       : 08
+  visualize      : 09
+  quantify       : 10
+
+# [END]

@@ -8,6 +8,8 @@
 
 import optuna
 
+from optuna.storages import JournalStorage
+from optuna.storages.journal import JournalFileBackend
 from pathlib import Path
 from optuna.pruners import MedianPruner
 from optuna.samplers import TPESampler
@@ -17,19 +19,22 @@ from chip_stroma.utils.loggers import setup_logger
 logger = setup_logger(__name__)
 
 
-def initialize_study(version: str,
-                     seed: int,
+def initialize_study(version         : str,
+                     seed            : int,
                      n_startup_trials: int,
-                     n_warmup_steps: int,
-                     studies_dir: Path) -> optuna.Study:
+                     n_warmup_steps  : int,
+                     studies_dir     : Path) -> optuna.Study: 
     """Initializes or loads an Optuna study."""
 
     # First detect if the database was already initialized
-    storage_path = Path(f"{studies_dir}/{version}.db")
+    storage_path = Path(f"{studies_dir}/{version}.log")
+    storage_path.parent.mkdir(parents = True, exist_ok = True)
+
+
     if storage_path.exists(): 
-        logger.info("Detected Optuna study database, loading existing study")
+        logger.info("Detected Optuna journal log, loading existing study")
     else:
-        logger.info("Optuna study database not found, initializing new study")
+        logger.info("Optuna journal log not found, initializing new study")
 
     
     sampler = TPESampler(
@@ -46,9 +51,11 @@ def initialize_study(version: str,
     )
     logger.info("Successfully initialized the MedianPruner")
 
+    storage = JournalStorage(JournalFileBackend(str(storage_path)))
+
     study = optuna.create_study(
         study_name     = version,
-        storage        = f"sqlite:///{storage_path}",
+        storage        = storage,
         direction      = "maximize",
         sampler        = sampler,
         pruner         = pruner,

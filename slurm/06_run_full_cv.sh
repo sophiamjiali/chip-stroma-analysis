@@ -10,7 +10,7 @@ VERSION=$1
 source "$(dirname "$0")/../.env"
 
 echo "=========================================="
-echo "Job Name:        05_run_multiseed.sh"
+echo "Job Name:        06_run_full_cv.sh"
 echo "Number of Folds: $N_FOLDS"
 echo "Start time:      $(date)"
 echo "=========================================="
@@ -21,7 +21,7 @@ cd /cluster/home/t144807uhn/chip-stroma-analysis/slurm
 ARRAY_JOBID=$(sbatch \
     --parsable \
     --array=0-$((N_FOLDS-1)) \
-    --job-name="${VERSION}_fgull_cv" \
+    --job-name="${VERSION}_full_cv" \
     06a_submit_full_cv.sh \
     $PROJECT_ROOT \
     $VERSION)

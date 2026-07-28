@@ -29,7 +29,6 @@ def infer_fold(model: torch.nn.Module,
 
     with torch.no_grad():
         for batch in dataloader:
-            logger.info("Processing a batch...")
             
             # Fetch all information returned from the patch dataset
             images       = batch['patch'].to(device)

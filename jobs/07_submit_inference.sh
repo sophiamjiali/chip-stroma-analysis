@@ -34,7 +34,7 @@ echo "Start        : $(date)"
 echo "=========================================="
 
 sbatch \
-    --job-name=$VERSION_inference \
+    --job-name=${VERSION}_inference \
     --output=$PROJECT_ROOT/$LOG_DIR/%x_%j.out \
     --error=$PROJECT_ROOT/$LOG_DIR/%x_%j.err \
     $SLURM_PATH \

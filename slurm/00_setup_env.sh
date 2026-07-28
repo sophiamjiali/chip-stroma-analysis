@@ -19,3 +19,5 @@ export PYTORCH_ENABLE_MPS_FALLBACK=0
 
 # Point to the pre-downloaded Resnet34 imagenet weights
 export TORCH_HOME="$HOME/.cache/torch"
+
+echo "Successfully initialized standardized SLURM environment"

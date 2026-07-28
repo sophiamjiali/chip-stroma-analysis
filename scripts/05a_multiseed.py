@@ -61,13 +61,13 @@ def main():
 
     # Submit model training in a SLURM array
     trial_idx = args.task_id // n_seeds
-    seed = args.task_id % n_seeds
-    trial = top_trials[trial_idx]
+    seed      = args.task_id % n_seeds
+    trial     = top_trials[trial_idx]
 
     trial_params = Box(deepcopy(trial.params), frozen = False)
 
     # Resolve trial parameters with constants from the original config.
-    sweep_path = Path(args.config_dir) / "sweeps" / f"{args.version}.yaml"
+    sweep_path   = Path(args.config_dir) / "sweeps" / f"{args.version}.yaml"
     sweep_params = Box(load_config(sweep_path), frozen_box = True)
 
     trial_params = resolve_params(trial_params, sweep_params)

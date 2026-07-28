@@ -32,6 +32,7 @@ module:
   bl_weight_target: 0.0              # Independent of ftl_weight
   bl_ramp_epochs  : 0
   smooth          : 1.0
+  nsd_tolerance   : 2.0
  
 trainer:
   max_epochs              : 60

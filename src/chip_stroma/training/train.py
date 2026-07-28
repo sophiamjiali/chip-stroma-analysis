@@ -91,15 +91,18 @@ def train(manifest: pd.DataFrame,
 
     logger.info("Successfully initialized the LightningModule")
     lit_module = VesselSegModule(
-        model = model,
-        lr           = params.module.lr,
-        weight_decay = params.module.weight_decay,
-        T_max        = params.trainer.max_epochs,
-        ftl_alpha    = params.module.ftl_alpha,
-        ftl_beta     = 1 - params.module.ftl_alpha,
-        ftl_gamma    = params.module.ftl_gamma,
-        ftl_weight   = params.module.ftl_weight,
-        smooth       = params.module.smooth
+        model            = model,
+        lr               = params.module.lr,
+        weight_decay     = params.module.weight_decay,
+        T_max            = params.trainer.max_epochs,
+        ftl_alpha        = params.module.ftl_alpha,
+        ftl_beta         = 1 - params.module.ftl_alpha,
+        ftl_gamma        = params.module.ftl_gamma,
+        ftl_weight       = params.module.ftl_weight,
+        smooth           = params.module.smooth,
+        nsd_tolerance    = params.module.nsd_tolerance,
+        bl_weight_target = params.module.bl_weight_target,
+        bl_ramp_epochs   = params.module.bl_ramp_epochs
     )
 
     logger.info("=" * 50)
@@ -212,15 +215,18 @@ def run_seed(manifest       : pd.DataFrame,
 
     logger.info("Successfully initialized the LightningModule")
     lit_module = VesselSegModule(
-        model = model,
-        lr           = trial_params['lr'],
-        weight_decay = trial_params['weight_decay'],
-        T_max        = trial_params['max_epochs'],
-        ftl_alpha    = trial_params['ftl_alpha'],
-        ftl_beta     = 1 - trial_params['ftl_alpha'],
-        ftl_gamma    = trial_params['ftl_gamma'],
-        ftl_weight   = trial_params['ftl_weight'],
-        smooth       = trial_params['smooth']
+        model            = model,
+        lr               = trial_params['lr'],
+        weight_decay     = trial_params['weight_decay'],
+        T_max            = trial_params['max_epochs'],
+        ftl_alpha        = trial_params['ftl_alpha'],
+        ftl_beta         = 1 - trial_params['ftl_alpha'],
+        ftl_gamma        = trial_params['ftl_gamma'],
+        ftl_weight       = trial_params['ftl_weight'],
+        smooth           = trial_params['smooth'],
+        nsd_tolerance    = trial_params['nsd_tolerance'],
+        bl_weight_target = trial_params['bl_weight_target'],
+        bl_ramp_epochs   = trial_params['bl_ramp_epochs']
     )
 
     logger.info("=" * 50)

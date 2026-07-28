@@ -18,7 +18,7 @@ source "$(dirname "$0")/../.env"
 
 # Build the primary paths for job submission
 VERSION=${1:? "Usage: $0 <version>"}
-LOG_DIR=$LOG_ROOT/inference/$VERSION
+LOG_DIR=inference/$VERSION
 SLURM_SCRIPT="07_run_inference.sh"
 SLURM_PATH=$PROJECT_ROOT/slurm/$SLURM_SCRIPT
 
@@ -27,16 +27,16 @@ mkdir -p $LOG_DIR
 
 echo "=========================================="
 echo "Pipeline Step: Inference"
-echo "Slurm Script:  $SLURM_SCRIPT"
-echo "Version:       $VERSION"
-echo "Log Directory: $PROJECT_ROOT"
-echo "Start:         $(date)"
+echo "Slurm Script : $SLURM_SCRIPT"
+echo "Version      : $VERSION"
+echo "Log Directory: $LOG_DIR"
+echo "Start        : $(date)"
 echo "=========================================="
 
 sbatch \
-    --job-name=inference \
-    --output=$LOG_DIR/%x_%j.out \
-    --error=$LOG_DIR/%x_%j.err \
+    --job-name=$VERSION_inference \
+    --output=$PROJECT_ROOT/$LOG_DIR/%x_%j.out \
+    --error=$PROJECT_ROOT/$LOG_DIR/%x_%j.err \
     $SLURM_PATH \
     $VERSION
 

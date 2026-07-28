@@ -33,14 +33,14 @@ logger = setup_logger(__name__)
 def main():
     args = parse_args()
     log_header(
-        pipeline_stage = "Evaluation",
-        config_path    = Path(args.config_dir) / "07_evaluate.yaml",
+        pipeline_stage = "Inference",
+        config_path    = Path(args.config_dir) / "07_inference.yaml",
         version        = args.version
     )
 
     # Load workflow and path configurations
     config = load_configs(
-        pipeline = Path(args.config_dir) / "07_evaluate.yaml",
+        pipeline = Path(args.config_dir) / "07_inference.yaml",
         paths    = Path(args.config_dir) / "00_paths.yaml"
     )
 
@@ -56,15 +56,23 @@ def main():
         patch_manifest_path = config.paths.metadata.patch_manifest
     )
     
-    # Loop over all folds for full-CV models (or specify one fold)
-    folds = ([config.inference.n_folds] if args.val_fold_only 
-             else range(config.inference.n_folds))
+    # Loop over all folds for full-CV models (or only one fold)
+    if args.single_model: 
+        logger.info("Performing inference on a single model")
+        logger.info(f"Detected fold: {config.inference.n_folds}")
+        folds = [config.inference.n_folds]
+    else:
+        logger.info("Performing inference on full cross-validated models")
+        folds = range(config.inference.n_folds)
+        
     
     for fold in folds:
         logger.info(f"Running inference on fold {fold}")
 
         # Load the fold's final CV model 
-        ckpt_path = ckpt_dir / f"fold_{fold}.ckpt"
+        if args.single_model: ckpt_path = ckpt_dir / "best_trial.ckpt"
+        else: ckpt_path = ckpt_dir / f"fold_{fold}.ckpt"
+
         model = build_model(
             encoder_name    = config.inference.model.encoder_name,
             encoder_weights = config.inference.model.encoder_weights,
@@ -102,7 +110,8 @@ def main():
         patch_metrics['fold'] = fold
         
         # Save raw artifacts without aggregation (08_evaluate)
-        fold_dir = dst_dir / f"fold_{fold}"
+        if args.single_model: fold_dir = dst_dir
+        else: fold_dir = dst_dir / f"fold_{fold}"
         fold_dir.mkdir(parents = True, exist_ok = True)
 
         patch_metrics.to_csv(fold_dir / "patch_metrics.csv", index = False)
@@ -123,7 +132,7 @@ def parse_args():
     parser = ap.ArgumentParser(description = "Model evaluation.")
     parser.add_argument("--config_dir", type = str, default = "configs/")
     parser.add_argument("--version", type = str)
-    parser.add_argument("--val_fold_only", action = "store_true")
+    parser.add_argument("--single_model", action = "store_true")
     
     return parser.parse_args()
 

@@ -69,6 +69,7 @@ def objective(trial:    Trial,
     trial_params = suggest_optimizer(params     = trial_params, trial = trial)
     trial_params = suggest_focal_loss(params    = trial_params, trial = trial)
     trial_params = suggest_boundary_loss(params = trial_params, trial = trial)
+    trial_params = suggest_nsd(params           = trial_params, trial = trial)
     trial_params = suggest_sampler(params       = trial_params, trial = trial)
     trial_params = suggest_trainer(params       = trial_params, trial = trial)
 
@@ -170,6 +171,19 @@ def suggest_boundary_loss(params: Box, trial: Trial) -> Box:
 
     logger.info("Successfully suggested weight target and ramping epochs "
                 "values for Boundary Loss")
+    return params
+
+
+def suggest_nsd(params: Box, trial: Trial) -> Box:
+    """Provides in-place suggestions for NSD tolerance."""
+
+    params.module.nsd_tolerance = (
+        trial.suggest_float("nsd_tolerance", *params.module.nsd_tolerance)
+        if isinstance(params.module.nsd_tolerance, (list, tuple))
+        else params.module.nsd_tolerance
+    )
+
+    logger.info("Successfully suggested NSD tolerance")
     return params
 
 

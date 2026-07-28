@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Activate the virtual environment
-export LD_LIBRARY_PATH=/cluster/home/t111631uhn/miniconda3/lib:$LD_LIBRARY_PATH
 source /cluster/home/t144807uhn/envs/chip-stroma-env-gpu/bin/activate
 
 # Ensure that all commands resolve back to the proper root directory

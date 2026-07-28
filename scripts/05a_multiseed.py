@@ -74,9 +74,10 @@ def main():
 
 
 
-    # ad-hoc add the missing parameters, for now...
-    trial_params.nsd_tolerance = 2.5
+    
 
+    trial_params['nsd_tolerance'] = 2.5
+    assert 'nsd_tolerance' in trial_params, trial_params
 
     
 

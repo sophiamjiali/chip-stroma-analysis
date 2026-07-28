@@ -66,21 +66,19 @@ def main():
 
     trial_params = Box(deepcopy(trial.params), frozen = False)
 
-
-
-    # ad-hoc add the missing parameters, for now...
-    trial_params['nsd_tolerance'] = 2.5
-
-
-
-
-
-
     # Resolve trial parameters with constants from the original config.
     sweep_path   = Path(args.config_dir) / "sweeps" / f"{args.version}.yaml"
     sweep_params = Box(load_config(sweep_path), frozen_box = True)
 
     trial_params = resolve_params(trial_params, sweep_params)
+
+
+
+    # ad-hoc add the missing parameters, for now...
+    trial_params.nsd_tolerance = 2.5
+
+
+    
 
     group = f"{args.version}_multiseed"
     result = run_seed(

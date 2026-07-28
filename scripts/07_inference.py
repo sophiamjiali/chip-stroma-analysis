@@ -47,8 +47,8 @@ def main():
     # Initialize version results directory and checkpoints (full CV models)
     dst_dir  = Path(config.paths.results) / args.version / "inference"
 
-    if args.single_model: ckpt_dir = Path(config.paths.checkpoints.full_cv)
-    else: ckpt_dir = Path(config.paths.checkpoints.sweep)
+    if args.single_model: ckpt_dir = Path(config.paths.checkpoints.sweep)
+    else: ckpt_dir = Path(config.paths.checkpoints.full_cv)
     ckpt_dir = ckpt_dir / args.version
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

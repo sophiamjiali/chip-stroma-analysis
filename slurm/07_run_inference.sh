@@ -11,9 +11,13 @@
 
 set -euo pipefail
 
+# Extract command-line arguments for clarity
+PROJECT_ROOT=$1
+VERSION=$2
+
 # Initialize the standardized environment
-source "$(dirname "$0")/../.env"
-source $PROJECT_ROOT/slurm/00_setup_env.sh
+source ${PROJECT_ROOT}/.env
+source ${PROJECT_ROOT}/slurm/00_setup_env.sh
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo "Job ID:     $SLURM_JOB_ID"
@@ -23,7 +27,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 srun --export=ALL python -u scripts/07_inference.py \
     --config_dir $CONFIG_DIR \
-    --version $1 \
+    --version $VERSION \
     --single_model
 
 # [END]

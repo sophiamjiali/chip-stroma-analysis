@@ -38,6 +38,7 @@ sbatch \
     --output=${LOG_ROOT}/${LOG_DIR}/${VERSION}_%j.out \
     --error=${LOG_ROOT}/${LOG_DIR}/${VERSION}_%j.err \
     $SLURM_PATH \
+    $PROJECT_ROOT \
     $VERSION
 
 echo "=========================================="

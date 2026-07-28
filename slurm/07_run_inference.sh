@@ -9,6 +9,8 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=sophiamjia.li@mail.utoronto.ca
 
+set -euo pipefail
+
 # Initialize the standardized environment
 source "$(dirname "$0")/../.env"
 source $PROJECT_ROOT/slurm/00_setup_env.sh
@@ -19,7 +21,7 @@ echo "Node:       $SLURMD_NODENAME"
 echo "GPU:        $CUDA_VISIBLE_DEVICES"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-srun python -u scripts/07_inference.py \
+srun --export=ALL python -u scripts/07_inference.py \
     --config_dir $CONFIG_DIR \
     --version $1 \
     --single_model

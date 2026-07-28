@@ -35,8 +35,8 @@ echo "=========================================="
 
 sbatch \
     --job-name=${VERSION}_inference \
-    --output=${PROJECT_ROOT}/${LOG_DIR}/${VERSION}_%j.out \
-    --error=${PROJECT_ROOT}/${LOG_DIR}/${VERSION}_%j.err \
+    --output=${LOG_ROOT}/${LOG_DIR}/${VERSION}_%j.out \
+    --error=${LOG_ROOT}/${LOG_DIR}/${VERSION}_%j.err \
     $SLURM_PATH \
     $VERSION
 

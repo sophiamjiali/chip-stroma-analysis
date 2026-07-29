@@ -84,7 +84,7 @@ def main():
     )
 
     # Aggregate mean/std Dice across folds as an unbiased generalized estimate
-    result = pd.DataFrame(result)
+    result = pd.DataFrame(result, index = [0])
     out_dir = config.paths.results / args.version / "full_cv_tasks"
     out_dir.mkdir(parents = True, exist_ok = True)
 

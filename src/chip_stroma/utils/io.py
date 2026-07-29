@@ -178,8 +178,8 @@ def initialize_train_manifest(train_path: Path,
 
     logger.info("=" * 50)
     logger.info("Step 02: Train Manifest")
-    logger.info(f"- Train Manifest Path : {train_path.relative_to(Path.cwd())}")
-    logger.info(f"- Patch Manifest Path : {patch_path.relative_to(Path.cwd())}")
+    logger.info(f"- Train Manifest Path : {train_path}")
+    logger.info(f"- Patch Manifest Path : {patch_path}")
     logger.info("-" * 50)
 
     if train_path.exists(): 

@@ -31,7 +31,6 @@ PY
 
 # Build the primary paths for job submission
 LOG_DIR="${STEP_NAME}/${VERSION}"
-SLURM_PATH="${PROJECT_ROOT}/slurm/${SLURM_SCRIPT}"
 
 # Make the project-specific logs directory
 mkdir -p $LOG_DIR

@@ -50,7 +50,7 @@ def main():
 
     # 3. Resolve the final configuration from multi-seed confirmation
     trial_params, trial_num = select_final_config(config, args.version)
-    sweep_path = Path(args.config_dir) / "sweeps" / f"{args.version}.yaml"
+    sweep_path   = Path(args.config_dir) / "sweeps" / f"{args.version}.yaml"
     sweep_params = Box(load_config(sweep_path), frozen_box = True)
 
     trial_params = resolve_params(trial_params, sweep_params)

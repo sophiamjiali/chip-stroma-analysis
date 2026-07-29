@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 # ==============================================================================
-# Script:           07_submit_inference.sh
-# Purpose:          Wrapper to submit the inference workflow step
+# Script:           submit_job.sh
+# Purpose:          Wrapper to submit a non-orchestrated workflow step
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
 # Date:             07/28/2026

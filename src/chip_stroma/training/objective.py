@@ -83,6 +83,7 @@ def objective(trial:    Trial,
         paths    = paths,
         params   = trial_params,
         seed     = seed,
+        ckpt_dir = paths.checkpoints.sweep,
         trial    = trial
     )
 

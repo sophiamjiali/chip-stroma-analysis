@@ -48,6 +48,7 @@ def main():
         paths    = config.paths,
         params   = config.train,
         seed     = config.train.data.seed,
+        ckpt_dir = config.paths.checkpoints.train,
         trial    = None
     )
 

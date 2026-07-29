@@ -31,12 +31,13 @@ logging.getLogger("lightning.pytorch").setLevel(logging.ERROR)
 
 
 def train(manifest: pd.DataFrame,
-          project: str,
-          group: str,
-          paths: Box,
-          params: Box,
-          seed: int,
-          trial = None) -> dict:
+          project : str,
+          group   : str,
+          paths   : Box,
+          params  : Box,
+          seed    : int,
+          ckpt_dir: Path,
+          trial   = None) -> dict: 
     """
     Reusable training function for single runs and Optuna sweeps.
 
@@ -152,7 +153,7 @@ def train(manifest: pd.DataFrame,
         # Save the checkpoint; both for train and sweep protocols
         ckpt_name = (f"trial_{trial.number}.ckpt" if trial is not None 
                      else "single_run.ckpt")
-        ckpt_path = paths.checkpoints.train / Path(group) / ckpt_name
+        ckpt_path = ckpt_dir / Path(group) / ckpt_name
         ckpt_path.parent.mkdir(parents = True, exist_ok = True)
 
         # SaveBestAfterTrial callback will maintain only one checkpoint

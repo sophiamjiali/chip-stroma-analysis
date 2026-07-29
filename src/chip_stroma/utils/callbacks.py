@@ -152,7 +152,7 @@ class BestEpochTracker(pl.Callback):
 # =====| Checkpointing |========================================================
 
 def make_checkpoint_callback(checkpoint_dir: Path,
-                             group: str):
+                             group         : str):
     """Wrapper for study-level callback. Keeps only one checkpoint 
     corresponding to the best (current) trial of the sweep."""
 

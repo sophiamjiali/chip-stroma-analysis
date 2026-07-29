@@ -52,8 +52,8 @@ def main():
 
     # 2. Verify that the training manifest was created, else create it
     manifest = initialize_train_manifest(
-        train_manifest_path = config.paths.metadata.train_manifest,
-        patch_manifest_path = config.paths.metadata.patch_manifest
+        train_path = config.paths.metadata.train_manifest,
+        patch_path = config.paths.metadata.patch_manifest
     )
 
     logger.info("=" * 50)

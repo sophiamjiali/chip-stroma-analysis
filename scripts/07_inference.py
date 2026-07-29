@@ -55,8 +55,8 @@ def main():
     
     # Load the validation fold as a dataset
     manifest = initialize_train_manifest(
-        train_manifest_path = config.paths.metadata.train_manifest,
-        patch_manifest_path = config.paths.metadata.patch_manifest
+        train_path = config.paths.metadata.train_manifest,
+        patch_path = config.paths.metadata.patch_manifest
     )
     
     # Loop over all folds for full-CV models (or only one fold)
@@ -133,8 +133,8 @@ def main():
 
 def parse_args():
     parser = ap.ArgumentParser(description = "Model evaluation.")
-    parser.add_argument("--config_dir", type = str, default = "configs/")
-    parser.add_argument("--version", type = str)
+    parser.add_argument("--config_dir",   type = str, default = "configs/")
+    parser.add_argument("--version",      type = str)
     parser.add_argument("--single_model", action = "store_true")
     
     return parser.parse_args()

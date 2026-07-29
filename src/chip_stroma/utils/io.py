@@ -203,11 +203,15 @@ def initialize_train_manifest(train_path: Path,
     return manifest
 
 
-def load_all_fold_patch_metrics(src_dir: Path, 
-                                n_folds: int) -> pd.DataFrame:
+def load_all_fold_patch_metrics(src_dir     : Path, 
+                                n_folds     : int,
+                                single_model: bool) -> pd.DataFrame:
     """
     Concatenates all patch_metric.csv across all folds from inference step.
     """
+
+    # If a single model was indicated, directly load its patch metrics
+    if single_model: return pd.read_csv(src_dir / "patch_metrics.csv")
 
     metrics = [pd.read_csv(src_dir / f"fold_{f}" / "patch_metrics.csv") 
                for f in range(n_folds)]

@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script:           evaluate.py
+# Script:           08_evaluate.py
 # Purpose:          Model evaluation on the validation fold
 # Author:           Sophia Mengjia Li
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
@@ -55,8 +55,9 @@ def main():
 
     # 1. Compute per-patient segmentation metrics, per fold
     predictions = load_all_fold_patch_metrics(
-        src_dir = inference_dir,
-        n_folds = n_folds
+        src_dir      = inference_dir,
+        n_folds      = n_folds,
+        single_model = args.single_model
     )
 
     fold_metrics = per_fold_metrics(predictions)
@@ -114,8 +115,9 @@ def main():
 
 def parse_args():
     parser = ap.ArgumentParser(description = "Model evaluation.")
-    parser.add_argument("--config_dir", type = str, default = "configs/")
-    parser.add_argument("--version", type = str)
+    parser.add_argument("--config_dir",   type = str, default = "configs/")
+    parser.add_argument("--version",      type = str)
+    parser.add_argument("--single_model", action = "store_true")
     
     return parser.parse_args()
 

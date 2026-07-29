@@ -1,6 +1,4 @@
 #!/bin/bash
-#SBATCH --output=/cluster/home/t144807uhn/logs/chip-stroma-analysis/multiseed/%x/aggregate_%j.out
-#SBATCH --error=/cluster/home/t144807uhn/logs/chip-stroma-analysis/multiseed/%x/aggregate_%j.err
 #SBATCH --time=00:15:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
@@ -8,27 +6,26 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=sophiamjia.li@mail.utoronto.ca
 
-# Make the project-specific logs directory
-mkdir -p /cluster/home/t144807uhn/logs/chip-stroma-analysis/multiseed/$1
+set -euo pipefail
 
-# Activate the virtual environment
-export LD_LIBRARY_PATH=/cluster/home/t111631uhn/miniconda3/lib:$LD_LIBRARY_PATH
-source /cluster/home/t144807uhn/envs/chip-stroma-env-gpu/bin/activate
+# Extract command-line arguments for clarity
+PROJECT_ROOT=$1
+VERSION=$2
 
-# Ensure that all commands resolve back to the proper root directory
-cd /cluster/home/t144807uhn/chip-stroma-analysis
+# Initialize the standardized environment
+source ${PROJECT_ROOT}/.env
+source ${PROJECT_ROOT}/slurm/00_setup_env.sh
 
-echo "=========================================="
-echo "Job ID:             $SLURM_JOB_ID"
-echo "Job Name:           $1"
-echo "Node:               $SLURMD_NODENAME"
-echo "Start time:         $(date)"
-echo "=========================================="
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo "Job ID:     $SLURM_JOB_ID"
+echo "Node:       $SLURMD_NODENAME"
+echo "GPU:        $CUDA_VISIBLE_DEVICES"
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 python scripts/05b_aggregate_multiseed.py \
     --config_dir configs/ \
     --version $1
 
-echo "=========================================="
-echo "End time: $(date)"
-echo "=========================================="
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+# [END]

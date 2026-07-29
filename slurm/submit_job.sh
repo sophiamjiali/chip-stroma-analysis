@@ -32,7 +32,7 @@ PY
 )
 
 # Build the primary paths for job submission
-LOG_DIR="${STEP_NAME}/${VERSION}"
+LOG_DIR="${LOG_ROOT}/${STEP_NAME}/${VERSION}"
 SLURM_SCRIPT="${STEP_NUMBER}_run_${STEP_NAME}.sh"
 SLURM_PATH="${PROJECT_ROOT}/slurm/${SLURM_SCRIPT}"
 
@@ -50,8 +50,8 @@ echo "=========================================="
 # Pass in the project root as $1, and version as $2
 sbatch \
     --job-name=${VERSION}_${STEP_NAME} \
-    --output=${LOG_ROOT}/${LOG_DIR}/${VERSION}_%j.out \
-    --error=${LOG_ROOT}/${LOG_DIR}/${VERSION}_%j.err \
+    --output=${LOG_DIR}/${VERSION}_%j.out \
+    --error=${LOG_DIR}/${VERSION}_%j.err \
     $SLURM_PATH \
     $PROJECT_ROOT \
     $VERSION

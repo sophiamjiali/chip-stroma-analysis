@@ -30,7 +30,7 @@ PY
 )
 
 # Build the primary paths for job submission
-LOG_DIR="${STEP_NAME}/${VERSION}"
+LOG_DIR="${LOG_ROOT}/${STEP_NAME}/${VERSION}"
 
 # Make the project-specific logs directory
 mkdir -p $LOG_DIR
@@ -48,8 +48,8 @@ ARRAY_JOBID=$(sbatch \
     --parsable \
     --array=0-$((N_FOLDS-1)) \
     --job-name="${VERSION}_full_cv" \
-    --output=${LOG_ROOT}/${LOG_DIR}/fold_%a_%A.out \
-    --error=${LOG_ROOT}/${LOG_DIR}/fold_%a_%A.err \
+    --output=${LOG_DIR}/fold_%a_%A.out \
+    --error=${LOG_DIR}/fold_%a_%A.err \
     06a_submit_full_cv.sh \
     $PROJECT_ROOT \
     $VERSION)
@@ -58,7 +58,8 @@ ARRAY_JOBID=$(sbatch \
 sbatch \
     --dependency=afterok:$ARRAY_JOBID \
     --job-name="${VERSION}_full_cv" \
-    --output=${LOG_ROOT}/${LOG_DIR}/aggregate_%A.out \
+    --output=${LOG_DIR}/aggregate_%A.out \
+    --error=${LOG_DIR}/aggregate_%A.err \
     06b_aggregate_full_cv.sh \
     $PROJECT_ROOT \
     $VERSION

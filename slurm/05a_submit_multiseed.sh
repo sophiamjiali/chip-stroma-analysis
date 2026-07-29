@@ -1,6 +1,4 @@
 #!/bin/bash
-#SBATCH --output=/cluster/home/t144807uhn/logs/chip-stroma-analysis/multiseed/%x/%x_%j.out
-#SBATCH --error=/cluster/home/t144807uhn/logs/chip-stroma-analysis/multiseed/%x/%x_%j.err
 #SBATCH --account=kumargroup_gpu
 #SBATCH -p gpu
 #SBATCH --gres=gpu:1
@@ -11,24 +9,15 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=sophiamjia.li@mail.utoronto.ca
 
-# Make the project-specific logs directory
-mkdir -p /cluster/home/t144807uhn/logs/chip-stroma-analysis/multiseed/$1
+set -euo pipefail
 
-# Activate the virtual environment
-export LD_LIBRARY_PATH=/cluster/home/t111631uhn/miniconda3/lib:$LD_LIBRARY_PATH
-source /cluster/home/t144807uhn/envs/chip-stroma-env-gpu/bin/activate
+# Extract command-line arguments for clarity
+PROJECT_ROOT=$1
+VERSION=$2
 
-# Ensure that all commands resolve back to the proper root directory
-cd /cluster/home/t144807uhn/chip-stroma-analysis
-
-echo "=========================================="
-echo "Array Job ID:       $SLURM_JOB_ID"
-echo "Task ID:            $SLURM_ARRAY_TASK_ID"
-echo "Job Name:           $1"
-echo "Node:               $SLURMD_NODENAME"
-echo "GPU:                $CUDA_VISIBLE_DEVICES"
-echo "Start time:         $(date)"
-echo "=========================================="
+# Initialize the standardized environment
+source ${PROJECT_ROOT}/.env
+source ${PROJECT_ROOT}/slurm/00_setup_env.sh
 
 # Configure WandB tracking for offline only (compute nodes have no internet)
 export WANDB_PROJECT="chip-stroma"
@@ -36,26 +25,22 @@ export WANDB_MODE=offline
 export WANDB_DIR="/cluster/home/t144807uhn/logs/chip-stroma-analysis/wandb/multiseed/$1/task_${SLURM_ARRAY_TASK_ID}"
 mkdir -p "$WANDB_DIR"
 
-# Mask Albumentions from checking for updates (no internet)
-export NO_ALBUMENTATIONS_UPDATE=1
-
 export OPTUNA_SQLITE_TIMEOUT=300
 
 unset SLURM_NTASKS
 unset SLURM_JOB_NAME
 
-export PYTORCH_ENABLE_MPS_FALLBACK=0
-
-# Point to the pre-downloaded Resnet34 imagenet weights
-export TORCH_HOME="$HOME/.cache/torch"
-
-CONFIG_DIR=/cluster/home/t144807uhn/chip-stroma-analysis/configs
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo "Job ID:     $SLURM_JOB_ID"
+echo "Node:       $SLURMD_NODENAME"
+echo "GPU:        $CUDA_VISIBLE_DEVICES"
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 srun python scripts/05a_multiseed.py \
     --config_dir $CONFIG_DIR \
     --version $1 \
     --task_id $SLURM_ARRAY_TASK_ID
 
-echo "=========================================="
-echo "End time: $(date)"
-echo "=========================================="
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+# [END]

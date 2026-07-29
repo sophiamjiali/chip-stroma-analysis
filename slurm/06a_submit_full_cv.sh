@@ -40,7 +40,7 @@ srun python scripts/06a_full_cv.py \
     --config_dir $CONFIG_DIR \
     --version $VERSION \
     --task_id $SLURM_ARRAY_TASK_ID
+    
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-echo "=========================================="
-echo "End time: $(date)"
-echo "=========================================="
+# [END]

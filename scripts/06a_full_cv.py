@@ -55,6 +55,16 @@ def main():
 
     trial_params = resolve_params(trial_params, sweep_params)
 
+
+
+
+    # TEMPORARY
+    trial_params['nsd_tolerance'] = 2.5
+
+
+
+
+
     ckpt_dir = Path(config.paths.checkpoints.full_cv) / args.version
     ckpt_dir.mkdir(parents = True, exist_ok = True)
 

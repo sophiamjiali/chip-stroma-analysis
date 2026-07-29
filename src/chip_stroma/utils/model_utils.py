@@ -42,7 +42,7 @@ def select_final_config(config: Box, version: str):
     """
 
     # Load the multi-seed confirmation summary CSV file
-    summary_path = (config.paths.evaluation / version / 
+    summary_path = (config.paths.results / version / 
                     "multiseed_summary.csv")
     summary = pd.read_csv(summary_path, index_col = "trial_num")
     best_trial_num = int(summary['mean'].idxmax())

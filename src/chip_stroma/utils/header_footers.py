@@ -19,11 +19,11 @@ def log_header(pipeline_stage: str, config_path: Path, version = None):
 
     logger.info("=" * 60)
     logger.info("Starting Pipeline Execution")
-    logger.info(f"- Pipeline Stage: {pipeline_stage}")
-    logger.info(f"- Configurations: {config_path}")
-    if version is not None: logger.info(f"- Version: {version}")
-    logger.info(f"- Working Directory: {Path.cwd()}")
-    logger.info(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"- Pipeline Stage    : {pipeline_stage}")
+    logger.info(f"- Configurations    : {config_path.relative_to(Path.cwd())}")
+    if version is not None: logger.info(f"- Version           : {version}")
+    logger.info(f"- Working Directory : {Path.cwd()}")
+    logger.info(f"- Timestamp         : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 60)
 
 def log_footer():

@@ -58,10 +58,10 @@ def train(manifest: pd.DataFrame,
 
     logger.info("=" * 50)
     logger.info("Step 03: Train Initialization")
-    logger.info(f"- Project: {project}")
-    logger.info(f"- Group: {group}")
-    logger.info(f"- Encoder Name: {params.model.encoder_name}")
-    logger.info(f"- Encoder Weights: {params.model.encoder_weights}")
+    logger.info(f"- Project         : {project}")
+    logger.info(f"- Group           : {group}")
+    logger.info(f"- Encoder Name    : {params.model.encoder_name}")
+    logger.info(f"- Encoder Weights : {params.model.encoder_weights}")
     logger.info("-" * 50)
 
     # Seed everything using the random state provided from configurations
@@ -139,10 +139,9 @@ def train(manifest: pd.DataFrame,
 
     logger.info("=" * 50)
     logger.info("Step 06: Model Training")
-    logger.info(f"- Project: {project}")
-    logger.info(f"- Group: {group}")
+    logger.info(f"- Project : {project}")
+    logger.info(f"- Group   : {group}")
     logger.info("-" * 50)
-    logger.info("Beginning model training")
 
     try:
         trainer.fit(model = lit_module, datamodule = datamodule)
@@ -184,9 +183,9 @@ def run_seed(manifest       : pd.DataFrame,
 
     logger.info("=" * 50)
     logger.info("Step 03: Train Initialization")
-    logger.info(f"- Project: {project}")
-    logger.info(f"- Group: {group}")
-    logger.info(f"- Seed: {seed}")
+    logger.info(f"- Project : {project}")
+    logger.info(f"- Group   : {group}")
+    logger.info(f"- Seed    : {seed}")
     logger.info("-" * 50)
 
     logger.info(f"Seeded all processes and workers with random state {seed}")
@@ -260,8 +259,8 @@ def run_seed(manifest       : pd.DataFrame,
 
     logger.info("=" * 50)
     logger.info("Step 06: Model Training")
-    logger.info(f"- Project: {project}")
-    logger.info(f"- Group: {group}")
+    logger.info(f"- Project : {project}")
+    logger.info(f"- Group   : {group}")
     logger.info("-" * 50)
     logger.info("Beginning model training")
 

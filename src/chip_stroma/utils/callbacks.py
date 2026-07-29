@@ -38,21 +38,29 @@ def configure_callbacks(params: Box,
     early_stopping_min_delta : Minimum improvement threshold for early stopping.
     """
 
+    # Extract each metric for easy access
+    stopping_metric = str(params.early_stopping.metric)
+    stopping_mode   = str(params.early_stopping.mode)
+    best_metric     = str(params.epoch_tracker.metric)
+    best_mode       = str(params.epoch_tracker.mode)
+
     logger.info("=" * 50)
     logger.info("Step 04: Callback Configuration")
-    logger.info(f"- Early Stopping Patience: {params.early_stopping.patience}")
-    logger.info(f"- Early Stopping Minimum Delta: {params.early_stopping.min_delta}")
+    logger.info(f"- EarlyStopping Metric    : {stopping_metric}")
+    logger.info(f"- EarlyStopping Mode      : {stopping_mode}")
+    logger.info(f"- BestEpochTracker Metric : {best_metric}")
+    logger.info(f"- BestEpochTracker Mode   : {best_mode}")
     logger.info("-" * 50)
 
     logger.info("Successfully configured the LearningRateMonitor callback")
     logger.info("Successfully configured the GradientNormCallback callback")
-    lr_monitor = LearningRateMonitor(logging_interval = "epoch")
+    lr_monitor         = LearningRateMonitor(logging_interval = "epoch")
     grad_norm_callback = GradientNormCallback(log_every_n_steps = 50)
 
     logger.info("Successfully configured the EarlyStopping callback")
     early_stop_callback = EarlyStopping(
-        monitor                  = str(params.early_stopping.metric),
-        mode                     = str(params.early_stopping.mode),
+        monitor                  = stopping_metric,
+        mode                     = stopping_mode,
         patience                 = params.early_stopping.patience,
         min_delta                = params.early_stopping.min_delta,
         strict                   = False,
@@ -62,10 +70,7 @@ def configure_callbacks(params: Box,
     )
 
     logger.info("Successfulyl configured the BestEpochTracker callback")
-    tracker = BestEpochTracker(
-        monitor = str(params.epoch_tracker.metric),
-        mode    = str(params.epoch_tracker.mode)
-    )
+    tracker = BestEpochTracker(monitor = best_metric, mode = best_mode)
 
     callbacks = [
         tracker,

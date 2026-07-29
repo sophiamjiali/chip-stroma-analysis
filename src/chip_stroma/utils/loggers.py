@@ -26,10 +26,17 @@ def setup_logger(name: str | None = None) -> logging.Logger:
 
     logging.basicConfig(
         level    = logging.INFO,
-        format   = "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        format   = "%(asctime)s | %(levelname)-8s | %(name)-30s | %(message)s",
         handlers = [logging.StreamHandler(sys.stdout)],
         force    = True,
     )
+
+    # Silence verbose third-party loggers
+    logging.getLogger("pytorch_lightning").setLevel(logging.WARNING)
+    logging.getLogger("lightning").setLevel(logging.WARNING)
+
+    # Trim the common package name from the prefix
+    if name is not None: name = name.removeprefix("chip_stroma.")
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
@@ -48,8 +55,8 @@ def configure_loggers(project: str,
     
     logger.info("=" * 50)
     logger.info("Step 05: Logging Configuration")
-    logger.info(f"- Project: {project}")
-    logger.info(f"- Group: {group}")
+    logger.info(f"- Project : {project}")
+    logger.info(f"- Group   : {group}")
     logger.info("-" * 50)
 
     # Start a new run with this trial if a sweep is detected

@@ -172,31 +172,31 @@ def save_patch_stats(stats: pd.DataFrame, path: Path) -> None:
 
 # =====| Patch Statistics |=====================================================
 
-def initialize_train_manifest(train_manifest_path: Path,
-                              patch_manifest_path: Path) -> pd.DataFrame:
+def initialize_train_manifest(train_path: Path,
+                              patch_path: Path) -> pd.DataFrame:
     """Loads or creates the train manifest from the patch manifest."""
 
     logger.info("=" * 50)
     logger.info("Step 02: Train Manifest")
-    logger.info(f"- Train Manifest Path: {train_manifest_path}")
-    logger.info(f"- Patch Manifest Path: {patch_manifest_path}")
+    logger.info(f"- Train Manifest Path : {train_path.relative_to(Path.cwd())}")
+    logger.info(f"- Patch Manifest Path : {patch_path.relative_to(Path.cwd())}")
     logger.info("-" * 50)
 
-    if train_manifest_path.exists(): 
+    if train_path.exists(): 
         logger.info("Successfully detected train manifest")
         logger.info("Loading and returning existing manifest for training")
-        manifest = pd.read_csv(train_manifest_path)
+        manifest = pd.read_csv(train_path)
 
     else:
         logger.info("Failed to detect an existing train manifest")
 
-        assert patch_manifest_path.exists(), f"Patch manifest could not be found at path: {patch_manifest_path}"
+        assert patch_path.exists(), f"Patch manifest could not be found at path: {patch_path}"
         logger.info("Successfully detected patch manifest")
 
         logger.info("Creating a train manifest from the patch manifest")
-        manifest = pd.read_csv(patch_manifest_path)
+        manifest = pd.read_csv(patch_path)
         manifest = manifest[manifest['include'] == True]
-        manifest.to_csv(train_manifest_path)
+        manifest.to_csv(train_path)
         logger.info("Successfully initialized and saved the train manifest")
 
     logger.info("=" * 50)

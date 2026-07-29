@@ -127,10 +127,22 @@ class VesselSegModule(pl.LightningModule):
 
     def on_train_start(self):
         logger.info("-" * 50)
-        logger.info("-- | Starting model training")
+        logger.info("Starting model training; validation epoch metrics "
+                    "are recorded below:")
+        logger.info(
+            f"{'Runtime':>10} | "
+            f"{'Elapsed':>10} | "
+            f"{'Epoch':>6} | "
+            f"{'Loss':>12} | "
+            f"{'Dice':>10} | "
+            f"{'IoU':>10} | "
+            f"{'Precision':>10} | "
+            f"{'Recall':>10}"
+        )
+
 
     def on_train_end(self):
-        logger.info("-- | Completing model training")
+        logger.info("Completing model training")
         logger.info("-" * 50)
 
 
@@ -203,23 +215,6 @@ class VesselSegModule(pl.LightningModule):
                             f"train/loss: {loss:.4f}")
 
         return loss
-    
-
-    def on_train_epoch_end(self) -> None:
-        """Add an indicator when the epoch ends without messy progress bar."""
-
-        global last_epoch_time
-        global start_time
-        now = time.time()
-        
-        epoch = self.current_epoch
-        loss = self.trainer.callback_metrics.get('train/loss_epoch', 'N/A')
-
-        logger.info(f"-- | Epoch {epoch} Complete   | train/loss: {loss:.4f} | "
-                    f"Time elapsed: {now - last_epoch_time:.1f}s | "
-                    f"Total runtime: {now - start_time:.1f}s")
-        last_epoch_time = now
-        return
 
 
     # =====| Validation Step |==================================================
@@ -358,13 +353,23 @@ class VesselSegModule(pl.LightningModule):
         self.val_recall_micro.reset()
 
         metrics = self.trainer.callback_metrics
+
+        # Track total time and elapsed time
+        global last_epoch_time
+        global start_time
+        now = time.time()
+        elapsed = now - last_epoch_time
+        runtime = now - start_time
+
         logger.info(
-            f"-- | Epoch {self.current_epoch} Validation | "
-            f"val/loss: {metrics.get('val/loss', 'N/A'):.4f} | "
-            f"val/dice: {metrics.get('val/dice', 'N/A'):.4f} | "
-            f"val/iou: {metrics.get('val/iou', 'N/A'):.4f} | "
-            f"val/precision: {metrics.get('val/precision', 'N/A'):.4f} | "
-            f"val/recall: {metrics.get('val/recall', 'N/A'):.4f}"
+            f"{runtime:>10d} | "
+            f"{elapsed:>10d} | "
+            f"{self.current_epoch:>6d} | "
+            f"{metrics.get('val/loss', 'N/A'):>12.4f} | "
+            f"{metrics.get('val/dice', 'N/A'):>10.4f} | "
+            f"{metrics.get('val/iou', 'N/A'):>10.4f} | "
+            f"{metrics.get('val/precision', 'N/A'):>10.4f} | "
+            f"{metrics.get('val/recall', 'N/A'):>10.4f}"
         )
 
         return

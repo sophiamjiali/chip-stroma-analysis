@@ -8,7 +8,7 @@
 
 from datetime import datetime
 from pathlib import Path
-g
+
 from chip_stroma.utils.loggers import setup_logger
 
 logger = setup_logger(__name__)

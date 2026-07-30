@@ -130,10 +130,10 @@ class VesselSegModule(pl.LightningModule):
         logger.info("Starting model training; validation epoch metrics "
                     "are recorded below:")
         logger.info(
-            f"{'Runtime':>10} | "
-            f"{'Elapsed':>10} | "
+            f"{'Runtime (m)':>10} | "
+            f"{'Elapsed (m)':>10} | "
             f"{'Epoch':>6} | "
-            f"{'Loss':>12} | "
+            f"{'Loss':>16} | "
             f"{'Dice':>10} | "
             f"{'IoU':>10} | "
             f"{'Precision':>10} | "
@@ -358,18 +358,20 @@ class VesselSegModule(pl.LightningModule):
         global last_epoch_time
         global start_time
         now = time.time()
-        elapsed = now - last_epoch_time
-        runtime = now - start_time
+        elapsed = (now - last_epoch_time) / 60
+        runtime = (now - start_time) / 60
+
+        last_epoch_time = now
 
         logger.info(
-            f"{runtime:>10f} | "
-            f"{elapsed:>10f} | "
+            f"{runtime:>10.3f} | "
+            f"{elapsed:>10.3f} | "
             f"{self.current_epoch:>6d} | "
-            f"{metrics.get('val/loss', 'N/A'):>12.4f} | "
-            f"{metrics.get('val/dice', 'N/A'):>10.4f} | "
-            f"{metrics.get('val/iou', 'N/A'):>10.4f} | "
-            f"{metrics.get('val/precision', 'N/A'):>10.4f} | "
-            f"{metrics.get('val/recall', 'N/A'):>10.4f}"
+            f"{metrics.get('val/loss', float('nan')):>16.4f} | "
+            f"{metrics.get('val/dice', float('nan')):>10.4f} | "
+            f"{metrics.get('val/iou', float('nan')):>10.4f} | "
+            f"{metrics.get('val/precision', float('nan')):>10.4f} | "
+            f"{metrics.get('val/recall', float('nan')):>10.4f}"
         )
 
         return

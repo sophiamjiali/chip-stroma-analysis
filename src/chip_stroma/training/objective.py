@@ -100,6 +100,7 @@ def objective(trial:    Trial,
     # Guard against NaN/pruned trials polluting best-trial selection
     val_dice = metrics.get('val/dice', float('nan'))
     if not torch.isfinite(torch.tensor(val_dice)):
+        logger.info("Trial pruned")
         raise optuna.TrialPruned()
     
     return float(val_dice)

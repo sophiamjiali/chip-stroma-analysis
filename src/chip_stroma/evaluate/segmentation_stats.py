@@ -157,29 +157,15 @@ def top_k_trials_table(version: str, study_dir: str, k: int) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-
-def multiseed_summary_table(trial_results: pd.DataFrame) -> pd.DataFrame:
-    """
-    Mean +/- SD across seeds for top-3 trials, keyed by hyperparameter 
-    configurations.
-    """
-
-    metric_cols = ["dice", "precision", "recall"]
-    summary = (
-        trial_results.groupby("trial_num")[metric_cols]
-        .agg(["mean", "std"])
-    )
-    summary.columns = ["_".join(c) for c in summary.columns]
-    return summary.reset_index()
-
-
 def final_cv_summary_table(cv_results: pd.DataFrame) -> pd.DataFrame:
     """Mean +/- SD across the 5 folds for the fixed finalist configuration."""
-    
-    metric_cols = ["dice", "precision", "recall"]
-    summary = cv_results[metric_cols].agg(["mean", "std"]).T
-    summary.columns = ["mean", "std"]
 
-    return summary.reset_index().rename(columns={"index": "metric"})
+    summary = cv_results["best_val_dice"].agg(["mean", "std"])
+
+    return pd.DataFrame({
+        'metric': ['dice'],
+        'mean'  : [summary['mean']],
+        'std'   : [summary['std']]
+    })
 
 # [END]

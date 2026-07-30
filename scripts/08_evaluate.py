@@ -23,7 +23,6 @@ from chip_stroma.evaluate.segmentation_stats import (
     threshold_sweep,
     select_overlay_cases,
     top_k_trials_table,
-    multiseed_summary_table,
     final_cv_summary_table
 )
 
@@ -106,11 +105,6 @@ def main():
     )
     top_k.to_csv(evaluate_dir / "top_k_trials.csv", index = False)
     logger.info("Successfully computed summary tables for top K trials")
-
-    multiseed = pd.read_csv(dst_dir / "multiseed_summary.csv")
-    multiseed = multiseed_summary_table(trial_results = multiseed)
-    multiseed.to_csv(evaluate_dir / "multiseed_summary.csv", index = False)
-    logger.info("Successfully computed the multiseed summary table")
 
     final_cv = pd.read_csv(dst_dir / "full_cv_summary.csv")
     final_cv = final_cv_summary_table(cv_results = final_cv)

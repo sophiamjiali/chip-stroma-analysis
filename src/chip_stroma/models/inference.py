@@ -37,7 +37,7 @@ def infer_fold(model     : torch.nn.Module,
     per_patch_results = []
     n_patches         = len(cast(Sized, dataloader.dataset))
     h, w              = dataloader.dataset[0]['patch'].shape[-2:]
-    logger.info(f"Detected {len(dataloader)} batches for processing")
+    logger.info(f"- Detected {len(dataloader)} batches for processing")
 
     # Pre-allocate on-disk arrays; nothing held in Python RAM across batches
     with h5py.File(out_path, "w") as h5f:
@@ -93,7 +93,7 @@ def infer_fold(model     : torch.nn.Module,
 
                 # Quantize the probabilities from [0,1] -> [0,255]
                 bsz                   = len(patch_names)
-                probs_ds[idx:idx+bsz] = ((probs_m.detact().cpu().numpy() * 255)
+                probs_ds[idx:idx+bsz] = ((probs_m.detach().cpu().numpy() * 255)
                                          .astype(np.uint8))
                 gt_ds[idx:idx+bsz]    = (vessel_masks_m.detach().cpu().numpy()
                                          .astype(bool))

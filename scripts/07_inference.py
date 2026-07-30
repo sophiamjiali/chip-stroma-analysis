@@ -7,7 +7,7 @@
 # ==============================================================================
 
 import torch
-import pickle
+import gc
 
 import argparse as ap
 
@@ -70,7 +70,7 @@ def main():
         
     
     for fold in folds:
-        logger.info(f"Running inference on fold {fold}")
+        logger.info(f"Beginning inference on fold {fold} / {len(folds)}")
 
         # Load the fold's final CV model 
         if args.single_model: ckpt_path = ckpt_dir / "best_trial.ckpt"
@@ -109,19 +109,20 @@ def main():
         )
 
         # Infer using the model and tag the fold explicitly
-        patch_metrics, probs, gt = infer_fold(model, dataloader, device)
-        patch_metrics['fold'] = fold
-        
-        # Save raw artifacts without aggregation (08_evaluate)
-        if args.single_model: fold_dir = dst_dir
-        else: fold_dir = dst_dir / f"fold_{fold}"
+        fold_dir = dst_dir if args.single_model else dst_dir / "fold_{fold}"
         fold_dir.mkdir(parents = True, exist_ok = True)
+        h5_path  = fold_dir / "val_arrays.h5"
 
+        patch_metrics = infer_fold(model, dataloader, device, h5_path)
+        patch_metrics['fold'] = fold
         patch_metrics.to_csv(fold_dir / "patch_metrics.csv", index = False)
-        with open(fold_dir / "val_probs.pkl", "wb") as f: pickle.dump(probs, f)
-        with open(fold_dir / "val_gt.pkl", "wb") as f   : pickle.dump(gt,    f)
 
-        logger.info(f"Fold {fold}: {len(patch_metrics)} patches processed")
+        logger.info(f"- {len(patch_metrics)} patches processed")
+
+        # Free fold-specific GPU/CPU memory before next begins
+        del model, dataloader, dataset, fold_manifest, patch_metrics
+        torch.cuda.empty_cache
+        gc.collect()
 
     logger.info("Inference complete for all fold(s).")
     log_footer()

@@ -20,7 +20,6 @@ from chip_stroma.training.create_study import load_study
 
 from chip_stroma.visualize.segmentation_plots import (
     plot_fold_boxplots,
-    plot_training_curves,
     plot_pr_curve,
     plot_patient_dice_violin,
     plot_overlay_panel,
@@ -61,18 +60,7 @@ def main():
         save_path = figure_dir / "fold_boxplots.png"
     )
 
-    # 2. Training cures for the selected finalist run
-    metrics     = config.visualize.training_curve_metrics
-    run         = wandb.Api().run(config.visualize.training_curve_run)
-    run_history = run.history(keys = ['epoch', *metrics])
-
-    plot_training_curves(
-        run_history = run_history,
-        metrics     = tuple(metrics),
-        save_path   = figure_dir / "training_curves.png"
-    )
-
-    # 3. Precision/recall vs. threshold; justify Otsu over fixed threshold
+    # 2. Precision/recall vs. threshold; justify Otsu over fixed threshold
     threshold_sweep = load_csv_inputs(evaluate_dir / "threshold_sweep.csv")
 
     plot_pr_curve(
@@ -80,7 +68,7 @@ def main():
         save_path       = figure_dir / "pr_curve.png"
     )
 
-    # 4. Per-patient Dice violin plots; highlight outlier patient
+    # 3. Per-patient Dice violin plots; highlight outlier patient
     per_patient = load_csv_inputs(evaluate_dir / "per_fold_metrics.csv")
     per_patient = per_patient[per_patient['sample_id'] != 'MACRO']
 
@@ -90,7 +78,7 @@ def main():
         save_path         = figure_dir / "patient_dice_violin.png"
     )
 
-    # 5. Overlay panels for best/median/worst QC cases selected by 08_evaluate
+    # 4. Overlay panels for best/median/worst QC cases selected by 08_evaluate
     overlay_cases = load_csv_inputs(evaluate_dir / "overlay_cases.csv")
     overlay_dir = figure_dir / "overlays"
     overlay_dir.mkdir(parents = True, exist_ok = True)
@@ -111,20 +99,24 @@ def main():
             save_path = overlay_dir / plot_name
         )
 
-    # 6. Optuna diagnostics; fANOVA importance and parallel coordinates
+    # 5. Optuna diagnostics; fANOVA importance and parallel coordinates
     importance = load_csv_inputs(evaluate_dir / "optuna_importance.csv")
     plot_optuna_importance(
         importance,
         save_path = figure_dir / "optuna_importance.png"
     )
 
+    # 6. Confusion matrix + calibration — need pooled counts/probs/gt from streaming sweep
+    conf_counts = load_json(evaluate_dir / "confusion_counts.json")
+    plot_confusion_matrix(conf_counts, save_path = figure_dir / "confusion_matrix.png")
 
-    study = load_study(args.version, config.paths.studies)
+    calib_sample = load_pickle(evaluate_dir / "calibration_sample.pkl")
+    plot_calibration(calib_sample["probs"], calib_sample["gt"], 
+                     save_path = figure_dir / "calibration.png")
 
-    plot_optuna_parallel_coords(
-        study.trials_dataframe(),
-        save_path = figure_dir / "optuna_parallel_coords.png"
-    )
+    # 9. Dice vs. vessel area — requires GT area fraction per patient
+    per_patient_area = load_csv_inputs(evaluate_dir / "per_patient_vessel_area.csv")
+    plot_dice_vs_vessel_area(per_patient_area, save_path=figure_dir / "dice_vs_vessel_area.png")
 
     log_footer()
     return

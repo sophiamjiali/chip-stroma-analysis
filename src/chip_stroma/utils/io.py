@@ -7,6 +7,7 @@
 # ==============================================================================
 
 import json
+import h5py
 
 import pandas as pd
 import numpy as np
@@ -14,6 +15,7 @@ import numpy as np
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 from tqdm import tqdm
+from PIL import Image
 
 from chip_stroma.utils.loggers import setup_logger
 
@@ -344,28 +346,37 @@ def load_csv_inputs(path: str | Path) -> pd.DataFrame:
 def load_overlay_arrays(src_dir  : str | Path,
                         fold     : str | int,
                         sample_id: str,
+                        patch_dir: str | Path
                         ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Loads (image, gt_mask, pred_mask) for one representative patch of a
-    patient, for overlay QC panels. Patch-level arrays are pickled per fold
-    at inference time (val_patches.pkl); since a patient can span many
-    patches, the patch whose Dice is closest to the patient's mean Dice is
-    selected as representative (median-behavior patch, not cherry-picked
-    best/worst). Join keys follow (sample_id, patch_name), per the known
-    patch_name-collision-across-patients bug.
+    patient, for overlay QC panels.
     """
-    patches = pd.read_pickle(Path(src_dir) / f"fold_{fold}" / "val_patches.pkl")
-    patient_patches = patches[patches["sample_id"] == sample_id]
- 
-    if patient_patches.empty:
-        raise ValueError(f"No patches found for sample_id={sample_id} in fold {fold}")
- 
+    fold_dir = Path(src_dir) / f"fold_{fold}"
+
+    metrics = pd.read_csv(fold_dir / "patch_metrics.csv").reset_index(drop=True)
+    patient_patches = metrics[metrics["sample_id"] == sample_id]
+
     # Representative patch: closest to this patient's mean Dice
     target_dice = patient_patches["dice"].mean()
-    idx = (patient_patches["dice"] - target_dice).abs().idxmin()
-    row = patient_patches.loc[idx]
- 
-    return row["image"], row["gt_mask"], row["pred_mask"]
+    h5_idx      = (patient_patches["dice"] - target_dice).abs().idxmin()
+    row         = metrics.loc[h5_idx]
+
+    # Pull probs/gt from the corresponding h5 index; de-quantize probs -> [0,1]
+    with h5py.File(fold_dir / "val_arrays.h5", "r") as h5f:
+        prob    = h5f["probs"][h5_idx].astype(np.float32) / 255.0
+        gt_mask = h5f["gt"][h5_idx]
+        
+    pred_mask = prob >= 0.5
+
+    # Raw image isn't persisted in the h5 — reload from the source patch,
+    image_path = Path(patch_dir) / row["sample_id"] / f"{row['patch_name']}"
+    matches    = (metrics[(metrics["sample_id"] == row["sample_id"]) & 
+                  (metrics["patch_name"] == row["patch_name"])])
+
+    image = np.array(Image.open(image_path))
+
+    return image, gt_mask, pred_mask
 
 
 # [END]

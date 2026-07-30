@@ -6,6 +6,9 @@
 # Date:             06/03/2026
 # ==============================================================================
 
+import json
+import pickle
+
 import argparse as ap
 import numpy as np
 
@@ -65,24 +68,38 @@ def main():
     # 2. Compute a threshold sweep, pooled across folds
     thr        = config.evaluate.thresholds
     thresholds = np.linspace(thr[0], thr[1], thr[2])
-    thresholds = threshold_sweep(
-        inference_dir = inference_dir,
-        n_folds       = n_folds,
-        single_model  = args.single_model,
-        thresholds    = thresholds
+    sweep, confusion_counts, calib_sample = threshold_sweep(
+        inference_dir     = inference_dir,
+        n_folds           = n_folds,
+        single_model      = args.single_model,
+        calib_sample_size = config.evaluate.calibration_sample_size,
+        thresholds        = threshold
     )
     
     thresholds.to_csv(evaluate_dir / "threshold_sweep.csv", index = False)
+    with open(evaluate_dir / "confusion_counts.json", "w") as f: 
+        json.dump(confusion_counts, f)
+    with open(evaluate_dir / "calibration_sample.pkl", "w") as f:
+        pickle.dump(calib_sample, f")
+            
     logger.info(f"Successfully conducted threshold sweep on {len(thresholds)} "
                 f"candidates")
 
-    # 3. Extract Optuna diagnostics from the sweep stage
+    # 3. Per-patient GT vessel-area fraction (for dice vs area plot)
+    vessel_area = compute_per_patient_vessel_area(
+            inference_dir = inference_dir, 
+            n_folds       = n_folds, 
+            single_model  = args.single_model
+    )
+    vessel_area.to_csv(evaluate_dir / "per_patient_vessel_area.csv", index = False)         
+
+    # 4. Extract Optuna diagnostics from the sweep stage
     importance = optuna_importance(args.version, config.paths.studies)
     importance.to_csv(evaluate_dir / "optuna_importance.csv", index = False)
     logger.info("Successfully extracted Optuna importance diagnostics "
                 "from sweep")
 
-    # 4. Overlay case selection by best/median/worst Dice
+    # 5. Overlay case selection by best/median/worst Dice
     per_patient = (
         predictions[predictions['has_signal']]
         .groupby(['fold', 'sample_id'])[['dice', 'precision', 'recall']]
@@ -95,7 +112,7 @@ def main():
     logger.info(f"Successfully selected {n_overlay_cases} candidate cases "
                 f"for overlay")
 
-    # 5. Compute summary tables
+    # 6. Compute summary tables
     top_k = top_k_trials_table(
         version   = args.version,
         study_dir = config.paths.studies,

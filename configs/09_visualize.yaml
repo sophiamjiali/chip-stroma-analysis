@@ -6,13 +6,5 @@
 # Date:             07/24/2026
 # ==============================================================================
 
-val_fold: 0
-
-batch_size: 32
-n_workers: 4
-
-model:
-  encoder_name   : resnet34
-  encoder_weights: imagenet
-  in_channels    : 3
-  out_classes    : 1
+fold_boxplot_metric: "dice"
+highlight_patient  : "h-BMO-18"

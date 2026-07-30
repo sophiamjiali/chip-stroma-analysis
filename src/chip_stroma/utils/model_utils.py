@@ -23,7 +23,7 @@ from chip_stroma.training.create_study import load_study
 
 # =====| Multi-Seed Confirmation |==============================================
 
-def get_top_k_trials(study_dir: str, version: str, k: int):
+def get_top_k_trials(version: str, study_dir: str, k: int):
     """Rank completed trials by the provided metric, descending."""
 
     # Extract all completed studies from the SQL database
@@ -50,11 +50,10 @@ def select_final_config(config: Box, version: str):
     best_trial_num = int(summary['mean'].idxmax())
 
     # Extract hyperparameters from the associated database
-    storage = f"sqlite:///{config.paths.studies}/{version}.db"
     top_trials = get_top_k_trials(
-        storage = storage, 
-        version = version, 
-        k = config.full_cv.top_k
+        version   = version,
+        study_dir = config.paths.studies,
+        k         = config.full_cv.top_k
     )
 
     finalized_trial = next(t for t in top_trials if t.number == best_trial_num)

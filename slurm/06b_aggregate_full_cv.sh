@@ -19,7 +19,6 @@ source ${PROJECT_ROOT}/slurm/00_setup_env.sh
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo "Job ID:     $SLURM_JOB_ID"
 echo "Node:       $SLURMD_NODENAME"
-echo "GPU:        $CUDA_VISIBLE_DEVICES"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 python scripts/06b_aggregate_full_cv.py \

@@ -44,19 +44,19 @@ echo "=========================================="
 cd ${PROJECT_ROOT}/slurm
 
 # Submit model trials in a SLURM array
-# ARRAY_JOBID=$(sbatch \
-#     --parsable \
-#     --array=0-$((N_FOLDS-1)) \
-#     --job-name="${VERSION}_full_cv" \
-#     --output=${LOG_DIR}/fold_%a_%A.out \
-#     --error=${LOG_DIR}/fold_%a_%A.err \
-#     06a_submit_full_cv.sh \
-#     $PROJECT_ROOT \
-#     $VERSION)
+ARRAY_JOBID=$(sbatch \
+    --parsable \
+    --array=0-$((N_FOLDS-1)) \
+    --job-name="${VERSION}_full_cv" \
+    --output=${LOG_DIR}/fold_%a_%A.out \
+    --error=${LOG_DIR}/fold_%a_%A.err \
+    06a_submit_full_cv.sh \
+    $PROJECT_ROOT \
+    $VERSION)
 
 # Aggregate trial summaries after all complete
 sbatch \
-    # --dependency=afterok:$ARRAY_JOBID \
+    --dependency=afterok:$ARRAY_JOBID \
     --job-name="${VERSION}_full_cv" \
     --output=${LOG_DIR}/aggregate_%A.out \
     --error=${LOG_DIR}/aggregate_%A.err \

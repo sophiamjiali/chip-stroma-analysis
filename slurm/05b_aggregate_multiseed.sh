@@ -22,7 +22,7 @@ echo "Node:       $SLURMD_NODENAME"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 python scripts/05b_aggregate_multiseed.py \
-    --config_dir configs/ \
+    --config_dir $CONFIG_DIR \
     --version $VERSION
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"

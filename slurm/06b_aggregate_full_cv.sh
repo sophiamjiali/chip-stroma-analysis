@@ -22,7 +22,7 @@ echo "Node:       $SLURMD_NODENAME"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 python scripts/06b_aggregate_full_cv.py \
-    --config_dir configs/ \
+    --config_dir $CONFIG_DIR \
     --version $VERSION
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"

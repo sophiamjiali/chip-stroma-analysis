@@ -7,12 +7,13 @@
 # ==============================================================================
 
 import optuna
-import wandb
 
 import pandas as pd
 import numpy as np
 
 from typing import cast
+
+from chip_stroma.training.create_study import load_study
 
 def per_fold_metrics(predictions: pd.DataFrame) -> pd.DataFrame:
     """Computes macro Dice/precision/recall per fold, per patient."""
@@ -36,9 +37,9 @@ def per_fold_metrics(predictions: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([per_patient, fold_macro], ignore_index = True)
     
 
-def optuna_importance(db_path: str) -> pd.DataFrame:
+def optuna_importance(version: str, study_dir: str) -> pd.DataFrame:
     """Wraps parameter importance call from Optuna, returns for plotting."""
-    study = optuna.load_study(study_name = None, storage = db_path)
+    study = load_study(version, study_dir)
     importances = optuna.importance.get_param_importances(study)
 
     return pd.DataFrame({
@@ -105,11 +106,11 @@ def select_overlay_cases(per_patient   : pd.DataFrame,
     return pd.concat(cases, ignore_index = True)
 
 
-def top_k_trials_table(db_path: str, k: int) -> pd.DataFrame:
+def top_k_trials_table(version: str, study_dir: str, k: int) -> pd.DataFrame:
     """Top-k completed trials by val/dice, with swept hyperparameter values."""
 
     # Extract all completed trials from the Optuna records
-    study = optuna.load_study(study_name = None, storage = db_path)
+    study = load_study(version, study_dir)
     trials = [
         t for t in study.trials
         if t.state == optuna.trial.TrialState.COMPLETE

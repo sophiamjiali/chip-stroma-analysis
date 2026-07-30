@@ -19,13 +19,15 @@ from optuna.trial import TrialState
 from box import Box
 from copy import deepcopy
 
+from chip_stroma.training.create_study import load_study
+
 # =====| Multi-Seed Confirmation |==============================================
 
-def get_top_k_trials(storage: str, version: str, k: int):
+def get_top_k_trials(study_dir: str, version: str, k: int):
     """Rank completed trials by the provided metric, descending."""
 
     # Extract all completed studies from the SQL database
-    study = optuna.load_study(study_name = version, storage = storage)
+    study = load_study(version, study_dir)
     completed = [t for t in study.trials if t.state == TrialState.COMPLETE]
 
     ranked = sorted(

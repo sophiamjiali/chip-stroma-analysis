@@ -76,8 +76,7 @@ def main():
     thresholds.to_csv(evaluate_dir / "threshold_sweep.csv", index = False)
 
     # 3. Extract Optuna diagnostics from the sweep stage
-    db_path    = f"sqlite:///{config.paths.studies}/{args.version}.db"
-    importance = optuna_importance(db_path)
+    importance = optuna_importance(args.version, config.paths.studies)
     importance.to_csv(evaluate_dir / "optuna_importance.csv", index = False)
 
     # 4. Overlay case selection by best/median/worst Dice
@@ -95,7 +94,11 @@ def main():
     overlay_cases.to_csv(evaluate_dir / "overlay_cases.csv", index = False)
 
     # 5. Compute summary tables
-    top_k = top_k_trials_table(db_path, k = config.evaluate.top_k_trials)
+    top_k = top_k_trials_table(
+        version   = args.version,
+        study_dir = config.paths.studies,
+        k         = config.evaluate.top_k_trials
+    )
     top_k.to_csv(evaluate_dir / "top_k_trials.csv", index = False)
 
     multiseed = pd.read_csv(dst_dir / "multiseed_summary.csv")

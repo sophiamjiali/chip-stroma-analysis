@@ -50,12 +50,10 @@ def main():
     )
 
     # Extract the top K trials
-    storage = f"sqlite:///{config.paths.studies}/{args.version}.db"
-    #storage = f"{config.paths.studies}/{args.version}.log"
     top_trials = get_top_k_trials(
-        storage = storage,
-        version = args.version,
-        k       = config.multiseed.top_k
+        study_dir = config.paths.studies,
+        version   = args.version,
+        k         = config.multiseed.top_k
     )
     n_seeds = int(config.multiseed.n_seeds)
 

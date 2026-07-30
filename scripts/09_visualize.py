@@ -17,6 +17,7 @@ from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
 from chip_stroma.utils.io import load_overlay_arrays, load_csv_inputs
+from chip_stroma.training.create_study import load_study
 
 from chip_stroma.visualize.segmentation_plots import (
     plot_fold_boxplots,
@@ -118,8 +119,8 @@ def main():
         save_path = figure_dir / "optuna_importance.png"
     )
 
-    db    = config.paths.studies / f"{args.version}.db"
-    study = optuna.load_study(study_name = None, storage = f"sqlite:///{db}")
+
+    study = load_study(args.version, config.paths.studies)
 
     plot_optuna_parallel_coords(
         study.trials_dataframe(),

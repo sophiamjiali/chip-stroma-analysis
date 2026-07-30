@@ -65,4 +65,17 @@ def initialize_study(version         : str,
     logger.info("Successfuly initialized the Optuna study for sweeping")
     return study
 
+
+def load_study(version: str, study_dir: str):
+    storage_path = Path(f"{study_dir}/{version}.log")
+
+    storage = JournalStorage(JournalFileBackend(str(storage_path)))
+
+    study = optuna.load_study(
+        study_name = version,
+        storage    = storage
+    )
+
+    return study
+
 # [END]

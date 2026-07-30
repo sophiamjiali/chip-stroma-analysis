@@ -24,7 +24,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 python scripts/05b_aggregate_multiseed.py \
     --config_dir configs/ \
-    --version $1
+    --version $VERSION
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 

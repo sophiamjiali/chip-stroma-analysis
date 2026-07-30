@@ -27,7 +27,7 @@ def get_top_k_trials(version: str, study_dir: str, k: int):
     """Rank completed trials by the provided metric, descending."""
 
     # Extract all completed studies from the SQL database
-    study = load_study(version, study_dir)
+    study = load_study(version = version, study_dir = study_dir)
     completed = [t for t in study.trials if t.state == TrialState.COMPLETE]
 
     ranked = sorted(

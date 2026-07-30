@@ -38,7 +38,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 srun python scripts/05a_multiseed.py \
     --config_dir $CONFIG_DIR \
-    --version $1 \
+    --version $VERSION \
     --task_id $SLURM_ARRAY_TASK_ID
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"

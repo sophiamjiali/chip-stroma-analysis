@@ -51,8 +51,8 @@ def main():
 
     # Extract the top K trials
     top_trials = get_top_k_trials(
-        study_dir = config.paths.studies,
         version   = args.version,
+        study_dir = config.paths.studies,
         k         = config.multiseed.top_k
     )
     n_seeds = int(config.multiseed.n_seeds)
@@ -74,8 +74,8 @@ def main():
 
     
 
-    trial_params['nsd_tolerance'] = 2.5
-    assert 'nsd_tolerance' in trial_params, trial_params
+    # trial_params['nsd_tolerance'] = 2.5
+    # assert 'nsd_tolerance' in trial_params, trial_params
 
     
 

@@ -77,7 +77,7 @@ def main():
         thresholds        = thresholds
     )
     
-    thresholds.to_csv(evaluate_dir / "threshold_sweep.csv", index = False)
+    sweep.to_csv(evaluate_dir / "threshold_sweep.csv", index = False)
     with open(evaluate_dir / "confusion_counts.json", "w") as f:
         json.dump(confusion_counts, f)
     with open(evaluate_dir / "calibration_sample.pkl", "wb") as f:

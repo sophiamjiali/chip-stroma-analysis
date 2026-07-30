@@ -10,3 +10,4 @@ n_folds: 5
 
 thresholds: [0.1, 0.9, 17]
 n_overlay_cases: 6
+top_k_trials: 2

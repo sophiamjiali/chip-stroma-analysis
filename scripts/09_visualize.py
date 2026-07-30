@@ -6,8 +6,6 @@
 # Date:             06/04/2026
 # ==============================================================================
 
-import wandb
-
 import argparse as ap
 
 from pathlib import Path
@@ -127,7 +125,7 @@ def main():
     per_patient_dice = per_patient_dice.groupby("sample_id")["dice"].mean().reset_index()
     
     vessel_area = load_csv_inputs(evaluate_dir / "per_patient_vessel_area.csv")
-    dice_vs_area = per_patient_dice.merge(vessel_area, on="sample_id", how="inner")
+    dice_vs_area = per_patient_dice.merge(vessel_area, on = "sample_id", how="inner")
     plot_dice_vs_vessel_area(
         per_patient = dice_vs_area, 
         save_path   = figure_dir / "dice_vs_vessel_area.png"
@@ -139,7 +137,7 @@ def main():
 # =====| Helpers |==============================================================
 
 def parse_args():
-    parser = ap.ArgumentParser(description = "Train a single run of the model.")
+    parser = ap.ArgumentParser(description = "Visualization.")
     parser.add_argument("--config_dir", type = str, default = "configs/")
     parser.add_argument("--version", type = str)
     

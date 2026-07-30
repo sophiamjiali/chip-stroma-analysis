@@ -166,14 +166,14 @@ def plot_overlay_panel(image     : np.ndarray,
     axes[1].axis("off")
     
     axes[2].imshow(image)
-    axes[2].imshow(pred_mask, cmap="Reds", alpha=0.3)
+    axes[2].imshow(pred_mask, cmap="Reds", alpha=0.6)
     axes[2].contour(pred_mask, colors="darkred", linewidths=1)
     axes[2].set_title(f"Vessel Prediction (Dice={dice_score:.3f})")
     axes[2].axis("off")
     
     fig.suptitle("Predicted Segmentation Compared with Ground Truth Mask", 
                  fontsize = 16, y=1.02)
-    fig.tight_layout()
+    fig.tight_layout(rect = (0, 0, 1, 0.93))
 
     if save_path: fig.savefig(save_path, dpi = 300); plt.close(fig)
     return None

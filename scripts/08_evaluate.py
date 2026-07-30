@@ -54,6 +54,7 @@ def main():
     evaluate_dir.mkdir(parents = True, exist_ok = True)
 
     # 1. Compute per-patient segmentation metrics, per fold
+    logger.info(f"Successfully loaded patch predictions for {n_folds} folds")
     predictions = load_all_fold_patch_metrics(
         src_dir      = inference_dir,
         n_folds      = n_folds,
@@ -62,22 +63,27 @@ def main():
 
     fold_metrics = per_fold_metrics(predictions)
     fold_metrics.to_csv(evaluate_dir / "per_fold_metrics.csv", index = False)
+    logger.info("Successfully computed and saved per-fold metrics")
 
     # 2. Compute a threshold sweep, pooled across folds
-    probs =pd.concat([pd.read_pickle(inference_dir/f"fold_{f}"/"val_probs.pkl") 
-                      for f in range(n_folds)])
-    gt    = pd.concat([pd.read_pickle(inference_dir / f"fold_{f}"/"val_gt.pkl") 
-                      for f in range(n_folds)])
-
     thr        = config.evaluate.thresholds
     thresholds = np.linspace(thr[0], thr[1], thr[2])
+    thresholds = threshold_sweep(
+        inference_dir = inference_dir,
+        n_folds       = n_folds,
+        single_model  = args.single_model,
+        thresholds    = thresholds
+    )
     
-    thresholds = threshold_sweep(probs, gt, thresholds)
     thresholds.to_csv(evaluate_dir / "threshold_sweep.csv", index = False)
+    logger.info(f"Successfully conducted threshold sweep on {len(thresholds)} "
+                f"candidates")
 
     # 3. Extract Optuna diagnostics from the sweep stage
     importance = optuna_importance(args.version, config.paths.studies)
     importance.to_csv(evaluate_dir / "optuna_importance.csv", index = False)
+    logger.info("Successfully extracted Optuna importance diagnostics "
+                "from sweep")
 
     # 4. Overlay case selection by best/median/worst Dice
     per_patient = (
@@ -86,12 +92,11 @@ def main():
         .mean()
         .reset_index()
     )
-
-    overlay_cases = select_overlay_cases(
-        per_patient, 
-        n_per_category = config.evaluate_n_overlay_cases
-    )
+    n_overlay_cases = config.evaluate_n_overlay_cases
+    overlay_cases = select_overlay_cases(per_patient, n_overlay_cases)
     overlay_cases.to_csv(evaluate_dir / "overlay_cases.csv", index = False)
+    logger.info(f"Successfully selected {n_overlay_cases} candidate cases "
+                f"for overlay")
 
     # 5. Compute summary tables
     top_k = top_k_trials_table(
@@ -100,14 +105,17 @@ def main():
         k         = config.evaluate.top_k_trials
     )
     top_k.to_csv(evaluate_dir / "top_k_trials.csv", index = False)
+    logger.info("Successfully computed summary tables for top K trials")
 
     multiseed = pd.read_csv(dst_dir / "multiseed_summary.csv")
     multiseed = multiseed_summary_table(trial_results = multiseed)
     multiseed.to_csv(evaluate_dir / "multiseed_summary.csv", index = False)
+    logger.info("Successfully computed the multiseed summary table")
 
     final_cv = pd.read_csv(dst_dir / "full_cv_summary.csv")
-    final_cv = final_cv_summary_table(trial_results = final_cv)
+    final_cv = final_cv_summary_table(cv_results = final_cv)
     final_cv.to_csv(evaluate_dir / "final_cv_summary.csv", index = False)
+    logger.info("Successfully computed the full CV summary atble")
 
     log_footer()
 

@@ -92,8 +92,8 @@ def main():
         .mean()
         .reset_index()
     )
-    n_overlay_cases = config.evaluate_n_overlay_cases
-    overlay_cases = select_overlay_cases(per_patient, n_overlay_cases)
+    n_overlay_cases = config.evaluate.n_overlay_cases
+    overlay_cases   = select_overlay_cases(per_patient, n_overlay_cases)
     overlay_cases.to_csv(evaluate_dir / "overlay_cases.csv", index = False)
     logger.info(f"Successfully selected {n_overlay_cases} candidate cases "
                 f"for overlay")

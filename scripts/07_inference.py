@@ -109,7 +109,7 @@ def main():
         )
 
         # Infer using the model and tag the fold explicitly
-        fold_dir = dst_dir if args.single_model else dst_dir / "fold_{fold}"
+        fold_dir = dst_dir if args.single_model else dst_dir / f"fold_{fold}"
         fold_dir.mkdir(parents = True, exist_ok = True)
         h5_path  = fold_dir / "val_arrays.h5"
 

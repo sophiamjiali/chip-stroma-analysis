@@ -6,7 +6,7 @@
 # Date:             07/22/2026
 # ==============================================================================
 
-n_folds: 0    # If running on only validation fold, just put the one number
+n_folds: 5    # If running on only validation fold, just put the one number
 
 model:
   encoder_name   : resnet34

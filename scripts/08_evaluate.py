@@ -6,7 +6,6 @@
 # Date:             06/03/2026
 # ==============================================================================
 
-import pandas as pd
 import argparse as ap
 import numpy as np
 
@@ -22,8 +21,7 @@ from chip_stroma.evaluate.segmentation_stats import (
     optuna_importance,
     threshold_sweep,
     select_overlay_cases,
-    top_k_trials_table,
-    final_cv_summary_table
+    top_k_trials_table
 )
 
 logger = setup_logger(__name__)

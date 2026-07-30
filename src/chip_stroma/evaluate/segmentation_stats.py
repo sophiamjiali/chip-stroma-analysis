@@ -157,15 +157,4 @@ def top_k_trials_table(version: str, study_dir: str, k: int) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def final_cv_summary_table(cv_results: pd.DataFrame) -> pd.DataFrame:
-    """Mean +/- SD across the 5 folds for the fixed finalist configuration."""
-
-    summary = cv_results["best_val_dice"].agg(["mean", "std"])
-
-    return pd.DataFrame({
-        'metric': ['dice'],
-        'mean'  : [summary['mean']],
-        'std'   : [summary['std']]
-    })
-
 # [END]

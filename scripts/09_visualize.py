@@ -7,7 +7,6 @@
 # ==============================================================================
 
 import wandb
-import optuna
 
 import argparse as ap
 

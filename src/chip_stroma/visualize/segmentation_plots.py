@@ -9,9 +9,24 @@
 import pandas as pd
 import numpy as np
 
-def plot_fold_boxplots(per_fold: pd.DataFrame, 
-                       metric: str = "dice", 
-                       save_path: str | None = None):
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+def plot_fold_boxplots(per_fold : pd.DataFrame, 
+                       metric   : str        = "dice",
+                       save_path: str | None = None) -> None:
+    """Per-patient metric distribution per fold; boxplot + overlaid points."""
+
+    fig, ax = plt.subplots(figsize = (6, 4))
+    sns.boxplot(data = per_fold, x = "fold", y = metric, ax = ax, 
+                showfliers = False, color = "lightgray")
+    sns.stripplot(data = per_fold, x = "fold", y = metric, ax = ax,
+                  color = "black", size = 4, jitter = 0.15, alpha = 0.7)
+    ax.set_title(f"Per-patient {metric} by fold")
+    ax.set_ylim(0, 1)
+    fig.tight_layout()
+
+    if save_path: fig.savefig(save_path, dpi = 300); plt.close(fig)
     return
 
 

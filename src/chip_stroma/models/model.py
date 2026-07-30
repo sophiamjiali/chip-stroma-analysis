@@ -362,8 +362,8 @@ class VesselSegModule(pl.LightningModule):
         runtime = now - start_time
 
         logger.info(
-            f"{runtime:>10d} | "
-            f"{elapsed:>10d} | "
+            f"{runtime:>10f} | "
+            f"{elapsed:>10f} | "
             f"{self.current_epoch:>6d} | "
             f"{metrics.get('val/loss', 'N/A'):>12.4f} | "
             f"{metrics.get('val/dice', 'N/A'):>10.4f} | "

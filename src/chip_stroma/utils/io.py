@@ -385,7 +385,7 @@ def load_overlay_arrays(src_dir  : str | Path,
     pred_mask = prob >= 0.5
 
     # Raw image isn't persisted in the h5 — reload from the source patch,
-    image_path = f"{patch_dir}/{row["sample_id"]}/{row['patch_name']}"
+    image_path = f"{patch_dir}/{row['sample_id']}/{row['patch_name']}"
     image      = np.array(Image.open(image_path))
 
     return image, gt_mask, pred_mask

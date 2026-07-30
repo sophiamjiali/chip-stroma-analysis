@@ -32,9 +32,11 @@ def main():
     results  = pd.concat([pd.read_csv(f) for f in task_dir.glob("*.csv")], 
                          ignore_index = True)
 
+    logger.info(f"Identified {len(results)} full CV summaries")
+
     # Summarize into one aggregate
-    summary = (results[['val_dice', 'val_precision', 'val_recall']]
-               .agg(['mean', 'std']))
+    summary = (results.groupby('trial_num')['best_val_dice']
+                        .agg(['mean', 'std', 'count']))
     summary_path = config.paths.results / args.version / "full_cv_summary.csv"
     summary_path.parent.mkdir(parents = True, exist_ok = True)
     summary.to_csv(summary_path)

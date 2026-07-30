@@ -106,11 +106,6 @@ def main():
     top_k.to_csv(evaluate_dir / "top_k_trials.csv", index = False)
     logger.info("Successfully computed summary tables for top K trials")
 
-    final_cv = pd.read_csv(dst_dir / "full_cv_summary.csv")
-    final_cv = final_cv_summary_table(cv_results = final_cv)
-    final_cv.to_csv(evaluate_dir / "final_cv_summary.csv", index = False)
-    logger.info("Successfully computed the full CV summary atble")
-
     log_footer()
 
     return

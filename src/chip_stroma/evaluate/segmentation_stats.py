@@ -166,7 +166,7 @@ def multiseed_summary_table(trial_results: pd.DataFrame) -> pd.DataFrame:
 
     metric_cols = ["dice", "precision", "recall"]
     summary = (
-        trial_results.groupby("trial_number")[metric_cols]
+        trial_results.groupby("trial_num")[metric_cols]
         .agg(["mean", "std"])
     )
     summary.columns = ["_".join(c) for c in summary.columns]

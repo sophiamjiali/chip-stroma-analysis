@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from matplotlib.lines import Line2D
+from matplotlib.ticker import ScalarFormatter
 
 logging.getLogger("matplotlib.category").setLevel(logging.ERROR)
 
@@ -210,6 +211,7 @@ def plot_optuna_importance(importance: pd.DataFrame,
     if save_path: fig.savefig(save_path, dpi = 300); plt.close(fig)
     return None
 
+
 def plot_confusion_matrix(threshold_sweep_counts: dict, save_path: str | None = None):
     """
     Normalized 2x2 pixel-level confusion matrix at the operating threshold
@@ -264,13 +266,23 @@ def plot_calibration(probs: np.ndarray,
             obs_freq.append(gt_flat[mask].mean())
 
     fig, ax = plt.subplots(figsize=(5, 5))
-    ax.plot([0, 1], [0, 1], "k--", label="Perfect calibration")
-    ax.plot(mean_pred, obs_freq, "o-", color="steelblue", label="Model")
-    ax.set_xlabel("Mean predicted probability"); ax.set_ylabel("Observed frequency")
-    ax.legend()
+
+    ax.plot([0, 1], [0, 1], "--", color="gray", linewidth=1, label="Perfect calibration")
+    ax.plot(mean_pred, obs_freq, "o-", color="steelblue", linewidth=2, markersize=5, label="Model")
+    
+    ax.set_title("Pixel-Wise Probability Calibration", fontsize=14, pad=12)
+    ax.set_xlabel("Mean Predicted Probability")
+    ax.set_ylabel("Observed Frequency")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_aspect("equal")
+    ax.grid(alpha=0.3)
+    
+    ax.legend(frameon=False, fontsize=9)
     fig.tight_layout()
+    
     if save_path: fig.savefig(save_path, dpi=300); plt.close(fig)
-    return fig
+    return None
 
 
 def plot_dice_vs_vessel_area(per_patient: pd.DataFrame, 
@@ -288,11 +300,16 @@ def plot_dice_vs_vessel_area(per_patient: pd.DataFrame,
     """
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.scatter(per_patient["vessel_area_frac"], per_patient["dice"], color="steelblue", alpha=0.7)
-    for _, row in per_patient.iterrows():
-        ax.annotate(row["sample_id"], (row["vessel_area_frac"], row["dice"]), fontsize=6, alpha=0.6)
-    ax.set_xlabel("GT vessel-area fraction"); ax.set_ylabel("Mean dice")
+    
+    ax.set_xlabel("Vessel Area Fraction")
+    ax.set_ylabel("Mean Dice Score")
+    ax.set_title("Vessel Area Fraction versus Segmentation Performance", pad=12)
+    
+    ax.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
+    ax.grid(alpha=0.3)
+    
     fig.tight_layout()
     if save_path: fig.savefig(save_path, dpi=300); plt.close(fig)
-    return fig
+    return None
     
 # [END]

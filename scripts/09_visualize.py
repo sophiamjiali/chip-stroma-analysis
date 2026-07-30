@@ -121,9 +121,17 @@ def main():
     plot_calibration(calib_sample["probs"], calib_sample["gt"], 
                      save_path = figure_dir / "calibration.png")
 
-    # 9. Dice vs. vessel area — requires GT area fraction per patient
-    per_patient_area = load_csv_inputs(evaluate_dir / "per_patient_vessel_area.csv")
-    plot_dice_vs_vessel_area(per_patient_area, save_path=figure_dir / "dice_vs_vessel_area.png")
+    # 7. Dice vs. vessel area — requires GT area fraction per patient
+    per_patient_dice = load_csv_inputs(evaluate_dir / "per_fold_metrics.csv")
+    per_patient_dice = per_patient_dice[per_patient_dice['sample_id'] != 'MACRO']
+    per_patient_dice = per_patient_dice.groupby("sample_id")["dice"].mean().reset_index()
+    
+    vessel_area = load_csv_inputs(evaluate_dir / "per_patient_vessel_area.csv")
+    dice_vs_area = per_patient_dice.merge(vessel_area, on="sample_id", how="inner")
+    plot_dice_vs_vessel_area(
+        per_patient = dice_vs_area, 
+        save_path   = figure_dir / "dice_vs_vessel_area.png"
+    )
 
     log_footer()
     return

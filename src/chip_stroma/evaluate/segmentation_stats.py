@@ -43,7 +43,7 @@ def per_fold_metrics(predictions: pd.DataFrame) -> pd.DataFrame:
 
 def optuna_importance(version: str, study_dir: str) -> pd.DataFrame:
     """Wraps parameter importance call from Optuna, returns for plotting."""
-    study = load_study(version, study_dir)
+    study       = load_study(version = version, study_dir = study_dir)
     importances = optuna.importance.get_param_importances(study)
 
     return pd.DataFrame({

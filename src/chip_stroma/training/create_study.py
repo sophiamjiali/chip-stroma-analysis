@@ -67,6 +67,18 @@ def initialize_study(version         : str,
 
 
 def load_study(version: str, study_dir: str):
+
+    # Temporary fix for legacy .db
+    if version == "v6":
+        storage_path = Path(f"{study_dir}/{version}.db")
+        study = optuna.load_study(
+            study_name = version,
+            storage = f"sqlite:///{storage_path}"
+        )
+        return study
+
+
+
     storage_path = Path(f"{study_dir}/{version}.log")
 
     storage = JournalStorage(JournalFileBackend(str(storage_path)))

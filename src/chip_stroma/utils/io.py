@@ -8,6 +8,7 @@
 
 import json
 import h5py
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -16,6 +17,7 @@ from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 from tqdm import tqdm
 from PIL import Image
+from typing import cast
 
 from chip_stroma.utils.loggers import setup_logger
 
@@ -23,6 +25,18 @@ logger = setup_logger(__name__)
 
 JOIN_KEY = ['sample_id', 'patch_name']
 
+
+def load_json(path: str | Path) -> dict:
+    """Loads a JSON file (e.g. confusion_counts.json) into a dict."""
+    with open(path, "r") as f:
+        return json.load(f)
+
+
+def load_pickle(path: str | Path):
+    """Loads a pickled object (e.g. calibration_sample.pkl)."""
+    with open(path, "rb") as f:
+        return pickle.load(f)
+    
 # =====| Name Sanitization |====================================================
 
 def sanitize_names(src_dir: Path) -> dict:
@@ -364,17 +378,15 @@ def load_overlay_arrays(src_dir  : str | Path,
 
     # Pull probs/gt from the corresponding h5 index; de-quantize probs -> [0,1]
     with h5py.File(fold_dir / "val_arrays.h5", "r") as h5f:
-        prob    = h5f["probs"][h5_idx].astype(np.float32) / 255.0
-        gt_mask = h5f["gt"][h5_idx]
+        prob    = (cast(h5py.Dataset, h5f["probs"])[h5_idx]
+                    .astype(np.float32) / 255.0)
+        gt_mask = cast(h5py.Dataset, h5f["gt"])[h5_idx]
         
     pred_mask = prob >= 0.5
 
     # Raw image isn't persisted in the h5 — reload from the source patch,
-    image_path = Path(patch_dir) / row["sample_id"] / f"{row['patch_name']}"
-    matches    = (metrics[(metrics["sample_id"] == row["sample_id"]) & 
-                  (metrics["patch_name"] == row["patch_name"])])
-
-    image = np.array(Image.open(image_path))
+    image_path = f"{patch_dir}/{row["sample_id"]}/{row['patch_name']}"
+    image      = np.array(Image.open(image_path))
 
     return image, gt_mask, pred_mask
 

@@ -234,7 +234,10 @@ def plot_confusion_matrix(threshold_sweep_counts: dict, save_path: str | None = 
     return fig
 
 
-def plot_calibration(probs: np.ndarray, gt: np.ndarray, n_bins: int = 10, save_path: str | None = None):
+def plot_calibration(probs: np.ndarray, 
+                     gt: np.ndarray, 
+                     n_bins: int = 10, 
+                     save_path: str | None = None):
     """
     Reliability diagram: predicted probability vs. observed positive
     frequency, binned into n_bins.
@@ -268,72 +271,10 @@ def plot_calibration(probs: np.ndarray, gt: np.ndarray, n_bins: int = 10, save_p
     fig.tight_layout()
     if save_path: fig.savefig(save_path, dpi=300); plt.close(fig)
     return fig
-
 
 
 def plot_dice_vs_vessel_area(per_patient: pd.DataFrame, 
-                             save_path  : str | None = None) -> None:
-    """
-    Scatter of per-patient dice vs. ground-truth vessel-area fraction.
-
-    X-axis: fraction of tissue pixels that are vessel-positive (GT).
-    Y-axis: per-patient mean dice.
-
-    Purpose: checks whether performance degrades on low-vessel-density
-    patients — the primary failure mode expected under ~125:1 class
-    imbalance, and directly relevant since vessel area is your
-    scientific endpoint (CHIP vs. non-CHIP comparison).
-    """
-    
-    fig, ax = plt.subplots(figsize=(6, 4))
-    ax.scatter(per_patient["vessel_area_frac"], per_patient["dice"], 
-               color="lightblue", alpha=0.7)
-    for _, row in per_patient.iterrows():
-        ax.annotate(row["sample_id"], (row["vessel_area_frac"], row["dice"]),
-                    fontsize=6, alpha=0.6)
-    ax.set_xlabel("GT vessel-area fraction"); ax.set_ylabel("Mean dice")
-    fig.tight_layout()
-    
-    if save_path: fig.savefig(save_path, dpi=300); plt.close(fig)
-    return None
-
-def plot_calibration(probs: np.ndarray, gt: np.ndarray, n_bins: int = 10, save_path: str | None = None):
-    """
-    Reliability diagram: predicted probability vs. observed positive
-    frequency, binned into n_bins.
-
-    X-axis: mean predicted probability per bin. Y-axis: observed
-    fraction of true-positive pixels in that bin. Diagonal = perfect
-    calibration.
-
-    Purpose: Otsu thresholding for vessel density scoring assumes
-    probabilities are meaningfully ordered/scaled — miscalibration here
-    would bias downstream density scores and the CHIP vs. non-CHIP
-    t-test.
-    """
-    probs_flat, gt_flat = probs.ravel(), gt.ravel().astype(bool)
-    bin_edges = np.linspace(0, 1, n_bins + 1)
-    bin_ids = np.digitize(probs_flat, bin_edges) - 1
-    bin_ids = np.clip(bin_ids, 0, n_bins - 1)
-
-    mean_pred, obs_freq = [], []
-    for b in range(n_bins):
-        mask = bin_ids == b
-        if mask.sum() > 0:
-            mean_pred.append(probs_flat[mask].mean())
-            obs_freq.append(gt_flat[mask].mean())
-
-    fig, ax = plt.subplots(figsize=(5, 5))
-    ax.plot([0, 1], [0, 1], "k--", label="Perfect calibration")
-    ax.plot(mean_pred, obs_freq, "o-", color="steelblue", label="Model")
-    ax.set_xlabel("Mean predicted probability"); ax.set_ylabel("Observed frequency")
-    ax.legend()
-    fig.tight_layout()
-    if save_path: fig.savefig(save_path, dpi=300); plt.close(fig)
-    return fig
-
-
-def plot_dice_vs_vessel_area(per_patient: pd.DataFrame, save_path: str | None = None):
+                             save_path: str | None = None):
     """
     Scatter of per-patient dice vs. ground-truth vessel-area fraction.
 

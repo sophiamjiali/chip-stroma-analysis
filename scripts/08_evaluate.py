@@ -9,8 +9,8 @@
 import json
 import pickle
 
-import argparse as ap
 import numpy as np
+import argparse as ap
 
 from pathlib import Path
 
@@ -24,7 +24,8 @@ from chip_stroma.evaluate.segmentation_stats import (
     optuna_importance,
     threshold_sweep,
     select_overlay_cases,
-    top_k_trials_table
+    top_k_trials_table,
+    compute_per_patient_vessel_area
 )
 
 logger = setup_logger(__name__)
@@ -73,14 +74,14 @@ def main():
         n_folds           = n_folds,
         single_model      = args.single_model,
         calib_sample_size = config.evaluate.calibration_sample_size,
-        thresholds        = threshold
+        thresholds        = thresholds
     )
     
     thresholds.to_csv(evaluate_dir / "threshold_sweep.csv", index = False)
-    with open(evaluate_dir / "confusion_counts.json", "w") as f: 
+    with open(evaluate_dir / "confusion_counts.json", "w") as f:
         json.dump(confusion_counts, f)
-    with open(evaluate_dir / "calibration_sample.pkl", "w") as f:
-        pickle.dump(calib_sample, f")
+    with open(evaluate_dir / "calibration_sample.pkl", "wb") as f:
+        pickle.dump(calib_sample, f)
             
     logger.info(f"Successfully conducted threshold sweep on {len(thresholds)} "
                 f"candidates")

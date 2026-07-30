@@ -15,8 +15,12 @@ from pathlib import Path
 from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
-from chip_stroma.utils.io import load_overlay_arrays, load_csv_inputs
-from chip_stroma.training.create_study import load_study
+from chip_stroma.utils.io import (
+    load_overlay_arrays, 
+    load_csv_inputs,
+    load_json,
+    load_pickle
+)
 
 from chip_stroma.visualize.segmentation_plots import (
     plot_fold_boxplots,
@@ -24,7 +28,9 @@ from chip_stroma.visualize.segmentation_plots import (
     plot_patient_dice_violin,
     plot_overlay_panel,
     plot_optuna_importance,
-    plot_optuna_parallel_coords
+    plot_confusion_matrix,
+    plot_dice_vs_vessel_area,
+    plot_calibration
 )
 
 logger = setup_logger(__name__)
@@ -87,7 +93,8 @@ def main():
         image, gt_mask, pred_mask = load_overlay_arrays(
             src_dir   = inference_dir,
             fold      = case['fold'],
-            sample_id = case['sample_id']
+            sample_id = case['sample_id'],
+            patch_dir = config.paths.processed_data.patch_dir
         )
 
         plot_name = (f"{case['category']}_fold{case['fold']}_" + 

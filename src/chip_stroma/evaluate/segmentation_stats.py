@@ -14,6 +14,7 @@ import pandas as pd
 import numpy as np
 
 from typing import cast
+from pathlib import Path
 
 from chip_stroma.training.create_study import load_study
 
@@ -57,8 +58,7 @@ def threshold_sweep(inference_dir: pd.DataFrame,
                     n_folds      : int,
                     single_model : bool,
                     calib_sample_size: int = 1000000,
-                    thresholds   : np.ndarray = np.linspace(0.1, 0.9, 17)
-                    ) -> pd.DataFrame:
+                    thresholds   : np.ndarray = np.linspace(0.1, 0.9, 17)):
     """
     Pooled precision/recall/dice at each threshold, justifying Otsu versus a 
     learned threshold for downstream fibroblast quantification.
@@ -129,8 +129,9 @@ def threshold_sweep(inference_dir: pd.DataFrame,
     sweep = pd.DataFrame(rows)
 
     # Confusion counts at the best (argmax-dice) threshold only
-    best_t = sweep_df.loc[sweep_df["dice"].idxmax(), "threshold"]
-    confusion_counts = {**counts[best_t], "threshold": float(best_t)}
+    best_pos = int(np.argmax(sweep["dice"].to_numpy()))
+    best_t = float(sweep["threshold"].iloc[best_pos])
+    confusion_counts = {**counts[best_t], "threshold": best_t}
 
     calib_sample = {"probs": np.array(reservoir_probs), "gt": np.array(reservoir_gt, dtype=bool)}
 
@@ -205,7 +206,8 @@ def compute_per_patient_vessel_area(inference_dir: Path,
             for sample_id, group in metrics.groupby("sample_id"):
                 idxs = group.index.to_numpy()
                 # gt already tissue-masked at inference time (vessel_masks_m)
-                gt_chunk = h5f["gt"][idxs.min():idxs.max() + 1]
+                gt_chunk = (cast(h5py.Dataset, h5f["gt"])
+                            [idxs.min():idxs.max() + 1])
                 vessel_px = gt_chunk.sum()
                 tissue_px = gt_chunk.size  # denominator note below
                 rows.append({"sample_id": sample_id, "fold": f if f is not None else 0,

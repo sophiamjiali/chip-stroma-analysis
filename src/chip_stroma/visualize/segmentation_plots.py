@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from matplotlib.lines import Line2D
-from matplotlib.ticker import ScalarFormatter
 
 logging.getLogger("matplotlib.category").setLevel(logging.ERROR)
 
@@ -214,39 +213,44 @@ def plot_optuna_importance(importance: pd.DataFrame,
 
 def plot_confusion_matrix(threshold_sweep_counts: dict, save_path: str | None = None):
     """
-    Normalized 2x2 pixel-level confusion matrix at the operating threshold
-    (argmax-dice from threshold_sweep).
+    Row-normalized (per true class) 2x2 pixel-level confusion matrix at
+    the operating threshold (argmax-dice from threshold_sweep).
 
-    Cells: TP/FP/FN/TN as fraction of all tissue-masked pixels.
+    Cells: TP/FP/FN/TN as fraction of pixels within their GT class
+    (not fraction of all pixels — normalizing by total is dominated by
+    background under ~125:1 imbalance, collapsing vessel cells to ~0).
 
     Purpose: more granular than dice alone — shows whether errors skew
     false-positive or false-negative, informing whether the vessel
     density score (script 10) will over- or under-estimate area.
     """
     tp, fp, fn, tn = threshold_sweep_counts["tp"], threshold_sweep_counts["fp"], threshold_sweep_counts["fn"], threshold_sweep_counts["tn"]
-    total = tp + fp + fn + tn
-    matrix = np.array([[tn, fp], [fn, tp]]) / total
+
+    matrix = np.array([[tn, fp], [fn, tp]], dtype=float)
+    row_sums = matrix.sum(axis=1, keepdims=True)  # GT: bg row, GT: vessel row
+    matrix_norm = matrix / row_sums               # normalize within each true class
 
     fig, ax = plt.subplots(figsize=(4, 4))
-    sns.heatmap(matrix, annot=True, fmt=".3f", cmap="Blues",
+    sns.heatmap(matrix_norm, annot=True, fmt=".3f", cmap="Blues", vmin=0, vmax=1,
                 xticklabels=["Pred: bg", "Pred: vessel"], yticklabels=["GT: bg", "GT: vessel"], ax=ax)
-    ax.set_title("Pixel-level confusion matrix (normalized)")
+    ax.set_title("Pixel-level confusion matrix\n(row-normalized by GT class)")
     fig.tight_layout()
     if save_path: fig.savefig(save_path, dpi=300); plt.close(fig)
     return fig
 
 
-def plot_calibration(probs: np.ndarray, 
-                     gt: np.ndarray, 
-                     n_bins: int = 10, 
-                     save_path: str | None = None):
+def plot_calibration(probs: np.ndarray,
+                      gt: np.ndarray,
+                      n_bins: int = 10,
+                      save_path: str | None = None):
     """
     Reliability diagram: predicted probability vs. observed positive
-    frequency, binned into n_bins.
+    frequency, quantile-binned into n_bins.
 
     X-axis: mean predicted probability per bin. Y-axis: observed
     fraction of true-positive pixels in that bin. Diagonal = perfect
-    calibration.
+    calibration. Lower subplot: pixel count per bin (log scale) to
+    expose bin reliability under ~125:1 class imbalance.
 
     Purpose: Otsu thresholding for vessel density scoring assumes
     probabilities are meaningfully ordered/scaled — miscalibration here
@@ -254,33 +258,41 @@ def plot_calibration(probs: np.ndarray,
     t-test.
     """
     probs_flat, gt_flat = probs.ravel(), gt.ravel().astype(bool)
-    bin_edges = np.linspace(0, 1, n_bins + 1)
-    bin_ids = np.digitize(probs_flat, bin_edges) - 1
-    bin_ids = np.clip(bin_ids, 0, n_bins - 1)
 
-    mean_pred, obs_freq = [], []
-    for b in range(n_bins):
+    # Quantile binning (not uniform): uniform bins are near-empty at high
+    # probs under severe imbalance, producing unstable/undefined points
+    bin_edges = np.unique(np.quantile(probs_flat, np.linspace(0, 1, n_bins + 1)))
+    bin_ids = np.clip(np.digitize(probs_flat, bin_edges[1:-1], right=True), 0, len(bin_edges) - 2)
+
+    mean_pred, obs_freq, counts = [], [], []
+    for b in range(len(bin_edges) - 1):
         mask = bin_ids == b
         if mask.sum() > 0:
             mean_pred.append(probs_flat[mask].mean())
             obs_freq.append(gt_flat[mask].mean())
+            counts.append(mask.sum())
 
-    fig, ax = plt.subplots(figsize=(5, 5))
+    # ECE weighted by bin size (more meaningful than plot alone under imbalance)
+    ece = np.sum(np.array(counts) / len(probs_flat) * np.abs(np.array(obs_freq) - np.array(mean_pred)))
+
+    fig, (ax, ax2) = plt.subplots(2, 1, figsize=(5, 6.5), sharex=True,
+                                   gridspec_kw={"height_ratios": [3, 1]})
 
     ax.plot([0, 1], [0, 1], "--", color="gray", linewidth=1, label="Perfect calibration")
     ax.plot(mean_pred, obs_freq, "o-", color="steelblue", linewidth=2, markersize=5, label="Model")
-    
-    ax.set_title("Pixel-Wise Probability Calibration", fontsize=14, pad=12)
-    ax.set_xlabel("Mean Predicted Probability")
+    ax.set_title(f"Pixel-Wise Probability Calibration (ECE={ece:.3f})", fontsize=13, pad=12)
     ax.set_ylabel("Observed Frequency")
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
-    ax.set_aspect("equal")
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.set_aspect("equal")
     ax.grid(alpha=0.3)
-    
     ax.legend(frameon=False, fontsize=9)
+
+    ax2.bar(mean_pred, counts, width=0.02, color="steelblue", alpha=0.6)
+    ax2.set_yscale("log")
+    ax2.set_ylabel("Pixel count")
+    ax2.set_xlabel("Mean Predicted Probability")
+    ax2.grid(alpha=0.3)
+
     fig.tight_layout()
-    
     if save_path: fig.savefig(save_path, dpi=300); plt.close(fig)
     return None
 

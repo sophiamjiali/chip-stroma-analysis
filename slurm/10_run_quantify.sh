@@ -25,7 +25,7 @@ echo "Node:       $SLURMD_NODENAME"
 echo "GPU:        $CUDA_VISIBLE_DEVICES"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-srun --export=ALL python -u scripts/10_visualize.py \
+srun --export=ALL python -u scripts/10_quantify.py \
     --config_dir $CONFIG_DIR \
     --version $VERSION \
     --single_modegl

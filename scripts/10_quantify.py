@@ -32,7 +32,7 @@ def main():
         config_path    = Path(args.config_dir) / "10_quantify.yaml",
         version        = args.version
     )
-g
+
     # Load workflow and path configurations
     config = load_configs(
         pipeline = Path(args.config_dir) / "10_quantify.yaml",
@@ -56,8 +56,8 @@ g
     thresholds   = [base_thresh - delta, base_thresh, base_thresh + delta]
 
     # Loop over all folds for full-CV models (or only one fold)
-    if args.final_model:
-        logger.info("Performing quantification on a final model")
+    if args.single_model:
+        logger.info("Performing quantification on a single model")
         logger.info(f"Detected fold: {config.quantify.n_folds}")
         folds = [config.quantify.n_folds]
     else:
@@ -71,14 +71,14 @@ g
         # Perform quantification on the specified fold
         all_rows.extend(
             quantify_fold(
-                fold        = fold,
-                manifest    = manifest,
-                thresholds  = thresholds,
-                base_thresh = base_thresh,
-                mask_dir    = qa_mask_dir,
-                paths       = config.paths,
-                version     = args.version,
-                final_model = args.final_model
+                fold         = fold,
+                manifest     = manifest,
+                thresholds   = thresholds,
+                base_thresh  = base_thresh,
+                mask_dir     = qa_mask_dir,
+                paths        = config.paths,
+                version      = args.version,
+                single_model = args.single_model
             )
         )
 
@@ -104,7 +104,7 @@ def parse_args():
     parser = ap.ArgumentParser(description = "Fibroblast quantification.")
     parser.add_argument("--config_dir",   type = str, default = "configs/")
     parser.add_argument("--version",      type = str)
-    parser.add_argument("--final_model", action = "store_true")
+    parser.add_argument("--single_model", action = "store_true")
     
     return parser.parse_args()
 

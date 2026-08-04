@@ -6,7 +6,7 @@
 # Date:             07/30/2026
 # ==============================================================================
 
-n_folds: 5
+n_folds: 0  # Just the validation fold for now
 
 vessel_threshold: 0.5
 vessel_threshold_delta: 0.1

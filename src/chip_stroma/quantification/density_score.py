@@ -31,7 +31,7 @@ def quantify_fold(fold        : int,
                   mask_dir    : Path,
                   paths       : Box,
                   version     : str,
-                  final_model : bool = False) -> list[dict]:
+                  single_model : bool = False) -> list[dict]:
     """
     Run quantification for one fold (or the single all-data model), 
     index-matched to that fold's val_arrays.h5, following the exact split logic.
@@ -39,11 +39,11 @@ def quantify_fold(fold        : int,
 
     # Fetch the inference path from the inference step
     results_dir = Path(paths.results) / version / "inference"
-    fold_dir = (results_dir / "inference" if final_model 
+    fold_dir = (results_dir / "inference" if single_model 
                 else results_dir / "inference" / f"fold_{fold}")
 
     # Initialize the fold's held-out validation split
-    fold_manifest = build_fold_manifest(manifest, fold, final_model)
+    fold_manifest = build_fold_manifest(manifest, fold, single_model)
     dataset = VesselPatchDataset(
         manifest        = fold_manifest,
         patch_dir       = paths.processed_data.patch_dir,

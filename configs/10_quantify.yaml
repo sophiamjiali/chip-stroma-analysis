@@ -5,3 +5,8 @@
 # Affiliation:      CCG Lab, Princess Margaret Cancer Center, UHN, UofT
 # Date:             07/30/2026
 # ==============================================================================
+
+n_folds: 5
+
+vessel_threshold: 0.5
+vessel_threshold_delta: 0.1

@@ -36,6 +36,28 @@ def load_pickle(path: str | Path):
     """Loads a pickled object (e.g. calibration_sample.pkl)."""
     with open(path, "rb") as f:
         return pickle.load(f)
+
+
+def save_qa_masks(vessel_mask: np.ndarray,
+                  fibroblast_mask: np.ndarray,
+                  tissue_mask: np.ndarray,
+                  out_path: Path) -> None:
+    """
+    Encode vessel, fibroblast, and tissue masks as a single palette PNG label 
+    image. Follows the following encoding:
+        0 = background
+        1 = tissue only
+        2 = vessel
+        3 = fibroblast
+    """
+
+    label = np.zeros(tissue_mask.shape, dtype = np.uint8)
+    label[tissue_mask]     = 1
+    label[vessel_mask]     = 2
+    label[fibroblast_mask] = 3
+    Image.fromarray(label, mode = "L").save(out_path)
+
+    return
     
 # =====| Name Sanitization |====================================================
 
@@ -136,6 +158,15 @@ def save_patch_manifest(manifest: pd.DataFrame, path: Path) -> None:
 def load_patch_manifest(path: Path) -> pd.DataFrame:
     """Loads the patch manifest from the path."""
     return pd.read_csv(path)
+
+
+def build_fold_manifest(manifest: pd.DataFrame,
+                        fold: int,
+                        single_model: bool) -> pd.DataFrame:
+    """Reconstructs the held-out split used at inference time."""
+
+    if single_model: return manifest.reset_index(drop = True)
+    return manifest[manifest['fold'] == fold].reset_index(drop = True)
     
 
 # =====| Patch Statistics |=====================================================

@@ -88,10 +88,10 @@ def threshold_sweep(inference_dir: pd.DataFrame,
                 end = min(start + CHUNK_SIZE, n)
 
                 # De-quantize uint8 -> [0,1] float32 for this chunk only
-                probs = probs[start:end].astype(np.float32) / 255.0
-                gt    = gt[start:end]
+                chunk_probs = probs[start:end].astype(np.float32) / 255.0
+                chunk_gt    = gt[start:end]
 
-                probs_flat, gt_flat = probs.ravel(), gt.ravel()
+                probs_flat, gt_flat = chunk_probs.ravel(), chunk_gt.ravel()
 
                 for t in thresholds:
                     pred = probs_flat >= t

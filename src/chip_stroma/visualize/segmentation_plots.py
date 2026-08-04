@@ -321,7 +321,7 @@ def plot_dice_vs_vessel_area(per_patient: pd.DataFrame,
     ax.grid(alpha=0.3)
     
     fig.tight_layout()
-    if save_path: fig.savefig(save_path, dpi=300); plt.close(fig)
+    if save_path: fig.savefig(save_path, dpi = 300); plt.close(fig)
     return None
     
 # [END]

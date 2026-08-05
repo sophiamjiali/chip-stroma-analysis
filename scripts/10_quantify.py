@@ -66,7 +66,7 @@ def main():
 
     all_rows = []
     for fold in folds:
-        logger.info(f"Quantifying fold {fold} / {len(folds)}")
+        logger.info(f"Quantifying fold {fold + 1} / {len(folds)}")
 
         # Perform quantification on the specified fold
         all_rows.extend(

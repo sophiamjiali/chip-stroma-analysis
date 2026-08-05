@@ -13,7 +13,7 @@ set -euo pipefail
 # ==============================================================================
 
 STEP_NAME=${1:? "Usage: $0 <pipeline_step> <version>"}
-VERSION=${2:? "Usage: $0 <pipeline_step> <version>"}
+VERSION=${2:-}
 
 # ==============================================================================
 
@@ -32,7 +32,7 @@ PY
 )
 
 # Build the primary paths for job submission
-LOG_DIR="${LOG_ROOT}/${STEP_NAME}/${VERSION}"
+LOG_DIR="${LOG_ROOT}/${STEP_NUMBER}_${STEP_NAME}/${VERSION}"
 SLURM_SCRIPT="${STEP_NUMBER}_run_${STEP_NAME}.sh"
 SLURM_PATH="${PROJECT_ROOT}/slurm/${SLURM_SCRIPT}"
 

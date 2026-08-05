@@ -20,7 +20,9 @@ from skimage.filters import threshold_otsu
 from chip_stroma.utils.io import build_fold_manifest, save_qa_masks
 from chip_stroma.data.transforms import get_val_transforms
 from chip_stroma.data.dataset import VesselPatchDataset
+from chip_stroma.utils.loggers import setup_logger
 
+logger = setup_logger(__name__)
 CHUNK_SIZE = 512
 
 
@@ -39,7 +41,7 @@ def quantify_fold(fold        : int,
 
     # Fetch the inference path from the inference step
     results_dir = Path(paths.results) / version / "inference"
-    fold_dir = results_dir if single_model else results_dir / f"fold_{fold}"
+    fold_dir    = results_dir if single_model else results_dir / f"fold_{fold}"
 
     # Initialize the fold's held-out validation split
     fold_manifest = build_fold_manifest(manifest, fold, single_model)
@@ -55,6 +57,8 @@ def quantify_fold(fold        : int,
     with h5py.File(fold_dir / "val_arrays.h5", "r") as h5f:
         probs = cast(h5py.Dataset, h5f['probs'])
         n     = probs.shape[0]
+
+        logger.info(f"- Loaded {n} fold predictions")
 
         # Stream in chunks, dequantizing uint8 -> [0,1] float32
         for start in range(0, n, CHUNK_SIZE):
@@ -96,6 +100,7 @@ def quantify_fold(fold        : int,
                         "fibroblast_density": res["density"]
                     })
 
+    logger.info("- Quantified all patches")
     return rows
 
 
@@ -154,7 +159,7 @@ def aggregate_scores(scores: pd.DataFrame) -> pd.DataFrame:
 def summarize_sensitivity(scores: pd.DataFrame) -> pd.DataFrame:
     """Per-patient density range/CV across the threshold sweep."""
 
-    summary = scores.groupby('sample_id')['patient_fibroblast_density'].agg(
+    summary = scores.groupby('sample_id')['sample_fibroblast_density'].agg(
         density_min = "min", density_max = "max", 
         density_mean = "mean", density_std = "std"
     )

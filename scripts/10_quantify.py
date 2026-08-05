@@ -93,7 +93,7 @@ def main():
     sensitivity.to_csv(quantify_dir / "vessel_threshold_sensitivity.csv", 
                        index = False)
 
-    logger.info("fQuantification  complete for all fold(s).")
+    logger.info("Quantification  complete for all fold(s).")
     log_footer()
     return
 

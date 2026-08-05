@@ -38,10 +38,10 @@ def load_pickle(path: str | Path):
         return pickle.load(f)
 
 
-def save_qa_masks(vessel_mask: np.ndarray,
+def save_qa_masks(vessel_mask    : np.ndarray,
                   fibroblast_mask: np.ndarray,
-                  tissue_mask: np.ndarray,
-                  out_path: Path) -> None:
+                  tissue_mask    : np.ndarray,
+                  out_path       : Path) -> None:
     """
     Encode vessel, fibroblast, and tissue masks as a single palette PNG label 
     image. Follows the following encoding:

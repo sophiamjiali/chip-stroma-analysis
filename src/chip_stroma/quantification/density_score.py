@@ -80,7 +80,11 @@ def quantify_fold(fold        : int,
                 )
 
                 # Export the fibroblast mask for the provided threshold
-                out_path = (mask_dir / f"{item['sample_id']}_{item['patch_name']}_masks.png")
+                out_dir = mask_dir / item['sample_id']
+                out_dir.mkdir(parents = True, exist_ok = True)
+
+                patch_name = item['patch_name'].remoesuffix('_raw.png')
+                out_path   = out_dir / f"{patch_name}_overlays.png"
 
                 qa_masks = patch_results[base_thresh]
                 save_qa_masks(

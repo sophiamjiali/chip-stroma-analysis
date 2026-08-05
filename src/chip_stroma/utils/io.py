@@ -18,12 +18,13 @@ from concurrent.futures import ProcessPoolExecutor
 from tqdm import tqdm
 from PIL import Image
 from typing import cast
+from skimage.color import label2rgb
 
 from chip_stroma.utils.loggers import setup_logger
 
 logger = setup_logger(__name__)
-
 JOIN_KEY = ['sample_id', 'patch_name']
+
 
 
 def load_json(path: str | Path) -> dict:
@@ -38,10 +39,10 @@ def load_pickle(path: str | Path):
         return pickle.load(f)
 
 
-def save_qa_masks(vessel_mask    : np.ndarray,
-                  fibroblast_mask: np.ndarray,
-                  tissue_mask    : np.ndarray,
-                  out_path       : Path) -> None:
+def save_overlay_masks(vessel_mask    : np.ndarray,
+                       fibroblast_mask: np.ndarray,
+                       tissue_mask    : np.ndarray,
+                       out_path       : Path) -> None:
     """
     Encode vessel, fibroblast, and tissue masks as a single palette PNG label 
     image. Follows the following encoding:
@@ -55,8 +56,39 @@ def save_qa_masks(vessel_mask    : np.ndarray,
     label[tissue_mask]     = 1
     label[vessel_mask]     = 2
     label[fibroblast_mask] = 3
-    Image.fromarray(label, mode = "L").save(out_path)
 
+    
+
+    img = Image.fromarray(label, mode = "P")
+    palette = [
+        0, 0, 0,        # 0 background = black
+        128, 128, 128,  # 1 tissue = gray
+        255, 0, 0,      # 2 vessel = red
+        0, 255, 0,      # 3 fibroblast = green
+    ]
+    img.putpalette(palette + [0] * (768 - len(palette)))
+    img.save(out_path)
+    return
+
+def save_overlay_patch(patch          : np.ndarray,
+                       vessel_mask    : np.ndarray,
+                       fibroblast_mask: np.ndarray,
+                       tissue_mask    : np.ndarray,
+                       out_path       : Path) -> None:
+    """Saves the masks overlaid on the patch itself."""
+
+    # build integer label map (same encoding as before)
+    label = np.zeros(tissue_mask.shape, dtype=np.uint8)
+    label[tissue_mask]     = 1
+    label[vessel_mask]     = 2
+    label[fibroblast_mask] = 3
+
+    # colors indexed by label value 1,2,3 (label2rgb skips 0/background by default)
+    colors = ["gray", "red", "lime"]  # tissue, vessel, fibroblast
+
+    overlay = label2rgb(label, image = patch, colors = colors,
+                         alpha = 0.5, bg_label = 0, image_alpha = 1)
+    Image.fromarray((overlay * 255).astype(np.uint8)).save(out_path)
     return
     
 # =====| Name Sanitization |====================================================

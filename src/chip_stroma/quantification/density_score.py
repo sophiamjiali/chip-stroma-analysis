@@ -17,10 +17,14 @@ from pathlib import Path
 from skimage.color import separate_stains, hdx_from_rgb
 from skimage.filters import threshold_otsu
 
-from chip_stroma.utils.io import build_fold_manifest, save_qa_masks
 from chip_stroma.data.transforms import get_val_transforms
 from chip_stroma.data.dataset import VesselPatchDataset
 from chip_stroma.utils.loggers import setup_logger
+from chip_stroma.utils.io import (
+    build_fold_manifest, 
+    save_overlay_masks, 
+    save_overlay_patch
+)
 
 logger = setup_logger(__name__)
 CHUNK_SIZE = 512
@@ -87,7 +91,18 @@ def quantify_fold(fold        : int,
                 out_path   = out_dir / f"{patch_name}_overlays.png"
 
                 qa_masks = patch_results[base_thresh]
-                save_qa_masks(
+
+                # Save masks as a palette
+                save_overlay_masks(
+                    vessel_mask     = qa_masks['vessel_mask'],
+                    fibroblast_mask = qa_masks['fibroblast_mask'],
+                    tissue_mask     = tissue_mask,
+                    out_path        = out_path
+                )
+
+                # Save masks overlaid on the patch itself
+                save_overlay_patch(
+                    patch           = patch,
                     vessel_mask     = qa_masks['vessel_mask'],
                     fibroblast_mask = qa_masks['fibroblast_mask'],
                     tissue_mask     = tissue_mask,

@@ -27,9 +27,6 @@ mkdir -p "$WANDB_DIR"
 
 export OPTUNA_SQLITE_TIMEOUT=300
 
-unset SLURM_NTASKS
-unset SLURM_JOB_NAME
-
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo "Job ID:     $SLURM_JOB_ID"
 echo "Node:       $SLURMD_NODENAME"

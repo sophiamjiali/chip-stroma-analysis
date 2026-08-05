@@ -29,4 +29,4 @@ srun --export=ALL python -u scripts/07_inference.py \
     --config_dir $CONFIG_DIR \
     --version $VERSION
 
-# [END]
+# [END]g

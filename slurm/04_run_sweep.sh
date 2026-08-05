@@ -28,7 +28,7 @@ PY
 )
 
 # Build the primary paths for job submission
-LOG_DIR="${LOG_ROOT}/${STEP_NAME}/${VERSION}"
+LOG_DIR="${LOG_ROOT}/${STEP_NUMBER}_${STEP_NAME}/${VERSION}"
 
 # Make the project-specific logs directory
 mkdir -p $LOG_DIR

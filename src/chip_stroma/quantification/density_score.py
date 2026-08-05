@@ -130,7 +130,7 @@ def quantify_patch(patch      : np.ndarray,
         otsu_t = threshold_otsu(dab_channel[valid_area])
         fibroblast_mask = (dab_channel >= otsu_t) & valid_area
 
-        density = fibroblast_mask.mask() / valid_area.sum()
+        density = fibroblast_mask.sum() / valid_area.sum()
         results[t] = {
             'density'        : density,
             'vessel_mask'    : vessel_mask,

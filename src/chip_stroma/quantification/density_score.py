@@ -39,8 +39,7 @@ def quantify_fold(fold        : int,
 
     # Fetch the inference path from the inference step
     results_dir = Path(paths.results) / version / "inference"
-    fold_dir = (results_dir / "inference" if single_model 
-                else results_dir / "inference" / f"fold_{fold}")
+    fold_dir = results_dir if single_model else results_dir / f"fold_{fold}")
 
     # Initialize the fold's held-out validation split
     fold_manifest = build_fold_manifest(manifest, fold, single_model)

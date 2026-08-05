@@ -64,7 +64,7 @@ def quantify_fold(fold        : int,
             for i in range(start, end):
                 item = dataset[i]
                 prob = chunk_probs[i - start].squeeze()
-                tissue_mask = item['tissue_mask'].astype(bool)
+                tissue_mask = item['tissue_mask'].cpu().numpy().astype(bool)
 
                 patch_results = quantify_patch(
                     patch       = item['patch'],

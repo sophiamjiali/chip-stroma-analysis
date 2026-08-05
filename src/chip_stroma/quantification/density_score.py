@@ -107,6 +107,7 @@ def quantify_patch(patch      : np.ndarray,
     """
 
     # DAB deconvolution per patch
+    patch       = np.moveaxis(patch, 0, -1)
     dab_channel = separate_stains(patch, hdx_from_rgb)[:, :, 1]
 
     results = {}

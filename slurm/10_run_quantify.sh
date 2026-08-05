@@ -28,6 +28,5 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 python -u scripts/10_quantify.py \
     --config_dir $CONFIG_DIR \
     --version $VERSION \
-    --single_model
 
 # [END]

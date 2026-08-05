@@ -18,5 +18,6 @@ steps:
   evaluate       : "08"
   visualize      : "09"
   quantify       : "10"
+  analysis       : "11"
 
 # [END]

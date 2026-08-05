@@ -65,6 +65,8 @@ def main():
         how      = 'left',
         validate = 'many_to_one'
     )
+    logger.info(f"- Read {len(sample_density)} sample-level fibroblast "
+                f"density scores")
 
     # Restrict to single base threshold (exclude swept thresholds)
     sample_density = sample_density[
@@ -76,22 +78,31 @@ def main():
     non_chip = sample_density.loc[sample_density['chip_status'] == 0, 
                                   "sample_fibroblast_density"]
 
+    logger.info(f"- Identified {len(chip)} CHIP patients")
+    logger.info(f"- Identified {len(non_chip)} non-CHIP patients")
+
     # Assumption check
     shapiro_chip = stats.shapiro(chip)[1], 
     shapiro_non  = stats.shapiro(non_chip)[1]
     levene_p     = stats.levene(chip, non_chip)[1]
+    logger.info("- Performed Shapiro-Wilk test")
+    logger.info("- Performed Levene test")
 
     # Primary significance test
     t_stat, t_p = stats.ttest_ind(chip, non_chip, equal_var = False)
+    logger.info("- Performed T-Test")
 
     # Non-parametric backup to T-Test
     u_stat, u_p = stats.mannwhitneyu(chip, non_chip, alternative = "two-sided")
+    logger.info("- Performed Mann-Whitney U test")
 
     # Effect size
     g = hedges_g(chip, non_chip)
+    logger.info("- Computed effect size")
 
     # Bootstrap CI on mean difference
     ci_low, ci_high = bootstrap_ci(chip.values, non_chip.values)
+    logger.info("- Computed CI boostraps on mean difference")
 
     # Separation via LOOCV logistic regression and AUC
     X = sample_density[['sample_fibroblast_density']].values
@@ -105,9 +116,15 @@ def main():
     auc         = roc_auc_score(y, loo_probs)
     fpr, tpr, _ = roc_curve(y, loo_probs)
 
+    logger.info("- Evaluated CHIP vs. non-CHIP separation via OOCV "
+                "logistic regression")
+
     # Clustering recovery; unsupervised grouping against CHIP labels
     cluster_labels = AgglomerativeClustering(n_clusters = 2).fit_predict(X)
     ari = adjusted_rand_score(y, cluster_labels)
+
+    logger.info("- Evaluated unsupervised clustering recovery against "
+                "CHIP labels")
 
     # Save results
     results = dict(
@@ -125,6 +142,8 @@ def main():
     )
     results_path = analysis_dir / "stats_results.json"
     json.dump(results, open(results_path, "w"), indent = 2, default = float)
+
+    logger.info("- Saved all statistical results")
 
     # Plot all key figures
     fig, axes = plt.subplots(1, 3, figsize=(15, 4))
@@ -154,6 +173,8 @@ def main():
 
     plt.tight_layout()
     plt.savefig(analysis_dir / "primary_analysis.png", dpi = 300)
+
+    logger.info("- Saved key figure")
 
     log_footer()
     return

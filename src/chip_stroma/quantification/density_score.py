@@ -64,10 +64,12 @@ def quantify_fold(fold        : int,
             for i in range(start, end):
                 item = dataset[i]
                 prob = chunk_probs[i - start].squeeze()
+
+                patch       = item['patch'].cpu().numpy()
                 tissue_mask = item['tissue_mask'].cpu().numpy().astype(bool)
 
                 patch_results = quantify_patch(
-                    patch       = item['patch'],
+                    patch       = patch,
                     prob        = prob,
                     tissue_mask = tissue_mask,
                     thresholds  = thresholds
@@ -107,7 +109,6 @@ def quantify_patch(patch      : np.ndarray,
     """
 
     # DAB deconvolution per patch
-    patch       = np.moveaxis(patch, 0, -1)
     dab_channel = separate_stains(patch, hdx_from_rgb)[:, :, 1]
 
     results = {}

@@ -55,6 +55,7 @@ def main():
     # Initialize version results directory
     analysis_dir = Path(config.paths.results) / args.version / "analysis"
     quantify_dir = Path(config.paths.results) / args.version / "quantify"
+    analysis_dir.mkdir(parents = True, exist_ok = True)
 
     # Load and merge CHIP status into sample-level fibroblast density
     sample_density = pd.read_csv(quantify_dir /"sample_fibroblast_density.csv") 

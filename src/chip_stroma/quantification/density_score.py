@@ -87,8 +87,9 @@ def quantify_fold(fold        : int,
                 out_dir = mask_dir / item['sample_id']
                 out_dir.mkdir(parents = True, exist_ok = True)
 
-                patch_name = item['patch_name'].removesuffix('_raw.png')
-                out_path   = out_dir / f"{patch_name}_overlays.png"
+                patch_name     = item['patch_name'].removesuffix('_raw.png')
+                out_mask_path  = out_dir / f"{patch_name}_masks.png"
+                out_patch_path = out_dir / f"{patch_name}_overlay.png"
 
                 qa_masks = patch_results[base_thresh]
 
@@ -97,7 +98,7 @@ def quantify_fold(fold        : int,
                     vessel_mask     = qa_masks['vessel_mask'],
                     fibroblast_mask = qa_masks['fibroblast_mask'],
                     tissue_mask     = tissue_mask,
-                    out_path        = out_path
+                    out_path        = out_mask_path
                 )
 
                 # Save masks overlaid on the patch itself
@@ -106,7 +107,7 @@ def quantify_fold(fold        : int,
                     vessel_mask     = qa_masks['vessel_mask'],
                     fibroblast_mask = qa_masks['fibroblast_mask'],
                     tissue_mask     = tissue_mask,
-                    out_path        = out_path
+                    out_path        = out_patch_path
                 )
 
                 # Format quantification statistics

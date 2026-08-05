@@ -88,7 +88,7 @@ def main():
 
     patch_scores.to_csv(quantify_dir / "patch_fibroblast_density.csv", 
                         index = False)
-    sample_scores.to_csv(quantify_dir / "sample_fibrblast_density.csv", 
+    sample_scores.to_csv(quantify_dir / "sample_fibroblast_density.csv", 
                          index = False)
     sensitivity.to_csv(quantify_dir / "vessel_threshold_sensitivity.csv", 
                        index = False)

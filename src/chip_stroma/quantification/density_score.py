@@ -47,8 +47,8 @@ def quantify_fold(fold        : int,
     dataset = VesselPatchDataset(
         manifest        = fold_manifest,
         patch_dir       = paths.processed_data.patch_dir,
-        vessel_mask_dir = paths.processed_diata.vessel_mask_dir,
-        tissue_mask_dir = paths.processed_diata.tissue_mask_dir,
+        vessel_mask_dir = paths.processed_data.vessel_mask_dir,
+        tissue_mask_dir = paths.processed_data.tissue_mask_dir,
         transform       = get_val_transforms()
     )
 

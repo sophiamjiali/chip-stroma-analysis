@@ -83,7 +83,7 @@ def quantify_fold(fold        : int,
                 out_dir = mask_dir / item['sample_id']
                 out_dir.mkdir(parents = True, exist_ok = True)
 
-                patch_name = item['patch_name'].remoesuffix('_raw.png')
+                patch_name = item['patch_name'].removesuffix('_raw.png')
                 out_path   = out_dir / f"{patch_name}_overlays.png"
 
                 qa_masks = patch_results[base_thresh]

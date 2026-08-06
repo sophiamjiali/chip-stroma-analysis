@@ -6,7 +6,8 @@
 checkpoints/
 /.vscode/
 .DS_Store
-
+analysis/
+test_figs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

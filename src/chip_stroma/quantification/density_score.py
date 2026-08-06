@@ -123,7 +123,8 @@ def quantify_fold(fold           : int,
                         "fibroblast_density": res["density"],
                         "object_count"      : res['object_count'],
                         "object_count_norm" : res["object_count_norm"],
-                        "mean_object_area"  : res["mean_object_area"]
+                        "mean_object_area"  : res["mean_object_area"],
+                        "valid_area"        : res["valid_area"]
                     })
     
 
@@ -157,6 +158,7 @@ def quantify_patch(patch          : np.ndarray,
                 'object_count'     : np.nan,
                 'object_count_norm': np.nan,
                 'mean_object_area' : np.nan,
+                'valid_area'       : 0,
                 'vessel_mask'      : vessel_mask,
                 'fibroblast_mask'  : np.zeros_like(vessel_mask)
             }
@@ -181,6 +183,7 @@ def quantify_patch(patch          : np.ndarray,
             'object_count'     : object_count,
             'object_count_norm': object_count_norm,
             'mean_object_area' : mean_object_area,
+            'valid_area'       : valid_area.sum(),
             'vessel_mask'      : vessel_mask,
             'fibroblast_mask'  : fibroblast_mask
         }

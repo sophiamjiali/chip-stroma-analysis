@@ -82,7 +82,7 @@ def main():
     logger.info(f"- Identified {len(non_chip)} non-CHIP patients")
 
     # Assumption check
-    shapiro_chip = stats.shapiro(chip)[1], 
+    shapiro_chip = stats.shapiro(chip)[1]
     shapiro_non  = stats.shapiro(non_chip)[1]
     levene_p     = stats.levene(chip, non_chip)[1]
     logger.info("- Performed Shapiro-Wilk test")

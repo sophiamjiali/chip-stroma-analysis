@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --time=0:30:00
+#SBATCH --time=0:15:00
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=2
 #SBATCH --mem=8G
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=sophiamjia.li@mail.utoronto.ca

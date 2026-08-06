@@ -61,12 +61,13 @@ def save_overlay_masks(vessel_mask    : np.ndarray,
     palette = [
         0, 0, 0,        # 0 background = black
         128, 128, 128,  # 1 tissue = gray
-        255, 0, 0,      # 2 vessel = red
-        0, 255, 0,      # 3 fibroblast = green
+        0, 255, 0,      # 2 vessel = lime
+        255, 0, 0       # 3 fibroblast = red
     ]
     img.putpalette(palette + [0] * (768 - len(palette)))
     img.save(out_path)
     return
+
 
 def save_overlay_patch(patch          : np.ndarray,
                        vessel_mask    : np.ndarray,
@@ -79,15 +80,11 @@ def save_overlay_patch(patch          : np.ndarray,
 
     # build integer label map (same encoding as before)
     label = np.zeros(tissue_mask.shape, dtype=np.uint8)
-    label[tissue_mask]     = 1
-    label[vessel_mask]     = 2
-    label[fibroblast_mask] = 3
+    label[vessel_mask] = 1
+    label[fibroblast_mask] = 2
 
-    # colors indexed by label value 1,2,3
-    colors = ["gray", "red", "lime"]  # tissue, vessel, fibroblast
-
-    overlay = label2rgb(label, image = patch, colors = colors,
-                         alpha = 0.5, bg_label = 0, image_alpha = 1)
+    overlay = label2rgb(label, image = patch, colors = ['lime', 'red'],
+                         alpha = 0.3, bg_label = 0, image_alpha = 1)
     Image.fromarray((overlay * 255).astype(np.uint8)).save(out_path)
     return
     

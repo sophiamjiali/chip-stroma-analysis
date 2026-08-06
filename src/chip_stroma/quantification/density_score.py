@@ -16,6 +16,7 @@ from typing import cast
 from pathlib import Path
 from skimage.color import separate_stains, hdx_from_rgb
 from skimage.filters import threshold_otsu
+from skimage.measure import label, regionprops
 
 from chip_stroma.data.transforms import get_val_transforms
 from chip_stroma.data.dataset import VesselPatchDataset
@@ -30,14 +31,15 @@ logger = setup_logger(__name__)
 CHUNK_SIZE = 512
 
 
-def quantify_fold(fold        : int,
-                  manifest    : pd.DataFrame,
-                  thresholds  : list[float],
-                  base_thresh : float,
-                  mask_dir    : Path,
-                  paths       : Box,
-                  version     : str,
-                  single_model : bool = False) -> list[dict]:
+def quantify_fold(fold           : int,
+                  manifest       : pd.DataFrame,
+                  thresholds     : list[float],
+                  base_thresh    : float,
+                  min_object_size: int,
+                  mask_dir       : Path,
+                  paths          : Box,
+                  version        : str,
+                  single_model   : bool = False) -> list[dict]:
     """
     Run quantification for one fold (or the single all-data model), 
     index-matched to that fold's val_arrays.h5, following the exact split logic.
@@ -77,10 +79,11 @@ def quantify_fold(fold        : int,
                 tissue_mask = item['tissue_mask'].cpu().numpy().astype(bool)
 
                 patch_results = quantify_patch(
-                    patch       = patch,
-                    prob        = prob,
-                    tissue_mask = tissue_mask,
-                    thresholds  = thresholds
+                    patch           = patch,
+                    prob            = prob,
+                    tissue_mask     = tissue_mask,
+                    thresholds      = thresholds,
+                    min_object_size = min_object_size
                 )
 
                 # Export the fibroblast mask for the provided threshold
@@ -117,17 +120,22 @@ def quantify_fold(fold        : int,
                         "patch_name"        : item["patch_name"],
                         "fold"              : fold,
                         "vessel_threshold"  : t,
-                        "fibroblast_density": res["density"]
+                        "fibroblast_density": res["density"],
+                        "object_count"      : res['object_count'],
+                        "object_count_norm" : res["object_count_norm"],
+                        "mean_object_area"  : res["mean_object_area"]
                     })
+    
 
     logger.info("- Quantified all patches")
     return rows
 
 
-def quantify_patch(patch      : np.ndarray,
-                   prob       : np.ndarray,
-                   tissue_mask: np.ndarray,
-                   thresholds : list[float]) -> dict[float, dict]: 
+def quantify_patch(patch          : np.ndarray,
+                   prob           : np.ndarray,
+                   tissue_mask    : np.ndarray,
+                   thresholds     : list[float],
+                   min_object_size: int) -> dict[float, dict]: 
     """
     Compute fibroblast density at each vessel-threshold in the sensitivity 
     sweep.
@@ -145,21 +153,36 @@ def quantify_patch(patch      : np.ndarray,
         # Detect degenerate cases; entire tissue masked as vessel
         if valid_area.sum() == 0:
             results[t] = {
-                'density'        : np.nan,
-                'vessel_mask'    : vessel_mask,
-                'fibroblast_mask': np.zeros_like(vessel_mask)
+                'density'          : np.nan,
+                'object_count'     : np.nan,
+                'object_count_norm': np.nan,
+                'mean_object_area' : np.nan,
+                'vessel_mask'      : vessel_mask,
+                'fibroblast_mask'  : np.zeros_like(vessel_mask)
             }
             continue
 
         # Otsu restricted to valid pixels only
         otsu_t = threshold_otsu(dab_channel[valid_area])
         fibroblast_mask = (dab_channel >= otsu_t) & valid_area
-
         density = fibroblast_mask.sum() / valid_area.sum()
+
+        # Identify discrete fibroblast objects
+        labeled_objects = label(fibroblast_mask)
+        props = regionprops(labeled_objects)
+        objects = [p for p in props if p.area >= min_object_size]
+
+        object_count = len(objects)
+        object_count_norm = object_count / valid_area.sum()
+        mean_object_area = np.mean([o.area for o in objects]) if objects else 0
+        
         results[t] = {
-            'density'        : density,
-            'vessel_mask'    : vessel_mask,
-            'fibroblast_mask': fibroblast_mask
+            'density'          : density,
+            'object_count'     : object_count,
+            'object_count_norm': object_count_norm,
+            'mean_object_area' : mean_object_area,
+            'vessel_mask'      : vessel_mask,
+            'fibroblast_mask'  : fibroblast_mask
         }
 
     return results
@@ -168,12 +191,17 @@ def quantify_patch(patch      : np.ndarray,
 def aggregate_scores(scores: pd.DataFrame) -> pd.DataFrame:
     """Macro-average patch densities to sample-level, per vessel threshold."""
 
-    return (
-        scores.groupby(['sample_id', 'vessel_threshold'])['fibroblast_density']
-        .mean()
-        .reset_index()
-        .rename(columns = {'fibroblast_density': 'sample_fibroblast_density'})
+    s_scores = scores.groupby(['sample_id', 'vessel_threshold']).agg(
+        sample_fibroblast_density = ('fibroblast_density', 'mean'),
+        total_object_count        = ('object_count', 'sum'),
+        total_valid_area          = ('valid_area', 'sum')
+    ).reset_index()
+
+    s_scores['sample_object_density'] = (
+        s_scores['total_object_count'] / s_scores['total_valid_area']
     )
+
+    return s_scores
 
 
 def summarize_sensitivity(scores: pd.DataFrame) -> pd.DataFrame:

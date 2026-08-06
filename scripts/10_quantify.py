@@ -71,14 +71,15 @@ def main():
         # Perform quantification on the specified fold
         all_rows.extend(
             quantify_fold(
-                fold         = fold,
-                manifest     = manifest,
-                thresholds   = thresholds,
-                base_thresh  = base_thresh,
-                mask_dir     = qa_mask_dir,
-                paths        = config.paths,
-                version      = args.version,
-                single_model = args.single_model
+                fold            = fold,
+                manifest        = manifest,
+                thresholds      = thresholds,
+                base_thresh     = base_thresh,
+                min_object_size = config.quantify.min_object_size,
+                mask_dir        = qa_mask_dir,
+                paths           = config.paths,
+                version         = args.version,
+                single_model    = args.single_model
             )
         )
 

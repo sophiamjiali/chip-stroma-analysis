@@ -10,3 +10,5 @@ n_folds: 5
 
 vessel_threshold: 0.5
 vessel_threshold_delta: 0.1
+
+min_object_size: 5

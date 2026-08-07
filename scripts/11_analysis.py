@@ -120,12 +120,13 @@ def main():
 
         # Bootstrap CI on mean difference
         ci_low, ci_high = bootstrap_ci(chip.values, non_chip.values)
-        logger.info("- Computed CI boostraps on mean difference")
+        logger.info("- Computed CI bootstraps on mean difference")
 
         # Separation via LOOCV logistic regression and AUC
         X = sample_density[[col]].dropna().values
-        y = (sample_density.loc[sample_density[col].notna(), 'chip_status']
-             .values())
+        y = (sample_density.loc[sample_density[col].notna(), 
+                                'chip_status'].values)
+        
         loocv = run_loocv_auc(X, y)
         logger.info("- Evaluated CHIP vs. non-CHIP separation via OOCV "
                     "logistic regression")

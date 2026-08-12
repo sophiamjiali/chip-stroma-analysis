@@ -17,9 +17,6 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from scipy import stats
 
-from scipy.stats import gaussian_kde
-from sklearn.cluster import AgglomerativeClustering
-
 from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.config import load_configs
 from chip_stroma.utils.loggers import setup_logger
@@ -28,6 +25,12 @@ from chip_stroma.classification.statistics import (
     hedges_g, 
     bootstrap_ci,
     run_loocv_auc
+)
+from chip_stroma.visualize.quantification_plots import (
+    plot_chip_boxplot,
+    plot_kde_overlap,
+    plot_loocv_distribution, 
+    plot_loocv_roc_curve
 )
 
 logger = setup_logger(__name__)
@@ -157,49 +160,43 @@ def main():
 
         logger.info("- Finished computing all key statistics")
 
-        # Plot key metric vs. CHIP status plot
-        fig, axes = plt.subplots(1, 3, figsize = (15, 4))
+        label_dir = analysis_dir / label
+        label_dir.mkdir(parents = True, exist_ok = True)
 
-        sns.boxplot(data = sample_density, x = "chip_status", 
-                    y = col, ax = axes[0], showfliers = False)
-        sns.swarmplot(data = sample_density, x = "chip_status", 
-                      y = col, ax = axes[0], color = "k", size = 4)
-        axes[0].set_xticklabels(["non-CHIP", "CHIP"])
-        axes[0].set_title(f"Welch p = {t_p:.3f}, MWU p = {u_p:.3f}, "
-                          f"g = {eff_g:.2f}")
+        # Plot key metric vs. CHIP status plot
+        plot_chip_boxplot(
+            sample_density = sample_density,
+            col = col,
+            welsh_p = t_p,
+            mwu_p = u_p,
+            eff_g = eff_g,
+            out_path = label_dir / f"boxplot_chip_status.png"
+        )
+        logger.info("- Saved boxplot")
 
         # Plot logistic regression
-        axes[1].plot(loocv['fpr'], loocv['tpr'], 
-                     label = f"AUC = {loocv['auc']:.2f}"
-                     f"\nperm p = {loocv['perm_p']:.3f}")
-        axes[1].plot([0, 1], [0, 1], "--", color="gray")
-        axes[1].set_xlabel("FPR")
-        axes[1].set_ylabel("TPR")
-        axes[1].set_title("LOOCV ROC")
-        axes[1].legend()
-
+        plot_loocv_roc_curve(
+            loocv = loocv,
+            out_path = label_dir / f"loocv_roc_curve.png"
+        )
+        logger.info("- Saved LOOCV ROC curve")
+        
         # Plot KDE overlap panel
-        xs = np.linspace(sample_density[col].min(), 
-                         sample_density[col].max(), 200)
-        kde_g  = gaussian_kde(chip)(xs)
-        kde_ng = gaussian_kde(non_chip)(xs)
+        plot_kde_overlap(
+            sample_density = sample_density,
+            col = col,
+            chip = chip,
+            non_chip = non_chip,
+            out_path = label_dir / f"kde_overlap.png"
+        )
+        logger.info("- Saved KDE Overlap")
 
-        axes[2].plot(xs, kde_g,  label = "CHIP",     color = "firebrick")
-        axes[2].plot(xs, kde_ng, label = "non-CHIP", color = "steelblue")
-        axes[2].fill_between(xs, np.minimum(kde_g, kde_ng), alpha = 0.3, 
-                             color = "gray", label = "overlap")
-        axes[2].axvline(loocv["youden_cutoff"], linestyle="--", 
-                        color = "k", label = "Youden cutoff")
-         
-        axes[2].set_title(f"Distribution overlap (sens = {loocv['sens']:.2f}, "
-                          f"spec = {loocv['spec']:.2f})")
-        axes[2].legend(fontsize = 8)
-
-        plt.tight_layout()
-        plt.savefig(analysis_dir / f"primary_analysis_{label}.png", dpi = 300)
-        plt.close(fig)
-
-        logger.info("- Saved key figure")
+        # Plot LOOCV distribution
+        plot_loocv_distribution(
+            loocv = loocv,
+            out_path = label_dir / f"loocv_distribution.png"
+        )
+        logger.info("- Saved LOOCV distribution")
 
 
     results_path = analysis_dir / "stats_results.json"

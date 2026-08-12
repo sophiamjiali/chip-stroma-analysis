@@ -166,17 +166,17 @@ def main():
         # Plot key metric vs. CHIP status plot
         plot_chip_boxplot(
             sample_density = sample_density,
-            col = col,
-            welsh_p = t_p,
-            mwu_p = u_p,
-            eff_g = eff_g,
-            out_path = label_dir / f"boxplot_chip_status.png"
+            col            = col,
+            welsh_p        = t_p,
+            mwu_p          = u_p,
+            eff_g          = eff_g,
+            out_path       = label_dir / f"boxplot_chip_status.png"
         )
         logger.info("- Saved boxplot")
 
         # Plot logistic regression
         plot_loocv_roc_curve(
-            loocv = loocv,
+            loocv    = loocv,
             out_path = label_dir / f"loocv_roc_curve.png"
         )
         logger.info("- Saved LOOCV ROC curve")
@@ -184,16 +184,17 @@ def main():
         # Plot KDE overlap panel
         plot_kde_overlap(
             sample_density = sample_density,
-            col = col,
-            chip = chip,
-            non_chip = non_chip,
-            out_path = label_dir / f"kde_overlap.png"
+            col            = col,
+            chip           = chip,
+            non_chip       = non_chip,
+            out_path       = label_dir / f"kde_overlap.png"
         )
         logger.info("- Saved KDE Overlap")
 
         # Plot LOOCV distribution
         plot_loocv_distribution(
-            loocv = loocv,
+            loocv    = loocv,
+            y        = y,
             out_path = label_dir / f"loocv_distribution.png"
         )
         logger.info("- Saved LOOCV distribution")

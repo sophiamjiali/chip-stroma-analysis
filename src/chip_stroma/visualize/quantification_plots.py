@@ -82,10 +82,12 @@ def plot_kde_overlap(sample_density: pd.DataFrame,
     plt.close(fig)
 
 
-def plot_loocv_distribution(loocv: dict, out_path: Path) -> None:
+def plot_loocv_distribution(loocv   : dict, 
+                            y       : pd.DataFrame,
+                            out_path: Path) -> None:
     
-    probs  = np.asarray(loocv["probs"])
-    y_true = np.asarray(loocv["y_true"])
+    probs  = np.asarray(loocv["loo_probs"])
+    y_true = np.asarray(y)
 
     fig, ax = plt.subplots(figsize=(5, 2.5))
     for lbl, color in [(1, "firebrick"), (0, "steelblue")]:

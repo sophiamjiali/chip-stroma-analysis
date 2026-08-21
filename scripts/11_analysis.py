@@ -10,9 +10,6 @@ import json
 
 import argparse as ap
 import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 from pathlib import Path
 from scipy import stats
@@ -84,7 +81,7 @@ def main():
     # Run full statistics on all metrics
     metrics = {
         "fibroblast_density": "sample_fibroblast_density",
-        "object_density": "sample_object_density", 
+        "object_density"    : "sample_object_density", 
     }
     
     all_results = {}
@@ -220,4 +217,4 @@ def parse_args():
 if __name__ == "__main__":
     main()
 
-# [END]g
+# [END]

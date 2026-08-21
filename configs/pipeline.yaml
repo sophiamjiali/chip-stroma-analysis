@@ -19,5 +19,6 @@ steps:
   visualize      : "09"
   quantify       : "10"
   analysis       : "11"
+  stitch_masks   : "12"
 
 # [END]

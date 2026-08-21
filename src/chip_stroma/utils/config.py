@@ -19,10 +19,10 @@ logger = logging.getLogger(__name__)
 
 # =====| Main API |=============================================================
 
-def load_configs(pipeline: Path, 
-                 paths: Path, 
+def load_configs(pipeline   : Path, 
+                 paths      : Path,
                  config_name: str | None = None,
-                 frozen: bool = False) -> Box:
+                 frozen     : bool = False) -> Box: 
     "Loads all configurations nested by their file name."
 
     logger.info("=" * 50)
@@ -35,7 +35,7 @@ def load_configs(pipeline: Path,
     name = config_name if config_name else pipeline.stem.split('_', 1)[1]
 
     config = {
-        name: load_config(pipeline),
+        name   : load_config(pipeline),
         "paths": load_paths_config(paths)
     }
 
@@ -51,23 +51,24 @@ def load_paths_config(paths: Path) -> dict:
     "Loads and resolves all paths in paths.yaml to the project root."
 
     # Extract environment constants from the .env file
-    PROJECT_ROOT, RAW_DIR, RAW_PATCH_DIR, RAW_VESSEL_MASK_DIR = extract_env()
+    ROOT_CONSTS = extract_env()
 
     # Recursively resolve full paths of each nested path
     config = load_config(paths)
-    config = resolve_paths(config, PROJECT_ROOT)
+    config = resolve_paths(config, ROOT_CONSTS['project_root'])
 
     # Append the raw directories directly into the configurations
     config['raw_data'] = {
-        "raw_dir": RAW_DIR,
-        "patch_dir": RAW_PATCH_DIR,
-        "vessel_mask_dir": RAW_VESSEL_MASK_DIR
+        "raw_dir"        : ROOT_CONSTS['raw_dir'],
+        "patch_dir"      : ROOT_CONSTS['raw_patch_dir'],
+        "vessel_mask_dir": ROOT_CONSTS['raw_vessel_mask_dir'],
+        "coordinate_dir" : ROOT_CONSTS['patch_coords_dir']
     }
 
     return config
 
     
-def extract_env() -> tuple[Path, Path, Path, Path]:
+def extract_env() -> dict:
     "Safe loading for .env constants."
 
     load_dotenv(ROOT / ".env")
@@ -75,9 +76,15 @@ def extract_env() -> tuple[Path, Path, Path, Path]:
     RAW_DIR             = os.getenv("RAW_DIR", ".")
     RAW_PATCH_DIR       = os.getenv("RAW_PATCH_DIR", ".")
     RAW_VESSEL_MASK_DIR = os.getenv("RAW_VESSEL_MASK_DIR", ".")
-    
-    return (Path(PROJECT_ROOT), Path(RAW_DIR), 
-            Path(RAW_PATCH_DIR), Path(RAW_VESSEL_MASK_DIR))
+    PATCH_COORDS_DIR    = os.getenv("PATCH_COORDS_DIR", ".")
+
+    return {
+        'project_root': PROJECT_ROOT,
+        'raw_dir': RAW_DIR,
+        'raw_patch_dir': RAW_PATCH_DIR,
+        'raw_vessel_mask_dir': RAW_VESSEL_MASK_DIR,
+        'patch_coords_dir': PATCH_COORDS_DIR
+    }
 
 
 def resolve_paths(data, root) -> dict:

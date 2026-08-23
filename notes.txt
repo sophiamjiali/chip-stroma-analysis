@@ -1,5 +1,14 @@
 General Notes
 
+- streamline the data generation steps
+    - quantify step generates QC overlays
+    - stitch step regenerates them, basically
+
+
+
+
+
+
 Patch Dimensions: 256 x 256 pixels
 
 Statistics on All Patches:

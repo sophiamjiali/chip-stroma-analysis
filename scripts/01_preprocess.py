@@ -131,7 +131,7 @@ def main():
 
 
     # Save metadata generated during preprocessing before normalization
-    save_name_mapping( name_mapping, path = config.paths.metadata.name_mapping)
+    save_name_mapping(name_mapping, path = config.paths.metadata.name_mapping)
     save_patch_manifest(manifest, path = config.paths.metadata.patch_manifest)
     save_patch_stats(statistics, path = config.paths.metadata.patch_statistics)
 

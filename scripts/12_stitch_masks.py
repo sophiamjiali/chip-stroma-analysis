@@ -70,7 +70,6 @@ def main():
 
     for _, row in manifest.iterrows():
         sample_id   = row['sample_id']
-        original_id = row['original_id']
         patch_name  = row['patch_name']
         fold        = row['fold']
 

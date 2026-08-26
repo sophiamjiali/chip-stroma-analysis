@@ -10,22 +10,26 @@ import json
 import h5py
 import pickle
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+import matplotlib.cm as cm
 
-from pathlib import Path
-from concurrent.futures import ProcessPoolExecutor
 from tqdm import tqdm
 from PIL import Image
 from typing import cast
+from pathlib import Path
+from skimage import measure
 from skimage.color import label2rgb
+from concurrent.futures import ProcessPoolExecutor
 
 from chip_stroma.utils.loggers import setup_logger
+from chip_stroma.visualize.overlays import SampleCoords
 
 logger = setup_logger(__name__)
 JOIN_KEY = ['sample_id', 'patch_name']
 
 
+# =====| General I/O Functions |================================================
 
 def load_json(path: str | Path) -> dict:
     """Loads a JSON file (e.g. confusion_counts.json) into a dict."""
@@ -38,6 +42,14 @@ def load_pickle(path: str | Path):
     with open(path, "rb") as f:
         return pickle.load(f)
 
+
+def load_csv_inputs(path: str | Path) -> pd.DataFrame:
+    """Thin read_csv wrapper — single point of control for dtype/NA handling
+    across evaluation-stage CSV inputs (keeps sample_id/fold as strings so
+    the 'MACRO' sentinel row and mixed-type fold labels round-trip cleanly)."""
+    return pd.read_csv(path, dtype = {"sample_id": str, "fold": str})
+
+# =====| Mask I/O Functions |===================================================
 
 def save_overlay_masks(vessel_mask    : np.ndarray,
                        fibroblast_mask: np.ndarray,
@@ -87,8 +99,154 @@ def save_overlay_patch(patch          : np.ndarray,
                          alpha = 0.3, bg_label = 0, image_alpha = 1)
     Image.fromarray((overlay * 255).astype(np.uint8)).save(out_path)
     return
-    
-# =====| Name Sanitization |====================================================
+
+
+def load_overlay_arrays(src_dir  : str | Path,
+                        fold     : str | int,
+                        sample_id: str,
+                        patch_dir: str | Path
+                        ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Loads (image, gt_mask, pred_mask) for one representative patch of a
+    patient, for overlay QC panels.
+    """
+    fold_dir = Path(src_dir) / f"fold_{fold}"
+
+    metrics = pd.read_csv(fold_dir / "patch_metrics.csv").reset_index(drop=True)
+    patient_patches = metrics[metrics["sample_id"] == sample_id]
+
+    # Representative patch: closest to this patient's mean Dice
+    target_dice = patient_patches["dice"].mean()
+    h5_idx      = (patient_patches["dice"] - target_dice).abs().idxmin()
+    row         = metrics.loc[h5_idx]
+
+    # Pull probs/gt from the corresponding h5 index; de-quantize probs -> [0,1]
+    with h5py.File(fold_dir / "val_arrays.h5", "r") as h5f:
+        prob    = (cast(h5py.Dataset, h5f["probs"])[h5_idx]
+                    .astype(np.float32) / 255.0)
+        gt_mask = cast(h5py.Dataset, h5f["gt"])[h5_idx]
+        
+    pred_mask = prob >= 0.5
+
+    # Raw image isn't persisted in the h5 — reload from the source patch,
+    image_path = f"{patch_dir}/{row['sample_id']}/{row['patch_name']}"
+    image      = np.array(Image.open(image_path))
+
+    return image, gt_mask, pred_mask
+
+
+def load_tissue_mask(sample_id : str,
+                     src_dir   : Path,
+                     tile_id   : str) -> np.ndarray | None: 
+    """
+    Load a patch's saved tissue mask. If no matching tissue mask was found, the 
+    patch was excluded by tissue filtering and is returned as None.
+    """
+
+    # Identify all tissue masks corresponding to the sample
+    candidates = list((src_dir / sample_id).glob(f"*{tile_id}*.png"))
+    if not candidates: return None
+
+    return np.array(Image.open(candidates[0]).convert("L")) > 0
+
+
+def load_coordinates(sample_id: str, coord_dir: Path) -> SampleCoords:
+    """
+    Load a patient's per-patch coordinates and slide metadata.
+    """
+
+    coords = pd.read_csv(coord_dir / f"{sample_id}.csv")
+    meta   = json.loads((coord_dir / f"{sample_id}_meta.json").read_text())
+
+    # Standardize the raw file column to patch name, as used by the pipeline
+    coords['patch_name'] = coords['raw_file'].map(lambda p: Path(str(p)).name)
+
+    return SampleCoords(
+        table = coords,
+        patch_size = meta['patch_size'], 
+        slide_height = meta['slide_height'], 
+        slide_width = meta['slide_width']
+    )
+
+
+def load_predictions(sample_id: str,
+                     fold     : int,
+                     pred_dir : Path) -> dict[str, np.ndarray]: 
+    """
+    Loads de-quantized OOF vessel probability maps at the native patch resolution, keyed by patch name.
+    """
+
+    # Load the predictions as generated previously in the pipeline
+    fold_dir = pred_dir / f"fold_{fold}"
+    metrics = pd.read_csv(fold_dir / "patch_metrics.csv").reset_index(drop=True)
+
+    # Extract all predictions corresponding to the given sample ID
+    patient_rows = metrics[metrics['sample_id'] == sample_id]
+
+    patch_probs: dict[str, np.ndarray] = {}
+    with h5py.File(fold_dir / "val_arrays.h5", "r") as h5f:
+        p = cast(h5py.Dataset, h5f["probs"])
+
+        # Place the sample probabilities into the dictionary, keyed by patch
+        for h5_idx, row in patient_rows.iterrows():
+            patch_probs[row['patch_name']] = p[h5_idx].astype(np.float32) /255.0
+
+    return patch_probs
+
+
+def save_vessel_heatmap(vessel_map: np.ndarray, path: Path) -> None:
+    """Colour-mapped per-pixel probability heatmap; reads model confidence."""
+
+    rgba = cm.get_cmap("inferno")(vessel_map)
+    Image.fromarray((rgba[..., :3] * 255).astype(np.uint8)).save(path)
+    return None
+
+
+def save_mask_png(mask: np.ndarray, path: Path) -> None:
+    """Saves the patch as an 8-bit binary mask PNG for visual QC."""
+
+    Image.fromarray((mask * 255).astype(np.uint8)).save(path)
+    return None
+
+
+def mask_to_geojson(mask               : np.ndarray,
+                    classification_name: str,
+                    colour             : tuple[int, int, int],
+                    min_area_px        : float = 25.0,
+                    scale              : float = 1.0) -> dict:
+    """
+    Vectorizes a binary mask into a QuPath-importable GeoJSON FeatureCollection.
+    """
+
+    features = []
+    for contour in measure.find_contours(mask, level = 0.5):
+        if contour.shape[0] < 3: continue
+
+        rows, cols = contour[:, 0], contour[:, 1]
+        area = 0.5 * abs(np.dot(cols, np.roll(rows, 1)) - 
+                         np.dot(rows, np.roll(cols, 1)))
+
+        if area < min_area_px: continue
+
+        ring = [[float(c * scale), float(r * scale)] for r, c in contour]
+        ring.append(ring[0])
+
+        features.append({
+            'type': 'Feature',
+            'geometry': {'type': 'Polygon', 'coordinates': [ring]},
+            'properties': {
+                'objectType': 'annotation',
+                'classification': {
+                    'name': classification_name, 
+                    'color': list(colour)
+                }
+            }
+        })
+
+    return {'type': 'FeatureCollection', 'features': features}
+
+
+# =====| Name Sanitization and Mapping |========================================
 
 def sanitize_names(src_dir: Path) -> dict:
     """Map original sample_id folder names to space-sanitized versions."""
@@ -128,7 +286,7 @@ def load_chip_labels(path: Path) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
-# =====| Patch Manifest |=======================================================
+# =====| Manifests |============================================================
 
 def build_patch_manifest(src_dir: Path, 
                          name_mapping: dict) -> pd.DataFrame:
@@ -189,6 +347,37 @@ def load_patch_manifest(path: Path) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
+def initialize_train_manifest(train_path: Path,
+                              patch_path: Path) -> pd.DataFrame:
+    """Loads or creates the train manifest from the patch manifest."""
+
+    logger.info("=" * 50)
+    logger.info("Step 02: Train Manifest")
+    logger.info(f"- Train Manifest Path : {train_path}")
+    logger.info(f"- Patch Manifest Path : {patch_path}")
+    logger.info("-" * 50)
+
+    if train_path.exists(): 
+        logger.info("Successfully detected train manifest")
+        logger.info("Loading and returning existing manifest for training")
+        manifest = pd.read_csv(train_path)
+
+    else:
+        logger.info("Failed to detect an existing train manifest")
+
+        assert patch_path.exists(), f"Patch manifest could not be found at path: {patch_path}"
+        logger.info("Successfully detected patch manifest")
+
+        logger.info("Creating a train manifest from the patch manifest")
+        manifest = pd.read_csv(patch_path)
+        manifest = manifest[manifest['include'] == True]
+        manifest.to_csv(train_path)
+        logger.info("Successfully initialized and saved the train manifest")
+
+    logger.info("=" * 50)
+    return manifest
+
+
 def build_fold_manifest(manifest: pd.DataFrame,
                         fold: int,
                         single_model: bool) -> pd.DataFrame:
@@ -246,38 +435,7 @@ def save_patch_stats(stats: pd.DataFrame, path: Path) -> None:
     stats.to_csv(path, index = False)
     return None
 
-# =====| Patch Statistics |=====================================================
-
-def initialize_train_manifest(train_path: Path,
-                              patch_path: Path) -> pd.DataFrame:
-    """Loads or creates the train manifest from the patch manifest."""
-
-    logger.info("=" * 50)
-    logger.info("Step 02: Train Manifest")
-    logger.info(f"- Train Manifest Path : {train_path}")
-    logger.info(f"- Patch Manifest Path : {patch_path}")
-    logger.info("-" * 50)
-
-    if train_path.exists(): 
-        logger.info("Successfully detected train manifest")
-        logger.info("Loading and returning existing manifest for training")
-        manifest = pd.read_csv(train_path)
-
-    else:
-        logger.info("Failed to detect an existing train manifest")
-
-        assert patch_path.exists(), f"Patch manifest could not be found at path: {patch_path}"
-        logger.info("Successfully detected patch manifest")
-
-        logger.info("Creating a train manifest from the patch manifest")
-        manifest = pd.read_csv(patch_path)
-        manifest = manifest[manifest['include'] == True]
-        manifest.to_csv(train_path)
-        logger.info("Successfully initialized and saved the train manifest")
-
-    logger.info("=" * 50)
-    return manifest
-
+# =====| Metrics |==============================================================
 
 def load_all_fold_patch_metrics(src_dir     : Path, 
                                 n_folds     : int,
@@ -406,49 +564,5 @@ def prune_tissue_masks(manifest: pd.DataFrame,
 
 def delete_mask(mask_path: Path) -> None:
     if mask_path.exists(): mask_path.unlink()
-
-
-# =====| General I/O |==========================================================
-
-def load_csv_inputs(path: str | Path) -> pd.DataFrame:
-    """Thin read_csv wrapper — single point of control for dtype/NA handling
-    across evaluation-stage CSV inputs (keeps sample_id/fold as strings so
-    the 'MACRO' sentinel row and mixed-type fold labels round-trip cleanly)."""
-    return pd.read_csv(path, dtype = {"sample_id": str, "fold": str})
- 
- 
-def load_overlay_arrays(src_dir  : str | Path,
-                        fold     : str | int,
-                        sample_id: str,
-                        patch_dir: str | Path
-                        ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Loads (image, gt_mask, pred_mask) for one representative patch of a
-    patient, for overlay QC panels.
-    """
-    fold_dir = Path(src_dir) / f"fold_{fold}"
-
-    metrics = pd.read_csv(fold_dir / "patch_metrics.csv").reset_index(drop=True)
-    patient_patches = metrics[metrics["sample_id"] == sample_id]
-
-    # Representative patch: closest to this patient's mean Dice
-    target_dice = patient_patches["dice"].mean()
-    h5_idx      = (patient_patches["dice"] - target_dice).abs().idxmin()
-    row         = metrics.loc[h5_idx]
-
-    # Pull probs/gt from the corresponding h5 index; de-quantize probs -> [0,1]
-    with h5py.File(fold_dir / "val_arrays.h5", "r") as h5f:
-        prob    = (cast(h5py.Dataset, h5f["probs"])[h5_idx]
-                    .astype(np.float32) / 255.0)
-        gt_mask = cast(h5py.Dataset, h5f["gt"])[h5_idx]
-        
-    pred_mask = prob >= 0.5
-
-    # Raw image isn't persisted in the h5 — reload from the source patch,
-    image_path = f"{patch_dir}/{row['sample_id']}/{row['patch_name']}"
-    image      = np.array(Image.open(image_path))
-
-    return image, gt_mask, pred_mask
-
 
 # [END]

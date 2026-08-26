@@ -9,6 +9,7 @@
 import json
 
 import argparse as ap
+import pandas as pd
 import numpy as np
 
 from pathlib import Path
@@ -29,7 +30,8 @@ from chip_stroma.utils.io import (
     load_predictions,
     save_vessel_heatmap,
     save_mask_png,
-    mask_to_geojson
+    mask_to_geojson,
+    load_json
 )
 
 logger = setup_logger(__name__)
@@ -67,21 +69,27 @@ def main():
 
     colours = config.stitch_masks.colours
 
+    # Load the mapping for sanitized to unsanitized sample IDs
+    name_mapping = load_json(config.paths.metadata.name_mapping)
 
     for _, row in manifest.iterrows():
-        sample_id   = row['sample_id']
-        patch_name  = row['patch_name']
-        fold        = row['fold']
+        sample_id  = row['sample_id']
+        patch_name = row['patch_name']
+        fold       = row['fold']
+
+        # # Fetch the unsanitized sample ID to map back to the coordinates
+        # raw_sample_id = next(key for key, value in name_mapping.items() 
+        #                      if value == sample_id)
 
         logger.info(f"Beginning to process item: {sample_id} - {patch_name}")
 
         # Load the sample's patch coordinates
         patch_coords = load_coordinates(
-            sample_id = sample_id,
-            coord_dir = coord_dir
+            sample_id    = sample_id,
+            coord_dir    = coord_dir
         )
 
-        logger.info(f"- Identified {len(patch_coords)} coordinates")
+        logger.info(f"- Identified {len(patch_coords.table)} coordinates")
 
         # Load the model's vessel predictions
         vessel_probs = load_predictions(
@@ -93,28 +101,29 @@ def main():
 
         # Stitch the vessel prediction mask into the full WSI
         vessel_map, vessel_mask = stitch_predictions(
-            predictions = vessel_probs,
             sample_id   = sample_id,
-            coords      = patch_coords,
-            patch_dir   = patch_dir
+            predictions = vessel_probs,
+            coordinates = patch_coords,
+            threshold   = config.stitch_masks.vessel_threshold
         )
         logger.info("- Stitched vessel prediction mask")
 
         # Derive and stitch fibroblast mask into the full WSI
         fibro_mask = stitch_fibroblast(
-            predictions = vessel_probs,
             sample_id   = sample_id,
-            coords      = patch_coords,
+            predictions = vessel_probs,
+            coordinates = patch_coords,
             patch_dir   = patch_dir,
-            mask_dir    = tissue_dir
+            mask_dir    = mask_dir,
+            threshold   = config.stitch_masks.vessel_threshold
         )
         logger.info("- Stitched fibroblast prediction mask")
 
         # Stitch the tissue mask into the full WSI
         tissue_mask = stitch_tissue_mask(
-            sample_id = sample_id,
-            coords    = patch_coords,
-            mask_dir  = tissue_dir
+            sample_id   = sample_id,
+            coordinates = patch_coords,
+            mask_dir    = tissue_dir
         )
         logger.info("- Stitched tissue mask")
 
@@ -128,7 +137,7 @@ def main():
         np.save(out_dir / "tissue_mask.npy", tissue_mask)
 
         heatmap_path = out_dir / "vessel_heatmap.png"
-        save_vessel_heatmap(vessel_map = vessel_map, heatmap_path)
+        save_vessel_heatmap(vessel_map = vessel_map, path = heatmap_path)
 
         save_mask_png(vessel_mask, out_dir / "vessel_mask.png")
         save_mask_png(fibro_mask, out_dir / "fibroblast_mask.png")

@@ -165,14 +165,14 @@ def quantify_patch(patch          : np.ndarray,
             continue
 
         # Otsu restricted to valid pixels only
-        otsu_t = threshold_otsu(dab_channel[valid_area])
+        otsu_t          = threshold_otsu(dab_channel[valid_area])
         fibroblast_mask = (dab_channel >= otsu_t) & valid_area
-        density = fibroblast_mask.sum() / valid_area.sum()
+        density         = fibroblast_mask.sum() / valid_area.sum()
 
         # Identify discrete fibroblast objects
         labeled_objects = label(fibroblast_mask)
-        props = regionprops(labeled_objects)
-        objects = [p for p in props if p.area >= min_object_size]
+        props           = regionprops(labeled_objects)
+        objects         = [p for p in props if p.area >= min_object_size]
 
         object_count = len(objects)
         object_count_norm = object_count / valid_area.sum()

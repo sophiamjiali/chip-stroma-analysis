@@ -1,0 +1,144 @@
+Date : 2026-08-26 16:35:40
+Directory : /Users/sophiali/Desktop/chip-stroma-analysis
+Total : 95 files,  6540 codes, 1932 comments, 1741 blanks, all 10213 lines
+
+Languages
++------------------+------------+------------+------------+------------+------------+
+| language         | files      | code       | comment    | blank      | total      |
++------------------+------------+------------+------------+------------+------------+
+| Python           |         43 |      4,056 |      1,496 |      1,439 |      6,991 |
+| JSON             |          7 |      1,489 |          0 |          7 |      1,496 |
+| YAML             |         21 |        471 |        197 |        118 |        786 |
+| Shell Script     |         20 |        378 |        239 |        166 |        783 |
+| Markdown         |          1 |         71 |          0 |          8 |         79 |
+| CSV              |          2 |         50 |          0 |          2 |         52 |
+| pip requirements |          1 |         25 |          0 |          1 |         26 |
++------------------+------------+------------+------------+------------+------------+
+
+Directories
++----------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                               | files      | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                  |         95 |      6,540 |      1,932 |      1,741 |     10,213 |
+| . (Files)                                                                                          |          1 |         71 |          0 |          8 |         79 |
+| configs                                                                                            |         21 |        471 |        197 |        118 |        786 |
+| configs (Files)                                                                                    |         12 |        135 |         89 |         41 |        265 |
+| configs/sweeps                                                                                     |          9 |        336 |        108 |         77 |        521 |
+| exploration                                                                                        |          4 |        102 |          2 |         31 |        135 |
+| notebooks                                                                                          |          7 |      1,489 |          0 |          7 |      1,496 |
+| requirements                                                                                       |          1 |         25 |          0 |          1 |         26 |
+| scripts                                                                                            |         15 |      1,173 |        249 |        397 |      1,819 |
+| slurm                                                                                              |         20 |        378 |        239 |        166 |        783 |
+| src                                                                                                |         26 |      2,831 |      1,245 |      1,013 |      5,089 |
+| src/chip_stroma                                                                                    |         26 |      2,831 |      1,245 |      1,013 |      5,089 |
+| src/chip_stroma/classification                                                                     |          2 |         47 |         26 |         18 |         91 |
+| src/chip_stroma/data                                                                               |          5 |        593 |        489 |        194 |      1,276 |
+| src/chip_stroma/evaluate                                                                           |          1 |        132 |         36 |         50 |        218 |
+| src/chip_stroma/models                                                                             |          3 |        460 |        141 |        150 |        751 |
+| src/chip_stroma/quantification                                                                     |          1 |        150 |         29 |         43 |        222 |
+| src/chip_stroma/training                                                                           |          5 |        486 |        185 |        153 |        824 |
+| src/chip_stroma/utils                                                                              |          6 |        596 |        196 |        271 |      1,063 |
+| src/chip_stroma/visualize                                                                          |          3 |        367 |        143 |        134 |        644 |
++----------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++----------------------------------------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| filename                                                                                           | language         | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| /Users/sophiali/Desktop/chip-stroma-analysis/README.md                                             | Markdown         |         71 |          0 |          8 |         79 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/00_paths.yaml                                 | YAML             |         17 |         10 |          5 |         32 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/01_preprocess.yaml                            | YAML             |         14 |          7 |          4 |         25 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/02_cross_validation.yaml                      | YAML             |          5 |          7 |          1 |         13 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/03_train.yaml                                 | YAML             |         37 |          8 |          8 |         53 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/05_multiseed.yaml                             | YAML             |         14 |          7 |          6 |         27 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/06_full_cv.yaml                               | YAML             |         14 |          7 |          6 |         27 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/07_inference.yaml                             | YAML             |          8 |          7 |          2 |         17 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/08_evaluate.yaml                              | YAML             |          5 |          7 |          2 |         14 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/09_visualize.yaml                             | YAML             |          2 |          7 |          1 |         10 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/10_quantify.yaml                              | YAML             |          4 |          7 |          3 |         14 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/11_analysis.yaml                              | YAML             |          1 |          7 |          1 |          9 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/pipeline.yaml                                 | YAML             |         14 |          8 |          2 |         24 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/sweeps/template.yaml                          | YAML             |         35 |         12 |          8 |         55 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/sweeps/v1.yaml                                | YAML             |         31 |         12 |          7 |         50 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/sweeps/v2.yaml                                | YAML             |         35 |         12 |          8 |         55 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/sweeps/v3.yaml                                | YAML             |         36 |         12 |          8 |         56 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/sweeps/v4.yaml                                | YAML             |         36 |         12 |          8 |         56 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/sweeps/v5.yaml                                | YAML             |         36 |         12 |          8 |         56 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/sweeps/v6.yaml                                | YAML             |         42 |         12 |         10 |         64 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/sweeps/v7.yaml                                | YAML             |         42 |         12 |         10 |         64 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/configs/sweeps/v8.yaml                                | YAML             |         43 |         12 |         10 |         65 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/exploration/all_patches_positive_counts.csv           | CSV              |         25 |          0 |          1 |         26 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/exploration/count_positive_counts.py                  | Python           |         30 |          1 |         16 |         47 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/exploration/create_svs_thumbnails.py                  | Python           |         22 |          1 |         13 |         36 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/exploration/filtered_positive_counts.csv              | CSV              |         25 |          0 |          1 |         26 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/notebooks/00_view_binary_mask.ipynb                   | JSON             |         77 |          0 |          1 |         78 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/notebooks/01_convert_mask_to_binary.ipynb             | JSON             |        114 |          0 |          1 |        115 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/notebooks/02_preprocess.ipynb                         | JSON             |        758 |          0 |          1 |        759 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/notebooks/03_train.ipynb                              | JSON             |        159 |          0 |          1 |        160 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/notebooks/04_analyze_sweep.ipynb                      | JSON             |        145 |          0 |          1 |        146 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/notebooks/05_evaluate.ipynb                           | JSON             |        173 |          0 |          1 |        174 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/notebooks/10_visualize.ipynb                          | JSON             |         63 |          0 |          1 |         64 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/requirements/requirements.txt                         | pip requirements |         25 |          0 |          1 |         26 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/01_preprocess.py                              | Python           |        106 |         21 |         27 |        154 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/02_assign_folds.py                            | Python           |         50 |         15 |         21 |         86 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/03_train.py                                   | Python           |         46 |         13 |         18 |         77 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/04a_init_study.py                             | Python           |         38 |         12 |         13 |         63 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/04b_sweep.py                                  | Python           |        102 |         15 |         30 |        147 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/05a_multiseed.py                              | Python           |         72 |         17 |         33 |        122 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/05b_aggregate_multiseed.py                    | Python           |         30 |         11 |         14 |         55 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/06a_full_cv.py                                | Python           |         69 |         15 |         32 |        116 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/06b_aggregate_full_cv.py                      | Python           |         30 |         11 |         14 |         55 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/07_inference.py                               | Python           |         93 |         18 |         36 |        147 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/08_evaluate.py                                | Python           |         97 |         18 |         29 |        144 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/09_visualize.py                               | Python           |        100 |         19 |         30 |        149 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/10_quantify.py                                | Python           |         77 |         16 |         22 |        115 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/11_analysis.py                                | Python           |        151 |         28 |         41 |        220 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/scripts/12_stitch_masks.py                            | Python           |        112 |         20 |         37 |        169 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/00_setup_env.sh                                 | Shell Script     |          9 |          5 |          8 |         22 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/01_run_preprocess.sh                            | Shell Script     |         11 |         10 |          6 |         27 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/02_run_fold_assignment.sh                       | Shell Script     |         11 |         10 |          6 |         27 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/03_run_train.sh                                 | Shell Script     |         16 |         14 |          8 |         38 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/04_run_sweep.sh                                 | Shell Script     |         39 |         15 |         13 |         67 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/04a_init_study.sh                               | Shell Script     |         15 |          9 |          8 |         32 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/04b_submit_sweep.sh                             | Shell Script     |         20 |         14 |          9 |         43 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/05_run_multiseed.sh                             | Shell Script     |         42 |         15 |         15 |         72 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/05a_submit_multiseed.sh                         | Shell Script     |         22 |         14 |         10 |         46 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/05b_aggregate_multiseed.sh                      | Shell Script     |         13 |         10 |          7 |         30 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/06_run_full_cv.sh                               | Shell Script     |         40 |         15 |         14 |         69 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/06a_submit_full_cv.sh                           | Shell Script     |         22 |         14 |         10 |         46 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/06b_aggregate_full_cv.sh                        | Shell Script     |         13 |         10 |          7 |         30 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/07_run_inference.sh                             | Shell Script     |         13 |         13 |          6 |         32 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/08_run_evaluate.sh                              | Shell Script     |         13 |         13 |          6 |         32 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/09_run_visualize.sh                             | Shell Script     |         13 |         13 |          6 |         32 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/10_run_quantify.sh                              | Shell Script     |         13 |         13 |          6 |         32 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/11_run_analysis.sh                              | Shell Script     |         12 |         10 |          6 |         28 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/submit_job.sh                                   | Shell Script     |         32 |         18 |         11 |         61 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/slurm/sync_wandb.sh                                   | Shell Script     |          9 |          4 |          4 |         17 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/classification/logistic_regression.py | Python           |          2 |          8 |          1 |         11 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/classification/statistics.py          | Python           |         45 |         18 |         17 |         80 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/data/datamodule.py                    | Python           |         91 |         82 |         29 |        202 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/data/dataset.py                       | Python           |         45 |         39 |         18 |        102 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/data/preprocessing.py                 | Python           |        391 |        288 |        116 |        795 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/data/sampler.py                       | Python           |         44 |         38 |         19 |        101 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/data/transforms.py                    | Python           |         22 |         42 |         12 |         76 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/evaluate/segmentation_stats.py        | Python           |        132 |         36 |         50 |        218 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/models/inference.py                   | Python           |         77 |         24 |         25 |        126 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/models/loss.py                        | Python           |        100 |         60 |         38 |        198 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/models/model.py                       | Python           |        283 |         57 |         87 |        427 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/quantification/density_score.py       | Python           |        150 |         29 |         43 |        222 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/training/create_study.py              | Python           |         56 |         11 |         26 |         93 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/training/cross_validation.py          | Python           |         98 |         79 |         40 |        217 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/training/objective.py                 | Python           |        125 |         50 |         44 |        219 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/training/predict.py                   | Python           |          0 |          7 |          0 |          7 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/training/train.py                     | Python           |        207 |         38 |         43 |        288 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/utils/callbacks.py                    | Python           |        115 |         44 |         43 |        202 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/utils/config.py                       | Python           |         77 |         18 |         31 |        126 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/utils/header_footers.py               | Python           |         18 |         10 |          9 |         37 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/utils/io.py                           | Python           |        283 |         79 |        143 |        505 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/utils/loggers.py                      | Python           |         57 |         22 |         21 |        100 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/utils/model_utils.py                  | Python           |         46 |         23 |         24 |         93 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/visualize/overlays.py                 | Python           |        115 |         42 |         50 |        207 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/visualize/quantification_plots.py     | Python           |         76 |          8 |         26 |        110 |
+| /Users/sophiali/Desktop/chip-stroma-analysis/src/chip_stroma/visualize/segmentation_plots.py       | Python           |        176 |         93 |         58 |        327 |
+| Total                                                                                              |                  |      6,540 |      1,932 |      1,741 |     10,213 |
++----------------------------------------------------------------------------------------------------+------------------+------------+------------+------------+------------+

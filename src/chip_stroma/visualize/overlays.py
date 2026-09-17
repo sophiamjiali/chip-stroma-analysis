@@ -120,7 +120,7 @@ def stitch_fibroblast(sample_id  : str,
         sanitized_name = re.sub(r"_x\d+_y\d+", "", row['patch_name'])
 
         vessel_prob = predictions.get(sanitized_name)
-        image_path  = patch_dir / sample_id / row['patch_name']
+        image_path  = patch_dir / sample_id / sanitized_name
 
         return quantify_fibroblast(image_path, vessel_prob, tissue, threshold)
 

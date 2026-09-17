@@ -9,7 +9,6 @@
 import json
 
 import argparse as ap
-import pandas as pd
 import numpy as np
 
 from pathlib import Path

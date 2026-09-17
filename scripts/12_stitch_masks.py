@@ -41,14 +41,14 @@ def main():
 
     args = parse_args()
     log_header(
-        pipeline_stage = "Analysis",
-        config_path    = Path(args.config_dir) / "11_analysis.yaml",
+        pipeline_stage = "stitch_masks",
+        config_path    = Path(args.config_dir) / "12_stitch_masks.yaml",
         version        = args.version
     )
 
     # Load workflow and path configurations
     config = load_configs(
-        pipeline = Path(args.config_dir) / "11_analysis.yaml",
+        pipeline = Path(args.config_dir) / "12_stitch_masks.yaml",
         paths    = Path(args.config_dir) / "00_paths.yaml"
     )
 
@@ -69,7 +69,7 @@ def main():
     colours = config.stitch_masks.colours
 
     # Load the mapping for sanitized to unsanitized sample IDs
-    name_mapping = load_json(config.paths.metadata.name_mapping)
+    # name_mapping = load_json(config.paths.metadata.name_mapping)
 
     for _, row in manifest.iterrows():
         sample_id  = row['sample_id']

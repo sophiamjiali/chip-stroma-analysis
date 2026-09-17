@@ -48,7 +48,6 @@ def place_patches(sample_id   : str,
     for _, row in coordinates.iterrows():
         patch = get_patch(row)
         if patch is None: 
-            print(f"{row['patch_name']} not found")
             n_missing += 1
             continue
 
@@ -79,6 +78,7 @@ def stitch_predictions(sample_id  : str,
         """Processes an individual patch. Accomodates if the patches extracted don't include coordinates, but are mapped in the metadata."""
 
         sanitized_name = re.sub(r"_x\d+_y\d+", "", row['patch_name'])
+        print(sanitized_name)
         return predictions.get(sanitized_name)
 
     vessel_map = place_patches(

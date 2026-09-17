@@ -34,9 +34,6 @@ def load_configs(pipeline   : Path,
     # If a sweep, override the configuration name with just 'sweep'
     name = config_name if config_name else pipeline.stem.split('_', 1)[1]
 
-    print(pipeline)
-    print(name)
-
     config = {
         name   : load_config(pipeline),
         "paths": load_paths_config(paths)
@@ -58,7 +55,7 @@ def load_paths_config(paths: Path) -> dict:
 
     # Recursively resolve full paths of each nested path
     config = load_config(paths)
-    config = resolve_paths(config, ROOT_CONSTS['project_root'])
+    config = resolve_paths(config, Path(ROOT_CONSTS['project_root']))
 
     # Append the raw directories directly into the configurations
     config['raw_data'] = {

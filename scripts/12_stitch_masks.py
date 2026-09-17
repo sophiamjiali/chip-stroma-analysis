@@ -29,7 +29,8 @@ from chip_stroma.utils.io import (
     load_predictions,
     save_vessel_heatmap,
     save_mask_png,
-    mask_to_geojson
+    mask_to_geojson,
+    load_json
 )
 
 logger = setup_logger(__name__)
@@ -68,22 +69,22 @@ def main():
     colours = config.stitch_masks.colours
 
     # Load the mapping for sanitized to unsanitized sample IDs
-    # name_mapping = load_json(config.paths.metadata.name_mapping)
+    name_mapping = load_json(config.paths.metadata.name_mapping)
 
     for _, row in manifest.iterrows():
         sample_id  = row['sample_id']
         patch_name = row['patch_name']
         fold       = row['fold']
 
-        # # Fetch the unsanitized sample ID to map back to the coordinates
-        # raw_sample_id = next(key for key, value in name_mapping.items() 
-        #                      if value == sample_id)
+        # Fetch the unsanitized sample ID to map back to the coordinates
+        raw_sample_id = next(key for key, value in name_mapping.items() 
+                             if value == sample_id)
 
         logger.info(f"Beginning to process item: {sample_id} - {patch_name}")
 
         # Load the sample's patch coordinates
         patch_coords = load_coordinates(
-            sample_id    = sample_id,
+            sample_id    = raw_sample_id,
             coord_dir    = coord_dir
         )
 

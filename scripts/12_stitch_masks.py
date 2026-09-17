@@ -112,7 +112,7 @@ def main():
             predictions = vessel_probs,
             coordinates = patch_coords,
             patch_dir   = patch_dir,
-            mask_dir    = mask_dir,
+            mask_dir    = tissue_dir,
             threshold   = config.stitch_masks.vessel_threshold
         )
         logger.info("- Stitched fibroblast prediction mask")

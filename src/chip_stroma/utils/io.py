@@ -10,6 +10,8 @@ import json
 import h5py
 import pickle
 
+from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
 import matplotlib.cm as cm
@@ -148,6 +150,19 @@ def load_tissue_mask(sample_id : str,
     if not candidates: return None
 
     return np.array(Image.open(candidates[0]).convert("L")) > 0
+
+
+@dataclass
+class SampleCoords:
+    """
+    A sample's patch coordinate table and WSI slide metadata. Read from TRIDENT 
+    metadata.
+    """
+
+    table       : pd.DataFrame  # tile_id, x, y, raw_file, mask_file, patch_name
+    patch_size  : int
+    slide_height: int
+    slide_width : int
 
 
 def load_coordinates(sample_id: str, coord_dir: Path) -> SampleCoords:

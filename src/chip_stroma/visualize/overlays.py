@@ -14,31 +14,17 @@ import pandas as pd
 from PIL import Image
 from pathlib import Path
 from typing import Callable
-from dataclasses import dataclass
 from skimage.color import separate_stains
 from skimage.filters import threshold_otsu
 from skimage.color.colorconv import hdx_from_rgb
 
 from chip_stroma.utils.loggers import setup_logger
-from chip_stroma.utils.io import load_tissue_mask
+from chip_stroma.utils.io import SampleCoords, load_tissue_mask
 
 logger = setup_logger(__name__)
 
 
 # =====| General Helpers |======================================================
-
-@dataclass
-class SampleCoords:
-    """
-    A sample's patch coordinate table and WSI slide metadata. Read from TRIDENT 
-    metadata.
-    """
-
-    table       : pd.DataFrame  # tile_id, x, y, raw_file, mask_file, patch_name
-    patch_size  : int
-    slide_height: int
-    slide_width : int
-
 
 def place_patches(sample_id   : str,
                   coordinates : pd.DataFrame,

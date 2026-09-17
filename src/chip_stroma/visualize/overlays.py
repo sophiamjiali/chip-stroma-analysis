@@ -78,7 +78,7 @@ def stitch_predictions(sample_id  : str,
     a map and binary mask.
     """
 
-    vessel_map, _ = place_patches(
+    vessel_map = place_patches(
         sample_id    = sample_id,
         coordinates  = coordinates.table,
         patch_size   = coordinates.patch_size,
@@ -119,7 +119,7 @@ def stitch_fibroblast(sample_id  : str,
 
         return quantify_fibroblast(image_path, vessel_prob, tissue, threshold)
 
-    fibroblast_mask, _ = place_patches(
+    fibroblast_mask = place_patches(
         sample_id    = sample_id,
         coordinates  = coordinates.table,
         patch_size   = coordinates.patch_size,
@@ -178,7 +178,7 @@ def stitch_tissue_mask(sample_id  : str,
 
         return None if tissue is None else tissue.astype(np.uint8)
 
-    tissue_mask, _ = place_patches(
+    tissue_mask = place_patches(
         sample_id    = sample_id,
         coordinates  = coordinates.table,
         patch_size   = coordinates.patch_size,

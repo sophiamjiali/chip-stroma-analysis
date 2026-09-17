@@ -227,22 +227,32 @@ def mask_to_geojson(mask               : np.ndarray,
                     classification_name: str,
                     colour             : tuple[int, int, int],
                     min_area_px        : float = 25.0,
-                    scale              : float = 1.0) -> dict:
+                    scale              : float = 1.0,
+                    downsample         : int = 4) -> dict:
     """
     Vectorizes a binary mask into a QuPath-importable GeoJSON FeatureCollection.
+
+    Contours traced on a downsampled mask — find_contours scans the full
+    array regardless of signal sparsity, OOM-ing on large slides even when
+    the mask is mostly background. Coordinates rescaled by `downsample` to
+    map back to native resolution.
     """
 
+    small = mask[::downsample, ::downsample]
+    effective_scale = scale * downsample
+
     features = []
-    for contour in measure.find_contours(mask, level = 0.5):
+    for contour in measure.find_contours(small, level = 0.5):
         if contour.shape[0] < 3: continue
 
         rows, cols = contour[:, 0], contour[:, 1]
         area = 0.5 * abs(np.dot(cols, np.roll(rows, 1)) - 
                          np.dot(rows, np.roll(cols, 1)))
+        # min_area_px still compared in native-resolution units
+        if area * (downsample ** 2) < min_area_px: continue
 
-        if area < min_area_px: continue
-
-        ring = [[float(c * scale), float(r * scale)] for r, c in contour]
+        ring = [[float(c * effective_scale), float(r * effective_scale)] 
+                for r, c in contour]
         ring.append(ring[0])
 
         features.append({
@@ -250,10 +260,7 @@ def mask_to_geojson(mask               : np.ndarray,
             'geometry': {'type': 'Polygon', 'coordinates': [ring]},
             'properties': {
                 'objectType': 'annotation',
-                'classification': {
-                    'name': classification_name, 
-                    'color': list(colour)
-                }
+                'classification': {'name': classification_name, 'color': list(colour)}
             }
         })
 

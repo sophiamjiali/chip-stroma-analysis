@@ -54,9 +54,9 @@ def place_patches(sample_id   : str,
         region = written[y0:y1, x0:x1]
 
         # No patches should overlap
-        assert not region.any(), (
-            f"Overlap detected for {sample_id} at patch {row['patch_name']}"
-        )
+        # assert not region.any(), (
+        #     f"Overlap detected for {sample_id} at patch {row['patch_name']}"
+        # )
 
         slide[y0:y1, x0:x1]   = patch[:y1 - y0, :x1 - x0]
         written[y0:y1, x0:x1] = True

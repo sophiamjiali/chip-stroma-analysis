@@ -96,6 +96,7 @@ def main():
             pred_dir  = inference_dir
         )
         logger.info(f"- Loaded vessel predictions")
+        print(vessel_probs.keys())
 
         # Stitch the vessel prediction mask into the full WSI
         vessel_map, vessel_mask = stitch_predictions(

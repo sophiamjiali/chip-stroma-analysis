@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import re
+
 import numpy as np
 import pandas as pd
 
@@ -73,13 +75,19 @@ def stitch_predictions(sample_id  : str,
     a map and binary mask.
     """
 
+    def get_prediction_patch(row: pd.Series) -> np.ndarray | None:
+        """Processes an individual patch. Accomodates if the patches extracted don't include coordinates, but are mapped in the metadata."""
+
+        sanitized_name = re.sub(r"_x\d+_y\d+", "", row['patch_name'])
+        return predictions.get(sanitized_name)
+
     vessel_map = place_patches(
         sample_id    = sample_id,
         coordinates  = coordinates.table,
         patch_size   = coordinates.patch_size,
         slide_height = coordinates.slide_height,
         slide_width  = coordinates.slide_width,
-        get_patch    = lambda row: predictions.get(row['patch_name']),
+        get_patch    = get_prediction_patch,
         dtype        = np.float32
     )
     vessel_mask = (vessel_map >= threshold).astype(np.uint8)

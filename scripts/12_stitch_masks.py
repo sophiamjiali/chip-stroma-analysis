@@ -71,16 +71,15 @@ def main():
     # Load the mapping for sanitized to unsanitized sample IDs
     name_mapping = load_json(config.paths.metadata.name_mapping)
 
-    for _, row in manifest.iterrows():
-        sample_id  = row['sample_id']
-        patch_name = row['patch_name']
-        fold       = row['fold']
+    for sample_id, group in manifest.groupby('sample_id'):
+        sample_id = str(sample_id)
+        fold      = group['fold'].iloc[0]
 
         # Fetch the unsanitized sample ID to map back to the coordinates
         raw_sample_id = next(key for key, value in name_mapping.items() 
                              if value == sample_id)
 
-        logger.info(f"Beginning to process item: {sample_id} - {patch_name}")
+        logger.info(f"Beginning to process item: {sample_id}")
 
         # Load the sample's patch coordinates
         patch_coords = load_coordinates(

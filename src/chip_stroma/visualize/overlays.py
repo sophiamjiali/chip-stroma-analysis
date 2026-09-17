@@ -51,8 +51,6 @@ def place_patches(sample_id   : str,
             n_missing += 1
             continue
 
-        print(f"{row['patch_name']} was found")
-
         y0, x0 = int(row['y']), int(row['x'])
         y1     = min(y0 + patch_size, slide_height)
         x1     = min(x0 + patch_size, slide_width)

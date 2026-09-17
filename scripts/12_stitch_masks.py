@@ -59,7 +59,7 @@ def main():
 
     # Extract key input and output directories
     patch_dir     = Path(config.paths.processed_data.patch_dir)
-    coord_dir     = Path(config.paths.raw_data.patch_coords_dir)
+    coord_dir     = Path(config.paths.raw_data.coordinate_dir)
     tissue_dir    = Path(config.paths.processed_data.tissue_mask_dir)
     inference_dir = Path(config.paths.results) / args.version / "inference"
     mask_dir      = Path(config.paths.results) / args.version / "stitch_masks"

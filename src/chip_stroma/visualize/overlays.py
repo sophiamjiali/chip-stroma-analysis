@@ -51,6 +51,8 @@ def place_patches(sample_id   : str,
             n_missing += 1
             continue
 
+        print(f"{row['patch_name']} was found")
+
         y0, x0 = int(row['y']), int(row['x'])
         y1     = min(y0 + patch_size, slide_height)
         x1     = min(x0 + patch_size, slide_width)
@@ -78,7 +80,6 @@ def stitch_predictions(sample_id  : str,
         """Processes an individual patch. Accomodates if the patches extracted don't include coordinates, but are mapped in the metadata."""
 
         sanitized_name = re.sub(r"_x\d+_y\d+", "", row['patch_name'])
-        print(sanitized_name)
         return predictions.get(sanitized_name)
 
     vessel_map = place_patches(

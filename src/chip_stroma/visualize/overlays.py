@@ -58,7 +58,7 @@ def place_patches(sample_id   : str,
             f"Overlap detected for {sample_id} at patch {row['patch_name']}"
         )
 
-        slide[y0:y1, x0:x1]   = patch[:, y1 - y0, x1 - x0]
+        slide[y0:y1, x0:x1]   = patch[:y1 - y0, :x1 - x0]
         written[y0:y1, x0:x1] = True
 
     n = len(coordinates)

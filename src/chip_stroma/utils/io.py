@@ -25,7 +25,6 @@ from skimage.color import label2rgb
 from concurrent.futures import ProcessPoolExecutor
 
 from chip_stroma.utils.loggers import setup_logger
-from chip_stroma.visualize.overlays import SampleCoords
 
 logger = setup_logger(__name__)
 JOIN_KEY = ['sample_id', 'patch_name']

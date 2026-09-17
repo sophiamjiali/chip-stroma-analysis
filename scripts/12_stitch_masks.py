@@ -29,8 +29,7 @@ from chip_stroma.utils.io import (
     load_predictions,
     save_vessel_heatmap,
     save_mask_png,
-    mask_to_geojson,
-    load_json
+    mask_to_geojson
 )
 
 logger = setup_logger(__name__)
@@ -41,7 +40,7 @@ def main():
 
     args = parse_args()
     log_header(
-        pipeline_stage = "stitch_masks",
+        pipeline_stage = "Stitch Masks",
         config_path    = Path(args.config_dir) / "12_stitch_masks.yaml",
         version        = args.version
     )

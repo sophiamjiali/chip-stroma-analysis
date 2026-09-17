@@ -34,6 +34,9 @@ def load_configs(pipeline   : Path,
     # If a sweep, override the configuration name with just 'sweep'
     name = config_name if config_name else pipeline.stem.split('_', 1)[1]
 
+    print(pipeline)
+    print(name)
+
     config = {
         name   : load_config(pipeline),
         "paths": load_paths_config(paths)

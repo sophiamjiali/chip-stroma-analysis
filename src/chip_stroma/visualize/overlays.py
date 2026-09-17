@@ -45,7 +45,10 @@ def place_patches(sample_id   : str,
     # Place each row possessed in the coordinate table
     for _, row in coordinates.iterrows():
         patch = get_patch(row)
-        if patch is None: n_missing += 1; continue
+        if patch is None: 
+            print(f"{row['patch_name']} not found")
+            n_missing += 1
+            continue
 
         y0, x0 = int(row['y']), int(row['x'])
         y1     = min(y0 + patch_size, slide_height)

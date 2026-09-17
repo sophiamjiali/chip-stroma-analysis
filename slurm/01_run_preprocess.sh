@@ -16,6 +16,9 @@ VERSION=$2
 source ${PROJECT_ROOT}/.env
 source ${PROJECT_ROOT}/slurm/00_setup_env.sh
 
+# Activate the CPU virtual environment
+source /cluster/home/t144807uhn/envs/chip-stroma-env/bin/activate
+
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo "Job ID:     $SLURM_JOB_ID"
 echo "Node:       $SLURMD_NODENAME"

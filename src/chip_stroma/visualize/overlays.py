@@ -31,15 +31,15 @@ def place_patches(sample_id   : str,
                   patch_size  : int,
                   slide_height: int,
                   slide_width : int,
-                  get_patch   : Callable[[pd.Series], np.ndarray | None]
+                  get_patch   : Callable[[pd.Series], np.ndarray | None],
+                  dtype       : np.typing.DTypeLike = np.float32
                  ) -> np.ndarray: 
     """
     Places non-overlapping patches on to the full WSI slide canvas.
     """
 
     # Initialize a canvas for stitching and a boolean tracker
-    slide     = np.zeros((slide_height, slide_width), dtype = np.float32)
-    written   = np.zeros((slide_height, slide_width), dtype = bool)
+    slide     = np.zeros((slide_height, slide_width), dtype = dtype)
     n_missing = 0
 
     # Place each row possessed in the coordinate table
@@ -51,15 +51,7 @@ def place_patches(sample_id   : str,
         y1     = min(y0 + patch_size, slide_height)
         x1     = min(x0 + patch_size, slide_width)
 
-        region = written[y0:y1, x0:x1]
-
-        # No patches should overlap
-        # assert not region.any(), (
-        #     f"Overlap detected for {sample_id} at patch {row['patch_name']}"
-        # )
-
         slide[y0:y1, x0:x1]   = patch[:y1 - y0, :x1 - x0]
-        written[y0:y1, x0:x1] = True
 
     n = len(coordinates)
     logger.info(f"- Stitched {n - n_missing} / {n} patches")
@@ -84,7 +76,8 @@ def stitch_predictions(sample_id  : str,
         patch_size   = coordinates.patch_size,
         slide_height = coordinates.slide_height,
         slide_width  = coordinates.slide_width,
-        get_patch    = lambda row: predictions.get(row['patch_name'])
+        get_patch    = lambda row: predictions.get(row['patch_name']),
+        dtype        = np.float32
     )
     vessel_mask = (vessel_map >= threshold).astype(np.uint8)
 
@@ -125,7 +118,8 @@ def stitch_fibroblast(sample_id  : str,
         patch_size   = coordinates.patch_size,
         slide_height = coordinates.slide_height,
         slide_width  = coordinates.slide_width,
-        get_patch    = get_fibroblast_patch
+        get_patch    = get_fibroblast_patch,
+        dtype        = np.uint8
     )
 
     return fibroblast_mask.astype(np.uint8)
@@ -184,7 +178,8 @@ def stitch_tissue_mask(sample_id  : str,
         patch_size   = coordinates.patch_size,
         slide_height = coordinates.slide_height,
         slide_width  = coordinates.slide_width,
-        get_patch    = get_tissue_patch
+        get_patch    = get_tissue_patch,
+        dtype        = np.uint8
     )
 
     return tissue_mask.astype(np.uint8)

@@ -7,6 +7,7 @@
 # ==============================================================================
 
 import json
+import gc
 
 import argparse as ap
 import numpy as np
@@ -106,6 +107,25 @@ def main():
         )
         logger.info("- Stitched vessel prediction mask")
 
+        # Save probability and mask NumPy files for downstream analysis
+        out_dir = mask_dir / sample_id
+        out_dir.mkdir(parents = True, exist_ok = True)
+        heatmap_path = out_dir / "vessel_heatmap.png"
+
+        np.save(out_dir / "vessel_prob.npy", vessel_map.astype(np.float16))
+        save_vessel_heatmap(vessel_map = vessel_map, path = heatmap_path)
+        del vessel_map
+
+        np.save(out_dir / "vessel_mask.npy", vessel_mask)
+        save_mask_png(vessel_mask, out_dir / "vessel_mask.png")
+        vessel_gj = mask_to_geojson(vessel_mask, "vessel", colours.vessel)
+        (out_dir / "vessel.geojson").write_text(json.dumps(vessel_gj))
+
+        # Delete the mask from memory to avoid RAM overhead
+        del vessel_mask, vessel_gj
+        gc.collect()
+
+
         # Derive and stitch fibroblast mask into the full WSI
         fibro_mask = stitch_fibroblast(
             sample_id   = sample_id,
@@ -117,6 +137,14 @@ def main():
         )
         logger.info("- Stitched fibroblast prediction mask")
 
+        np.save(out_dir / "fibroblast_mask.npy", fibro_mask)
+        save_mask_png(fibro_mask, out_dir / "fibroblast_mask.png")
+        fibro_gj  = mask_to_geojson(fibro_mask, "fibroblast",colours.fibroblast)
+        (out_dir / "fibroblast.geojson").write_text(json.dumps(fibro_gj))
+        del fibro_mask, fibro_gj
+        gc.collect()
+
+
         # Stitch the tissue mask into the full WSI
         tissue_mask = stitch_tissue_mask(
             sample_id   = sample_id,
@@ -125,29 +153,12 @@ def main():
         )
         logger.info("- Stitched tissue mask")
 
-        # Save probability and mask NumPy files for downstream analysis
-        out_dir = mask_dir / sample_id
-        out_dir.mkdir(parents = True, exist_ok = True)
-
-        np.save(out_dir / "vessel_prob.npy", vessel_map.astype(np.float16))
-        np.save(out_dir / "vessel_mask.npy", vessel_mask)
-        np.save(out_dir / "fibroblast_mask.npy", fibro_mask)
         np.save(out_dir / "tissue_mask.npy", tissue_mask)
-
-        heatmap_path = out_dir / "vessel_heatmap.png"
-        save_vessel_heatmap(vessel_map = vessel_map, path = heatmap_path)
-
-        save_mask_png(vessel_mask, out_dir / "vessel_mask.png")
-        save_mask_png(fibro_mask, out_dir / "fibroblast_mask.png")
         save_mask_png(tissue_mask, out_dir / "tissue_mask.png")
-
-        vessel_gj = mask_to_geojson(vessel_mask, "vessel", colours.vessel)
-        fibro_gj  = mask_to_geojson(fibro_mask, "fibroblast",colours.fibroblast)
         tissue_gj = mask_to_geojson(tissue_mask, "tissue", colours.tissue)
-
-        (out_dir / "vessel.geojson").write_text(json.dumps(vessel_gj))
-        (out_dir / "fibroblast.geojson").write_text(json.dumps(fibro_gj))
         (out_dir / "tissue.geojson").write_text(json.dumps(tissue_gj))
+        del tissue_mask, tissue_gj, vessel_probs
+        gc.collect()
 
         logger.info("- Saved all key outputs")
 

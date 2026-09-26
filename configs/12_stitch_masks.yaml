@@ -7,4 +7,7 @@
 # ==============================================================================
 
 vessel_threshold: 0.5
-colours: [0, 1, 2]
+colours:
+  vessel:     [0, 255, 0]     # lime, matches save_overlay_masks palette
+  fibroblast: [255, 0, 0]     # red
+  tissue:     [128, 128, 128] # gray

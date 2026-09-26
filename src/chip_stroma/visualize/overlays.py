@@ -41,7 +41,7 @@ def place_patches(sample_id   : str,
     """
 
     # Initialize a canvas for stitching and a boolean tracker
-    slide     = np.zeros((slide_height, slide_width), dtype = dtype)
+    slide     = None
     n_missing = 0
 
     # Place each row possessed in the coordinate table
@@ -51,11 +51,20 @@ def place_patches(sample_id   : str,
             n_missing += 1
             continue
 
+        # Allocate canvas patching patch dimensions
+        if slide is None:
+            shape = ((slide_height, slide_width, patch.shape[2]) 
+                     if patch.ndim == 3 else (slide_height, slide_width))
+            slide = np.zeros(shape, dtype = dtype)
+
         y0, x0 = int(row['y']), int(row['x'])
         y1     = min(y0 + patch_size, slide_height)
         x1     = min(x0 + patch_size, slide_width)
 
         slide[y0:y1, x0:x1]   = patch[:y1 - y0, :x1 - x0]
+
+    if slide is None: 
+        slide = np.zeros((slide_height, slide_width), dtype = dtype)
 
     n = len(coordinates)
     logger.info(f"- Stitched {n - n_missing} / {n} patches")
@@ -203,8 +212,6 @@ def stitch_wsi_thumbnail(sample_id: str,
                          coordinates: SampleCoords,
                          patch_dir: Path,
                          downsample: int = 4) -> np.ndarray:
-    """Stitches raw RGB patches for visual context; downsampled since this is
-    QC-only (not used for quantification, unlike the mask stitching)."""
 
     def get_rgb_patch(row: pd.Series) -> np.ndarray | None:
         sanitized_name = re.sub(r"_x\d+_y\d+", "", row['patch_name'])
@@ -213,9 +220,14 @@ def stitch_wsi_thumbnail(sample_id: str,
         with Image.open(path) as img:
             return np.array(img.convert("RGB"))[::downsample, ::downsample]
 
+    # Scale y/x coordinates into the downsampled canvas's coordinate space
+    coords_scaled = coordinates.table.copy()
+    coords_scaled['y'] = coords_scaled['y'] // downsample
+    coords_scaled['x'] = coords_scaled['x'] // downsample
+
     return place_patches(
         sample_id    = sample_id,
-        coordinates  = coordinates.table,
+        coordinates  = coords_scaled,
         patch_size   = coordinates.patch_size // downsample,
         slide_height = coordinates.slide_height // downsample,
         slide_width  = coordinates.slide_width // downsample,

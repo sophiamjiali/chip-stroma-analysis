@@ -174,10 +174,10 @@ def main():
         logger.info("- Stitched downsampled WSI thumbnail")
 
         # Downsample masks to match thumbnail resolution
-        vessel_small     = vessel_mask[::4, ::4]
-        fibroblast_small = fibro_mask[::4, ::4]
-        tissue_small     = tissue_mask[::4, ::4]
-
+        th, tw = wsi_thumb.shape[:2]
+        vessel_small     = vessel_mask[::4, ::4][:th, :tw]
+        fibroblast_small = fibro_mask[::4, ::4][:th, :tw]
+        tissue_small     = tissue_mask[::4, ::4][:th, :tw]
 
         label = np.zeros(tissue_small.shape, dtype=np.uint8)
         label[tissue_small.astype(bool)]     = 0

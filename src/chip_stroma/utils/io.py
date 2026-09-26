@@ -208,10 +208,16 @@ def load_predictions(sample_id: str,
     return patch_probs
 
 
-def save_vessel_heatmap(vessel_map: np.ndarray, path: Path) -> None:
+def save_vessel_heatmap(vessel_map: np.ndarray, 
+                        path      : Path, 
+                        max_dim   : int = 4096) -> None:
     """Colour-mapped per-pixel probability heatmap; reads model confidence."""
 
-    rgba = cm.get_cmap("inferno")(vessel_map)
+    # Downsample so RGBA expansion doesn't cause OOM kill
+    scale = max(1, int(np.ceil(max(vessel_map.shape) / max_dim)))
+    small = vessel_map[::scale, ::scale]
+
+    rgba = cm.get_cmap("inferno")(small)
     Image.fromarray((rgba[..., :3] * 255).astype(np.uint8)).save(path)
     return None
 

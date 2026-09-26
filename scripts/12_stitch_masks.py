@@ -114,12 +114,16 @@ def main():
 
         np.save(out_dir / "vessel_prob.npy", vessel_map.astype(np.float16))
         save_vessel_heatmap(vessel_map = vessel_map, path = heatmap_path)
+        logger.info("- Saved vessel heatmap")
         del vessel_map
 
         np.save(out_dir / "vessel_mask.npy", vessel_mask)
         save_mask_png(vessel_mask, out_dir / "vessel_mask.png")
+        logger.info("- Saved vessel mask PNG")
+
         vessel_gj = mask_to_geojson(vessel_mask, "vessel", colours.vessel)
         (out_dir / "vessel.geojson").write_text(json.dumps(vessel_gj))
+        logger.info("- Saved vessel GeoJSON")
 
         # Delete the mask from memory to avoid RAM overhead
         del vessel_mask, vessel_gj
@@ -139,8 +143,10 @@ def main():
 
         np.save(out_dir / "fibroblast_mask.npy", fibro_mask)
         save_mask_png(fibro_mask, out_dir / "fibroblast_mask.png")
+        logger.info("- Saved fibroblast mask PNG")
         fibro_gj  = mask_to_geojson(fibro_mask, "fibroblast",colours.fibroblast)
         (out_dir / "fibroblast.geojson").write_text(json.dumps(fibro_gj))
+        logger.info("- Saved fibroblast GeoJSON")
         del fibro_mask, fibro_gj
         gc.collect()
 
@@ -155,8 +161,10 @@ def main():
 
         np.save(out_dir / "tissue_mask.npy", tissue_mask)
         save_mask_png(tissue_mask, out_dir / "tissue_mask.png")
+        logger.info("- Saved tissue mask PNG")
         tissue_gj = mask_to_geojson(tissue_mask, "tissue", colours.tissue)
         (out_dir / "tissue.geojson").write_text(json.dumps(tissue_gj))
+        logger.info("- Saved tissue mask GeoJSON")
         del tissue_mask, tissue_gj, vessel_probs
         gc.collect()
 

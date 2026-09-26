@@ -195,6 +195,32 @@ def stitch_tissue_mask(sample_id  : str,
     )
 
     return tissue_mask.astype(np.uint8)
-      
+
+
+# =====| Stitch WSI Thumbnail |=================================================
+
+def stitch_wsi_thumbnail(sample_id: str,
+                         coordinates: SampleCoords,
+                         patch_dir: Path,
+                         downsample: int = 4) -> np.ndarray:
+    """Stitches raw RGB patches for visual context; downsampled since this is
+    QC-only (not used for quantification, unlike the mask stitching)."""
+
+    def get_rgb_patch(row: pd.Series) -> np.ndarray | None:
+        sanitized_name = re.sub(r"_x\d+_y\d+", "", row['patch_name'])
+        path = patch_dir / sample_id / sanitized_name
+        if not path.exists(): return None
+        with Image.open(path) as img:
+            return np.array(img.convert("RGB"))[::downsample, ::downsample]
+
+    return place_patches(
+        sample_id    = sample_id,
+        coordinates  = coordinates.table,
+        patch_size   = coordinates.patch_size // downsample,
+        slide_height = coordinates.slide_height // downsample,
+        slide_width  = coordinates.slide_width // downsample,
+        get_patch    = get_rgb_patch,
+        dtype        = np.uint8
+    )
 
 # [END]

@@ -235,4 +235,28 @@ def stitch_wsi_thumbnail(sample_id: str,
         dtype        = np.uint8
     )
 
+def make_overlay(wsi_thumb  : np.ndarray,
+                 vessel_mask: np.ndarray,
+                 fibro_mask : np.ndarray,
+                 max_dim    : int = 4096,
+                 alpha      : float = 0.35) -> np.ndarray:
+    """Manual uint8 blending — label2rgb's float64 cast OOMs on large WSIs."""
+
+    th, tw = wsi_thumb.shape[:2]
+    scale = max(1, int(np.ceil(max(th, tw) / max_dim)))
+
+    # Downsample everything to a fixed, bounded resolution
+    thumb = wsi_thumb[::scale, ::scale].astype(np.uint8)
+    h, w = thumb.shape[:2]
+
+    vessel = vessel_mask[::4*scale, ::4*scale][:h, :w].astype(bool)
+    fibro  = fibro_mask[::4*scale, ::4*scale][:h, :w].astype(bool)
+
+    overlay = thumb.copy()
+    overlay[vessel] = ((1 - alpha) * thumb[vessel] + 
+                       alpha * np.array([0, 255, 0])).astype(np.uint8)
+    overlay[fibro]  = ((1 - alpha) * thumb[fibro] + 
+                       alpha * np.array([255, 0, 0])).astype(np.uint8)
+    return overlay
+
 # [END]

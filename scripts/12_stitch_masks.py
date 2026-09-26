@@ -25,7 +25,8 @@ from chip_stroma.visualize.overlays import (
     stitch_predictions,
     stitch_fibroblast,
     stitch_tissue_mask,
-    stitch_wsi_thumbnail
+    stitch_wsi_thumbnail,
+    make_overlay
 )
 
 from chip_stroma.utils.io import (
@@ -173,20 +174,9 @@ def main():
         wsi_thumb = stitch_wsi_thumbnail(sample_id, patch_coords, patch_dir)
         logger.info("- Stitched downsampled WSI thumbnail")
 
-        # Downsample masks to match thumbnail resolution
-        th, tw = wsi_thumb.shape[:2]
-        vessel_small     = vessel_mask[::4, ::4][:th, :tw]
-        fibroblast_small = fibro_mask[::4, ::4][:th, :tw]
-        tissue_small     = tissue_mask[::4, ::4][:th, :tw]
-
-        label = np.zeros(tissue_small.shape, dtype=np.uint8)
-        label[tissue_small.astype(bool)]     = 0
-        label[vessel_small.astype(bool)]     = 1
-        label[fibroblast_small.astype(bool)] = 2
-
-        overlay = label2rgb(label, image = wsi_thumb, colors = ['lime', 'red'],
-                            alpha = 0.35, bg_label = 0, image_alpha = 1)
-        Image.fromarray((overlay * 255).astype(np.uint8)).save(out_dir / "wsi_overlay.png")
+        overlay = make_overlay(wsi_thumb, vessel_mask, fibro_mask)
+        Image.fromarray(overlay).save(out_dir / "wsi_overlay.png")
+        logger.info("- Saved WSI overlay")
 
         logger.info("- Saved downsampled WSI overlay")
         del vessel_mask, fibro_mask, tissue_mask

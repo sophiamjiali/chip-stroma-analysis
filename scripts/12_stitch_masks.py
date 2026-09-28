@@ -14,7 +14,6 @@ import numpy as np
 
 from pathlib import Path
 from PIL import Image
-from skimage.color import label2rgb
 
 from chip_stroma.utils.header_footers import log_header, log_footer
 from chip_stroma.utils.config import load_configs
@@ -25,8 +24,9 @@ from chip_stroma.visualize.overlays import (
     stitch_predictions,
     stitch_fibroblast,
     stitch_tissue_mask,
-    stitch_wsi_thumbnail,
-    make_overlay
+    load_wsi_thumbnail,
+    to_thumb,
+    blend
 )
 
 from chip_stroma.utils.io import (
@@ -65,6 +65,7 @@ def main():
 
     # Extract key input and output directories
     patch_dir     = Path(config.paths.processed_data.patch_dir)
+    wsi_dir       = Path(config.paths.raw_data.wsi_dir)
     coord_dir     = Path(config.paths.raw_data.coordinate_dir)
     tissue_dir    = Path(config.paths.processed_data.tissue_mask_dir)
     inference_dir = Path(config.paths.results) / args.version / "inference"
@@ -104,7 +105,6 @@ def main():
 
         # Stitch the vessel prediction mask into the full WSI
         vessel_map, vessel_mask = stitch_predictions(
-            sample_id   = sample_id,
             predictions = vessel_probs,
             coordinates = patch_coords,
             threshold   = config.stitch_masks.vessel_threshold
@@ -119,7 +119,6 @@ def main():
         np.save(out_dir / "vessel_prob.npy", vessel_map.astype(np.float16))
         save_vessel_heatmap(vessel_map = vessel_map, path = heatmap_path)
         logger.info("- Saved vessel heatmap")
-        del vessel_map
 
         np.save(out_dir / "vessel_mask.npy", vessel_mask)
         save_mask_png(vessel_mask, out_dir / "vessel_mask.png")
@@ -128,7 +127,9 @@ def main():
         vessel_gj = mask_to_geojson(vessel_mask, "vessel", colours.vessel)
         (out_dir / "vessel.geojson").write_text(json.dumps(vessel_gj))
         logger.info("- Saved vessel GeoJSON")
-        del vessel_gj
+
+        del vessel_map, vessel_gj
+        gc.collect()
 
 
         # Derive and stitch fibroblast mask into the full WSI
@@ -145,9 +146,11 @@ def main():
         np.save(out_dir / "fibroblast_mask.npy", fibro_mask)
         save_mask_png(fibro_mask, out_dir / "fibroblast_mask.png")
         logger.info("- Saved fibroblast mask PNG")
+
         fibro_gj  = mask_to_geojson(fibro_mask, "fibroblast",colours.fibroblast)
         (out_dir / "fibroblast.geojson").write_text(json.dumps(fibro_gj))
         logger.info("- Saved fibroblast GeoJSON")
+
         del fibro_gj
         gc.collect()
 
@@ -163,23 +166,39 @@ def main():
         np.save(out_dir / "tissue_mask.npy", tissue_mask)
         save_mask_png(tissue_mask, out_dir / "tissue_mask.png")
         logger.info("- Saved tissue mask PNG")
+
         tissue_gj = mask_to_geojson(tissue_mask, "tissue", colours.tissue)
         (out_dir / "tissue.geojson").write_text(json.dumps(tissue_gj))
         logger.info("- Saved tissue mask GeoJSON")
-        del tissue_gj, vessel_probs
+
+        del tissue_gj
         gc.collect()
 
 
         # Build an overlay for all three masks on a downsampled WSI thumbnail
-        wsi_thumb = stitch_wsi_thumbnail(sample_id, patch_coords, patch_dir)
-        logger.info("- Stitched downsampled WSI thumbnail")
+        slide_path = wsi_dir / f"{raw_sample_id}.svs"
+        thumb      = load_wsi_thumbnail(slide_path)
+        hw         = thumb.shape[:2]
+        logger.info("- Loaded downsampled WSI thumbnail")
 
-        overlay = make_overlay(wsi_thumb, vessel_mask, fibro_mask)
-        Image.fromarray(overlay).save(out_dir / "wsi_overlay.png")
+        vessel_t = to_thumb(vessel_mask, hw)
+        fibro_t  = to_thumb(fibro_mask, hw)
+        tissue_t = to_thumb(tissue_mask, hw)
+
+        # Save the clean slide, tissue-mask QC, and the final overlay
+        Image.fromarray(thumb).save(out_dir / "wsi_thumbnail.png")
+        Image.fromarray(blend(thumb, [(tissue_t, (0, 0, 255))], 
+                              alpha = 0.15)).save(out_dir / "wsi_tissue.png")
+        Image.fromarray(blend(thumb, [
+            (vessel_t, (0, 255, 0)), (fibro_t, (255, 0, 0))
+        ])).save(out_dir / "wsi_overlay.png")
+
         logger.info("- Saved WSI overlay")
 
-        logger.info("- Saved downsampled WSI overlay")
-        del vessel_mask, fibro_mask, tissue_mask
+        del vessel_mask, fibro_mask, tissue_mask, thumb
+        del vessel_t, fibro_t, tissue_t
+        gc.collect()
+        
         logger.info("- Saved all key outputs")
 
     logger.info("Completed all stitching.")

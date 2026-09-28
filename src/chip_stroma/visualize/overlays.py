@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import re
+import cv2
+import openslide
 
 import numpy as np
 import pandas as pd
@@ -28,8 +30,7 @@ logger = setup_logger(__name__)
 
 # =====| General Helpers |======================================================
 
-def place_patches(sample_id   : str,
-                  coordinates : pd.DataFrame,
+def place_patches(coordinates : pd.DataFrame,
                   patch_size  : int,
                   slide_height: int,
                   slide_width : int,
@@ -74,8 +75,7 @@ def place_patches(sample_id   : str,
 
 # =====| Stitch Vessel Predictions |============================================
 
-def stitch_predictions(sample_id  : str,
-                       predictions: dict[str, np.ndarray],
+def stitch_predictions(predictions: dict[str, np.ndarray],
                        coordinates: SampleCoords,
                        threshold  : float) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -90,7 +90,6 @@ def stitch_predictions(sample_id  : str,
         return predictions.get(sanitized_name)
 
     vessel_map = place_patches(
-        sample_id    = sample_id,
         coordinates  = coordinates.table,
         patch_size   = coordinates.patch_size,
         slide_height = coordinates.slide_height,
@@ -134,7 +133,6 @@ def stitch_fibroblast(sample_id  : str,
         return quantify_fibroblast(image_path, vessel_prob, tissue, threshold)
 
     fibroblast_mask = place_patches(
-        sample_id    = sample_id,
         coordinates  = coordinates.table,
         patch_size   = coordinates.patch_size,
         slide_height = coordinates.slide_height,
@@ -194,7 +192,6 @@ def stitch_tissue_mask(sample_id  : str,
         return None if tissue is None else tissue.astype(np.uint8)
 
     tissue_mask = place_patches(
-        sample_id    = sample_id,
         coordinates  = coordinates.table,
         patch_size   = coordinates.patch_size,
         slide_height = coordinates.slide_height,
@@ -208,55 +205,49 @@ def stitch_tissue_mask(sample_id  : str,
 
 # =====| Stitch WSI Thumbnail |=================================================
 
-def stitch_wsi_thumbnail(sample_id: str,
-                         coordinates: SampleCoords,
-                         patch_dir: Path,
-                         downsample: int = 4) -> np.ndarray:
+def load_wsi_thumbnail(slide_path: Path, 
+                       max_dim   : int = 4096):
+    """Real WSI thumbnail from the slide pyramid (independent of patches)."""
 
-    def get_rgb_patch(row: pd.Series) -> np.ndarray | None:
-        sanitized_name = re.sub(r"_x\d+_y\d+", "", row['patch_name'])
-        path = patch_dir / sample_id / sanitized_name
-        if not path.exists(): return None
-        with Image.open(path) as img:
-            return np.array(img.convert("RGB"))[::downsample, ::downsample]
+    slide = openslide.OpenSlide(str(slide_path))
+    W, H  = slide.dimensions
+    s     = max_dim / max(W, H)
 
-    # Scale y/x coordinates into the downsampled canvas's coordinate space
-    coords_scaled = coordinates.table.copy()
-    coords_scaled['y'] = coords_scaled['y'] // downsample
-    coords_scaled['x'] = coords_scaled['x'] // downsample
-
-    return place_patches(
-        sample_id    = sample_id,
-        coordinates  = coords_scaled,
-        patch_size   = coordinates.patch_size // downsample,
-        slide_height = coordinates.slide_height // downsample,
-        slide_width  = coordinates.slide_width // downsample,
-        get_patch    = get_rgb_patch,
-        dtype        = np.uint8
+    thumb = np.array(
+        slide.get_thumbnail((int(W * s), int(H * s))).convert("RGB")
     )
 
-def make_overlay(wsi_thumb  : np.ndarray,
-                 vessel_mask: np.ndarray,
-                 fibro_mask : np.ndarray,
-                 max_dim    : int = 4096,
-                 alpha      : float = 0.35) -> np.ndarray:
-    """Manual uint8 blending — label2rgb's float64 cast OOMs on large WSIs."""
+    return thumb
 
-    th, tw = wsi_thumb.shape[:2]
-    scale = max(1, int(np.ceil(max(th, tw) / max_dim)))
 
-    # Downsample everything to a fixed, bounded resolution
-    thumb = wsi_thumb[::scale, ::scale].astype(np.uint8)
-    h, w = thumb.shape[:2]
+def to_thumb(mask, hw):
+    """
+    Max-pool a full-res binary mask down to thumbnail size (sparse positives survive).
+    """
+    H, W = mask.shape
+    k = max(1, int(np.ceil(max(H / hw[0], W / hw[1]))))
+    m = mask[:H // k * k, :W // k * k]
+    pooled = m.reshape(H // k, k, W // k, k).max(axis=(1, 3))
 
-    vessel = vessel_mask[::4*scale, ::4*scale][:h, :w].astype(bool)
-    fibro  = fibro_mask[::4*scale, ::4*scale][:h, :w].astype(bool)
+    return cv2.resize(
+        pooled.astype(np.uint8), (hw[1], hw[0]),
+        interpolation = cv2.INTER_NEAREST
+    ).astype(bool)
 
-    overlay = thumb.copy()
-    overlay[vessel] = ((1 - alpha) * thumb[vessel] + 
-                       alpha * np.array([0, 255, 0])).astype(np.uint8)
-    overlay[fibro]  = ((1 - alpha) * thumb[fibro] + 
-                       alpha * np.array([255, 0, 0])).astype(np.uint8)
-    return overlay
+
+def blend(thumb, layers, alpha=0.5, grow=1):
+    """
+    layers: [(bool_mask, (r,g,b)), ...]; dilate slightly so tiny objects stay 
+    visible.
+    """
+
+    out = thumb.copy()
+    k = np.ones((3, 3), np.uint8)
+
+    for m, c in layers:
+        m      = cv2.dilate(m.astype(np.uint8), k, iterations=grow).astype(bool)
+        out[m] = ((1 - alpha) * out[m] + alpha * np.array(c)).astype(np.uint8)
+
+    return out
 
 # [END]

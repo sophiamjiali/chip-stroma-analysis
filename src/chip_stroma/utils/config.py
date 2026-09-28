@@ -61,6 +61,7 @@ def load_paths_config(paths: Path) -> dict:
     config['raw_data'] = {
         "raw_dir"        : ROOT_CONSTS['raw_dir'],
         "patch_dir"      : ROOT_CONSTS['raw_patch_dir'],
+        "wsi_dir"        : ROOT_CONSTS['raw_wsi_dir'],
         "vessel_mask_dir": ROOT_CONSTS['raw_vessel_mask_dir'],
         "coordinate_dir" : ROOT_CONSTS['patch_coords_dir']
     }
@@ -74,16 +75,18 @@ def extract_env() -> dict:
     load_dotenv(ROOT / ".env")
     PROJECT_ROOT        = os.getenv("PROJECT_ROOT", ".")
     RAW_DIR             = os.getenv("RAW_DIR", ".")
+    RAW_WSI_DIR         = os.getenv("RAW_WSI_DIR", ".")
     RAW_PATCH_DIR       = os.getenv("RAW_PATCH_DIR", ".")
     RAW_VESSEL_MASK_DIR = os.getenv("RAW_VESSEL_MASK_DIR", ".")
     PATCH_COORDS_DIR    = os.getenv("PATCH_COORDS_DIR", ".")
 
     return {
-        'project_root': PROJECT_ROOT,
-        'raw_dir': RAW_DIR,
-        'raw_patch_dir': RAW_PATCH_DIR,
+        'project_root'       : PROJECT_ROOT,
+        'raw_dir'            : RAW_DIR,
+        'raw_wsi_dir'        : RAW_WSI_DIR,
+        'raw_patch_dir'      : RAW_PATCH_DIR,
         'raw_vessel_mask_dir': RAW_VESSEL_MASK_DIR,
-        'patch_coords_dir': PATCH_COORDS_DIR
+        'patch_coords_dir'   : PATCH_COORDS_DIR
     }
 
 

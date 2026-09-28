@@ -28,7 +28,7 @@ def load_configs(pipeline   : Path,
     logger.info("=" * 50)
     logger.info("Step 01: Configurations")
     logger.info(f"- Pipeline : {pipeline}")
-    logger.info(f"- Paths    : {paths.relative_to(Path.cwd())}")
+    logger.info(f"- Paths    : {paths}")
     logger.info("-" * 50)
 
     # If a sweep, override the configuration name with just 'sweep'

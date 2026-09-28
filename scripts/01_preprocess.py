@@ -51,26 +51,28 @@ def main():
         paths    = Path(args.config_dir) / "00_paths.yaml"
     )
 
+    src_dir = Path(config.paths.raw_data.patch_dir)
+
     # 2. Sanitize sample folder names
-    name_mapping = sanitize_names(src_dir = config.paths.raw_data.patch_dir)
+    name_mapping = sanitize_names(src_dir)
 
     # 3. Initialize a patch manifest to map training information
     manifest = build_patch_manifest(
-        src_dir      = config.paths.raw_data.patch_dir,
+        src_dir      = src_dir,
         name_mapping = name_mapping
     )
 
     # 4. Initialize patch statistics for QC and audit logging
     statistics = build_patch_stats(
-        src_dir      = config.paths.raw_data.patch_dir,
+        src_dir      = src_dir,
         name_mapping = name_mapping
     )
 
     # 5. Detect tissue and remove background
     tissue_detection_cfg = config.preprocess.tissue_detection
     tissue_report = apply_tissue_filter(
-        src_patch_dir     = config.paths.raw_data.patch_dir,
-        dst_mask_dir      = config.paths.processed_data.tissue_mask_dir,
+        src_patch_dir     = Path(config.paths.raw_data.patch_dir),
+        dst_mask_dir      = Path(config.paths.processed_data.tissue_mask_dir),
         manifest          = manifest,
         tissue_threshold  = tissue_detection_cfg.tissue_threshold,
         gaussian_sigma    = tissue_detection_cfg.gaussian_sigma,
@@ -84,7 +86,7 @@ def main():
     # 6. Detect artifacts and discard corrupted patches
     artifact_detection_cfg = config.preprocess.artifact_detection
     artifact_report = apply_artifact_filter(
-        src_dir              = config.paths.raw_data.patch_dir,
+        src_dir              = src_dir,
         manifest             = manifest,
         blur_threshold       = artifact_detection_cfg.blur_threshold,
         dark_pixel_threshold = artifact_detection_cfg.dark_pixel_threshold,
@@ -99,7 +101,7 @@ def main():
     included = manifest[manifest['include'] == True]
     included = included[['sample_id', 'patch_name', 'original_id']]
     normalizer = fit_normalizer(
-        reference_path = config.preprocess.normalization.reference_patch,
+        reference_path = Path(config.preprocess.normalization.reference_patch),
         method         = config.preprocess.normalization.method
     )
 
@@ -108,16 +110,16 @@ def main():
         included_patches = included,
         normalizer       = normalizer,
         method           = config.preprocess.normalization.method,
-        src_patch_dir    = config.paths.raw_data.patch_dir,
-        dst_patch_dir    = config.paths.processed_data.patch_dir,
+        src_patch_dir    = Path(config.paths.raw_data.patch_dir),
+        dst_patch_dir    = Path(config.paths.processed_data.patch_dir),
         n_workers        = config.preprocess.n_workers
     )
 
     # 9. Convert vessel annotation masks to binary scaled to grayscale
     vessel_report = convert_vessel_masks(
         manifest      = manifest,
-        src_mask_dir  = config.paths.raw_data.vessel_mask_dir,
-        dst_mask_dir  = config.paths.processed_data.vessel_mask_dir,
+        src_mask_dir  = Path(config.paths.raw_data.vessel_mask_dir),
+        dst_mask_dir  = Path(config.paths.processed_data.vessel_mask_dir),
         n_workers     = config.preprocess.n_workers
     )
     manifest = update_vessel_report(manifest, vessel_report)
@@ -125,15 +127,18 @@ def main():
     # Clean tissue masks of patches that didn't pass downstream filtering
     manifest = prune_tissue_masks(
         manifest     = manifest,
-        src_mask_dir = config.paths.processed_data.tissue_mask_dir,
+        src_mask_dir = Path(config.paths.processed_data.tissue_mask_dir),
         n_workers    = config.preprocess.n_workers
     )
 
 
     # Save metadata generated during preprocessing before normalization
-    save_name_mapping(name_mapping, path = config.paths.metadata.name_mapping)
-    save_patch_manifest(manifest, path = config.paths.metadata.patch_manifest)
-    save_patch_stats(statistics, path = config.paths.metadata.patch_statistics)
+    save_name_mapping(name_mapping, 
+                      path = Path(config.paths.metadata.name_mapping))
+    save_patch_manifest(manifest, 
+                        path = Path(config.paths.metadata.patch_manifest))
+    save_patch_stats(statistics, 
+                     path = Path(config.paths.metadata.patch_statistics))
 
     log_footer()
 
